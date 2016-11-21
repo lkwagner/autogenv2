@@ -48,7 +48,9 @@ class CrystalWriter:
     self.restart=False
     
 
-    
+  #---------------------------
+  def set_restart(self,v):
+    self.restart=v
 
 ########################################################
   def crystal_input(self):
