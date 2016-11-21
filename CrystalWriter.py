@@ -13,7 +13,9 @@ class CrystalWriter:
 
     #Crystal structure
     self.cif=cif
-    self.struct=CifParser.from_string(cif).get_structures(primitive=False)[0]
+    #we want to save the dict representation because it's easier to store to JSON 
+    #later
+    self.struct=CifParser.from_string(cif).get_structures(primitive=False)[0].as_dict()
     self.supercell=np.identity(3)
 
     #Electron model
@@ -26,7 +28,12 @@ class CrystalWriter:
     self.cutoff=0.2    
     self.kmesh=[8,8,8]
     self.gmesh=16
-    self.tolinteg=[10,10,10,18]
+    self.tolinteg=[10,10,10,10,18]
+    self.dftgrid='XLGRID'
+    
+    #Memory
+    self.biposize=100000000
+    self.exchsize=10000000
     
 
     #SCF convergence parameters
@@ -75,14 +82,14 @@ class CrystalWriter:
       self.functional['correlation'],
       "HYBRID", 
       str(self.functional['hybrid']),
-      "XLGRID",
+      self.dftgrid,
       "END",
       "SCFDIR",
       "SAVEWF",
       "BIPOSIZE",
-      "100000000",
+      str(self.biposize),
       "EXCHSIZE",
-      "10000000",
+      str(self.exchsize),
       "TOLDEE",
       str(self.edifftol),
       "FMIXING",
@@ -92,7 +99,8 @@ class CrystalWriter:
       "MAXCYCLE",
       str(self.maxcycle),
       "SMEAR",
-      str(self.smear)
+      str(self.smear),
+      "SAVEWF"
     ]
 
     if self.levshift!=[]:
@@ -102,6 +110,7 @@ class CrystalWriter:
 
     if self.restart:
       outlines+=["GUESSP"]
+    outlines+=["END"]
 
     return "\n".join(outlines)
 
@@ -110,8 +119,8 @@ class CrystalWriter:
 ########################################################
 
   def cif2geom(self):
-    lat=self.struct.as_dict()['lattice']
-    sites=self.struct.as_dict()['sites']
+    lat=self.struct['lattice']
+    sites=self.struct['sites']
     geomlines=["CRYSTAL","0 0 0","1","%g %g %g %g %g %g"%\
           (lat['a'],lat['b'],lat['c'],lat['alpha'],lat['beta'],lat['gamma'])]
 
@@ -125,7 +134,7 @@ class CrystalWriter:
 ########################################################
 
   def basis_section(self):
-    sites=self.struct.as_dict()['sites']
+    sites=self.struct['sites']
     elements=set()
     for s in sites:
       nm=s['species'][0]['element']
@@ -278,4 +287,7 @@ class CrystalWriter:
 if __name__=="__main__":
   cwriter=CrystalWriter(open("si.cif").read())
   print(cwriter.crystal_input())
-  print(cwriter.__dict__)
+  import json,jsontools
+  with open("tmp.json",'w') as f:
+    f.write(json.dumps(cwriter.__dict__,cls=jsontools.NumpyAwareJSONEncoder))
+  #print(cwriter.__dict__)
