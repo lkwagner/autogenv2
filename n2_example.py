@@ -3,14 +3,14 @@ import local
 import os,json
 
 
-setup={'id':'si',
+setup={'id':'n2',
         'job_record':submission_tools.JobRecord(),
-       'crystal':CrystalWriter.CrystalWriter(open("si.cif").read() ),
+       'crystal':CrystalWriter.CrystalWriter(xyz=open("n2.xyz").read()),
        'properties':PropertiesWriter.PropertiesWriter() 
          }
 
-setup['crystal'].xml_name="/Users/lkwagner/work/qwalk/autogenv2/BFD_Library.xml"
-setup['crystal'].kmesh=[2,2,2]
+setup['crystal'].xml_name="/home/brian/programs/autogenv2/BFD_Library.xml"
+#setup['crystal'].kmesh=[2,2,2]
 setup['crystal'].dftgrid='LGRID'
 setup['crystal'].basis_params=[0.3,1,3]
 setup['crystal'].tolinteg=[8,8,8,8,16]
@@ -27,11 +27,10 @@ except:
   pass
 os.chdir(d)
 
-#runcrys.run(setup['job_record'])
+runcrys.run(setup['job_record'])
 runprop.run(setup['job_record'])
 
 print(runcrys.check_status(setup['job_record']))
 
 setup['crystal_output']=runcrys.output()
-
 
