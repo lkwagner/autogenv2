@@ -162,8 +162,8 @@ class CrystalWriter:
 
   def geom0d(self):
     geomlines=["MOLECULE","1"]
-    geomlines+=["%i"%len(self.struct)]
-    for v in self.struct:
+    geomlines+=["%i"%len(self.struct['sites'])]
+    for v in self.struct['sites']:
       nm=v['species'][0]['element']
       nm=str(Element(nm).Z+200)
       geomlines+=[nm+" %g %g %g"%(v['xyz'][0],v['xyz'][1],v['xyz'][2])]
