@@ -9,7 +9,7 @@ setup={'id':'si',
        'properties':PropertiesWriter.PropertiesWriter() 
          }
 
-setup['crystal'].xml_name="/home/brian/programs/autogenv2/BFD_Library.xml"
+setup['crystal'].xml_name="../BFD_Library.xml"
 setup['crystal'].kmesh=[2,2,2]
 setup['crystal'].dftgrid='LGRID'
 setup['crystal'].basis_params=[0.3,1,3]
@@ -28,7 +28,6 @@ except:
 os.chdir(d)
 
 runcrys.run(setup['job_record'])
-raise NotImplementedError
 runprop.run(setup['job_record'])
 
 print(runcrys.check_status(setup['job_record']))

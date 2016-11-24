@@ -33,13 +33,11 @@ class LocalRunner(LocalSubmitter):
     if loc=="": loc=os.getcwd()
     if name=="": name=stdout
     header = []
-    #exeline = "%s &> %s"%(exe, stdout)
-    commands = header +  prep_commands + [exe] + final_commands
+    exeline = "%s &> %s"%(exe, stdout)
+    commands = header +  prep_commands + [exeline] + final_commands
 
-    result = ""
     for c in commands:
-      result += sub.check_output(c,shell=True).decode()
-    with open(stdout,'w') as outf: outf.write(result)
+      os.system(c)
     return []
 
 ###############################################################
@@ -53,9 +51,7 @@ class LocalCrystal(LocalRunner):
     to instance of a job run."""
     exe = self.BIN+"crystal < %s"%inpfn
     prep_commands=["cp %s INPUT"%inpfn]
-    # Not needed if not running parallel.
-    #final_commands = ["rm *.pe[0-9]","rm *.pe[0-9][0-9]"]
-    final_commands = []
+    final_commands = ["rm *.pe[0-9]","rm *.pe[0-9][0-9]"]
 
     if jobname == "":
       jobname = outfn
