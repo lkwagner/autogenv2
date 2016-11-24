@@ -10,13 +10,9 @@ setup={'id':'h2',
          }
 
 setup['crystal'].xml_name="../BFD_Library.xml"
-#setup['crystal'].kmesh=[2,2,2]
 setup['crystal'].basis_params=[0.2,0,3]
 setup['crystal'].cutoff=0.0    
-
 setup['crystal'].dftgrid='LGRID'
-setup['crystal'].basis_params=[0.3,1,3]
-setup['crystal'].tolinteg=[8,8,8,8,16]
 setup['crystal'].spin_polarized=False
 
 runcrys=CrystalRun.CrystalRun(local.LocalCrystal(),setup['crystal'])
