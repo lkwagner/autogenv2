@@ -9,12 +9,14 @@ setup={'id':'si',
        'properties':PropertiesWriter.PropertiesWriter() 
          }
 
-setup['crystal'].xml_name="../BFD_Library.xml"
-setup['crystal'].kmesh=[2,2,2]
-setup['crystal'].dftgrid='LGRID'
-setup['crystal'].basis_params=[0.3,1,3]
-setup['crystal'].tolinteg=[8,8,8,8,16]
-setup['crystal'].spin_polarized=False
+setup['crystal'].set_options( {'xml_name':"../BFD_Library.xml",
+                               'kmesh':[2,2,2],
+                               'basis_params':[0.3,1,3],
+                               'tolinteg':[8,8,8,8,16],
+                               'spin_polarized':False,
+                               'dftgrid':'LGRID'
+                               }
+                               ) 
 
 runcrys=CrystalRun.CrystalRun(local.LocalCrystal(),setup['crystal'])
 runprop=PropertiesRun.PropertiesRun()

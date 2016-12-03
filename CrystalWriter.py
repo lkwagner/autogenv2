@@ -59,8 +59,16 @@ class CrystalWriter:
     
 
   #---------------------------
-  def set_restart(self,v):
-    self.restart=v
+
+  def set_options(self, d):
+    selfdict=self.__dict__
+    for k in d.keys():
+      if not k in selfdict.keys():
+        print("Error:",k,"not a keyword for CrystalWriter")
+        raise InputError
+      selfdict[k]=d[k]
+      
+      
 
 ########################################################
   def crystal_input(self):
