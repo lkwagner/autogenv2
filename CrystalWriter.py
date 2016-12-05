@@ -182,7 +182,6 @@ class CrystalWriter:
   def basis_section(self):
     elements=set()
     for s in self.struct['sites']:
-      print(s)
       nm=s['species'][0]['element']
       elements.add(nm)
     basislines=[]
