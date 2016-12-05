@@ -137,13 +137,13 @@ class CrystalWriter:
 ########################################################
   def geom(self):
     """Generate the geometry section for CRYSTAL"""
+    assert self.boundary in ['0d','3d'],"Invalid or not implemented boundary."
     if self.boundary=="3d":
       return self.geom3d()
     elif self.boundary=='0d': 
       return self.geom0d()
     else:
-      print("Didn't understand self.boundary in CrystalWriter")
-      raise NotImplementedError
+      quit() # This shouldn't happen.
 
 ########################################################
 
