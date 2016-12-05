@@ -5,7 +5,7 @@ class PropertiesWriter:
   def __init__(self,crystal_writer,cryapi=False):
     self.kmesh=crystal_writer.kmesh
     self.cryapi=cryapi
-    self.gmesh=crystal_writer.kmesh
+    self.gmesh=crystal_writer.gmesh
     self.boundary=crystal_writer.boundary
 
   def properties_input(self):

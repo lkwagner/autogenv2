@@ -39,6 +39,7 @@ class LocalRunner(LocalSubmitter):
 
     outstr = ""
     for c in commands:
+      # Problem: this method doesn't allow you to watch it's progress.
       outstr+=sub.check_output(c,shell=True).decode()
     with open(stdout,'w') as outf:
       outf.write(outstr)

@@ -4,10 +4,10 @@ import os,json
 
 
 setup={'id':'h2',
-        'job_record':submission_tools.JobRecord(),
-       'crystal':CrystalWriter.CrystalWriter(xyz=open("h2.xyz").read()),
-       'properties':PropertiesWriter.PropertiesWriter() 
-         }
+        'job_record':submission_tools.JobRecord()
+        }
+setup['crystal']=CrystalWriter.CrystalWriter(xyz=open("h2.xyz").read())
+setup['properties']=PropertiesWriter.PropertiesWriter(setup['crystal'])
 
 setup['crystal'].xml_name="../BFD_Library.xml"
 setup['crystal'].basis_params=[0.2,0,3]
@@ -16,7 +16,7 @@ setup['crystal'].dftgrid='LGRID'
 setup['crystal'].spin_polarized=False
 
 runcrys=CrystalRun.CrystalRun(local.LocalCrystal(),setup['crystal'])
-runprop=PropertiesRun.PropertiesRun()
+runprop=PropertiesRun.PropertiesRun(setup['properties'])
 
 currwd=os.getcwd()
 d=setup['id']
