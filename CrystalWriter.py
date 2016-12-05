@@ -27,7 +27,6 @@ class CrystalWriter:
     elif self.xyz!=None:
       self.struct=XYZ.from_string(xyz).molecule.as_dict()
       self.boundary="0d"
-    print(self.struct)
     #Electron model
     self.spin_polarized=True    
     self.xml_name="BFD_Library.xml"
@@ -333,8 +332,6 @@ class CrystalWriter:
 
 if __name__=="__main__":
   cwriter=CrystalWriter(open("si.cif").read())
-  print(cwriter.crystal_input())
   import json,jsontools
   with open("tmp.json",'w') as f:
     f.write(json.dumps(cwriter.__dict__,cls=jsontools.NumpyAwareJSONEncoder))
-  #print(cwriter.__dict__)
