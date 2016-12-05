@@ -143,7 +143,7 @@ class CrystalWriter:
       return self.geom0d()
     else:
       print("Didn't understand self.boundary in CrystalWriter")
-      quit()
+      raise NotImplementedError
 
 ########################################################
 
