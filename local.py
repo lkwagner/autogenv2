@@ -22,6 +22,7 @@ class LocalRunner(LocalSubmitter):
     return "unknown"
 #-------------------------------------------------------
   def _job_cancel(self,queue_id):
+    # Should we raise NotImplemetedError, and catch?
     print("Cancel was called, but not implemented")
 #-------------------------------------------------------
   def _qsub(self,exe,prep_commands=[],final_commands=[],
@@ -33,11 +34,14 @@ class LocalRunner(LocalSubmitter):
     if loc=="": loc=os.getcwd()
     if name=="": name=stdout
     header = []
-    exeline = "%s &> %s"%(exe, stdout)
+    exeline = exe
     commands = header +  prep_commands + [exeline] + final_commands
 
+    outstr = ""
     for c in commands:
-      os.system(c)
+      outstr+=sub.check_output(c,shell=True).decode()
+    with open(stdout,'w') as outf:
+      outf.write(outstr)
     return []
 
 ###############################################################
@@ -51,7 +55,9 @@ class LocalCrystal(LocalRunner):
     to instance of a job run."""
     exe = self.BIN+"crystal < %s"%inpfn
     prep_commands=["cp %s INPUT"%inpfn]
-    final_commands = ["rm *.pe[0-9]","rm *.pe[0-9][0-9]"]
+    # Not needed for nonparallel.
+    #final_commands = ["rm *.pe[0-9]","rm *.pe[0-9][0-9]"]
+    final_commands = []
 
     if jobname == "":
       jobname = outfn
