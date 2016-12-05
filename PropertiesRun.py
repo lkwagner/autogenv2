@@ -3,8 +3,7 @@ import os
 
 class PropertiesRun:
   _name_="PropertiesRun"
-  def __init__(self,pwriter=PropertiesWriter.PropertiesWriter(),
-               submitter=None):
+  def __init__(self,pwriter,submitter=None):
     self._submitter=submitter
     self._pwriter=pwriter
 
