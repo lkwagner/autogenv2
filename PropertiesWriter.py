@@ -8,10 +8,11 @@ class PropertiesWriter:
 
 
   def properties_input(self):
-    outlines=['NEWK',
-              "0 %i"%self.gmesh,
-              " ".join(map(str,self.kmesh)),
-              "1 1"]
+    outlines=['NEWK']
+    if self.cif!=None:
+      outlines+=[ "0 %i"%self.gmesh,
+                  " ".join(map(str,self.kmesh)),
+    outlines+=["1 1"]
     if self.cryapi:
       outlines+=["CRYAPI_OUT"]
     else:
