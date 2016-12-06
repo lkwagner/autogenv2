@@ -14,8 +14,9 @@ There may be some helper objects slightly below this level.
 
 ## Level 2: Managing completion of a job element
 
- * The Manager object consists of a Writer, Reader, and Runner. It may consist of several of those object. Its job is to complete the job according to the requirements set out in Reader.
+ * The Manager object consists of a Writer, Reader, and Runner. It may consist of several of those object. Its role is to complete the job according to the requirements set out in Reader.
 
-## Level 3: Managing completion of a list of job elements
+## Data formats
+ A calculation is made up of a sequence of Managers. Thus a record of the calculation should be a list of Manager objects. These can be stored either in JSON or a pickle type format.
 
 
