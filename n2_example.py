@@ -1,4 +1,5 @@
-import submission_tools,CrystalWriter,CrystalRunner,PropertiesRun
+import submission_tools,PropertiesRun,Manager
+import CrystalWriter,CrystalRunner,CrystalReader
 import local
 import os,json
 
@@ -15,8 +16,11 @@ setup['crystal'].set_options({
     'spin_polarized':False
   })
 
-runcrys=CrystalRunner.CrystalRunner(local.LocalCrystal(),setup['crystal'])
-runprop=PropertiesRun.PropertiesRun(setup['crystal'])
+testjob = Manager.Manager(
+    writer=setup['crystal'],
+    reader=CrystalReader.CrystalReader(),
+    runner=CrystalRunner.LocalCrystalRunner()
+  )
 
 currwd=os.getcwd()
 d=setup['id']
@@ -26,10 +30,4 @@ except:
   pass
 os.chdir(d)
 
-runcrys.run(setup['job_record'])
-runprop.run(setup['job_record'])
-
-print(runcrys.check_status(setup['job_record']))
-
-setup['crystal_output']=runcrys.output()
-
+testjob.update_status(job_record=setup['job_record'])

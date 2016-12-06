@@ -17,57 +17,7 @@ class LocalRunner(LocalSubmitter):
     self.np=1
     self.nn=1
 
-#-------------------------------------------------------
-  def _job_status(self,queue_id):
-    return "unknown"
-#-------------------------------------------------------
-  def _job_cancel(self,queue_id):
-    # Should we raise NotImplemetedError, and catch?
-    print("Cancel was called, but not implemented")
-#-------------------------------------------------------
-  def _qsub(self,exe,prep_commands=[],final_commands=[],
-      name="",stdout="",loc=""):
-    """ Helper function for executable submitters. 
-    Should work in most cases to simplify code."""
-
-    if stdout=="": stdout="stdout"
-    if loc=="": loc=os.getcwd()
-    if name=="": name=stdout
-    header = []
-    exeline = exe
-    commands = header +  prep_commands + [exeline] + final_commands
-
-    outstr = ""
-    for c in commands:
-      # Problem: this method doesn't allow you to watch it's progress.
-      outstr+=sub.check_output(c,shell=True).decode()
-    with open(stdout,'w') as outf:
-      outf.write(outstr)
-    return []
-
-###############################################################
-class LocalCrystal(LocalRunner):
-  """Fully defined submission class. Defines interaction with specific
-  program to be run."""
-  def _submit_job(self,inpfn,outfn="stdout",jobname="",loc=""):
-    """ Submit a specific job to the queue. 
-    
-    Should not interact with user, and should receive only information specific
-    to instance of a job run."""
-    exe = self.BIN+"crystal < %s"%inpfn
-    prep_commands=["cp %s INPUT"%inpfn]
-    # Not needed for nonparallel.
-    #final_commands = ["rm *.pe[0-9]","rm *.pe[0-9][0-9]"]
-    final_commands = []
-
-    if jobname == "":
-      jobname = outfn
-    if loc == "":
-      loc = os.getcwd()
-
-    qid = self._qsub(exe,prep_commands,final_commands,jobname,outfn,loc)
-    return qid
-
+### Below is legacy code for now. ###
 ###############################################################
 class LocalProperties(LocalRunner):
   """Fully defined submission class. Defines interaction with specific
