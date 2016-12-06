@@ -1,4 +1,3 @@
-import PropertiesWriter
 import os
 
 class PropertiesRun:

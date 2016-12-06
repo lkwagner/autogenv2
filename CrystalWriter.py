@@ -44,7 +44,6 @@ class CrystalWriter:
     self.biposize=100000000
     self.exchsize=10000000
     
-
     #SCF convergence parameters
     self.initial_charges={}    
     self.fmixing=80
@@ -53,6 +52,9 @@ class CrystalWriter:
     self.levshift=[]
     self.broyden=[0.01,60,15]
     self.smear=0.0001
+
+    # Use the new crystal2qmc script. This should change soon!
+    self.cryapi=False
 
     self.restart=False
     
@@ -130,6 +132,20 @@ class CrystalWriter:
       outlines+=["GUESSP"]
     outlines+=["END"]
 
+    return "\n".join(outlines)
+
+########################################################
+  def properties_input(self):
+    outlines=['NEWK']
+    if self.boundary=='3d':
+      outlines+=[ "0 %i"%self.gmesh,
+                  " ".join(map(str,self.kmesh))]
+    outlines+=["1 1"]
+    if self.cryapi:
+      outlines+=["CRYAPI_OUT"]
+    else:
+      outlines+=["67 999"]
+    outlines+=["END"]
     return "\n".join(outlines)
     
 
@@ -334,3 +350,5 @@ if __name__=="__main__":
   import json,jsontools
   with open("tmp.json",'w') as f:
     f.write(json.dumps(cwriter.__dict__,cls=jsontools.NumpyAwareJSONEncoder))
+  pwriter=PropertiesWriter()
+  print(pwriter.properties_input())

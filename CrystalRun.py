@@ -135,4 +135,3 @@ class CrystalRun:
     shutil.copy("fort.79","fort.20")
     self._cwriter.set_restart(True)
     return self.run(job_record)
-

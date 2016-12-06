@@ -1,4 +1,4 @@
-import submission_tools,CrystalWriter,CrystalRun,PropertiesWriter,PropertiesRun
+import submission_tools,CrystalWriter,CrystalRun,PropertiesRun
 import local
 import os,json
 
@@ -7,7 +7,6 @@ setup={'id':'si',
         'job_record':submission_tools.JobRecord()
       }
 setup['crystal']=CrystalWriter.CrystalWriter(open("si.cif").read() )
-setup['properties']=PropertiesWriter.PropertiesWriter(setup['crystal'])
 
 setup['crystal'].set_options( {'xml_name':"../BFD_Library.xml",
                                'kmesh':[2,2,2],
@@ -19,7 +18,7 @@ setup['crystal'].set_options( {'xml_name':"../BFD_Library.xml",
                                ) 
 
 runcrys=CrystalRun.CrystalRun(local.LocalCrystal(),setup['crystal'])
-runprop=PropertiesRun.PropertiesRun(setup['properties'])
+runprop=PropertiesRun.PropertiesRun(setup['crystal'])
 
 currwd=os.getcwd()
 d=setup['id']
