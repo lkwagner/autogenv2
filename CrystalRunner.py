@@ -7,7 +7,7 @@ import CrystalWriter
 
 ####################################################
 
-class CrystalRun:
+class CrystalRunner:
   _name_="RunCrystal"
   def __init__(self, submitter,cwriter):
     self._submitter = submitter
@@ -61,28 +61,28 @@ class CrystalRun:
       if "CONVERGENCE" in reslines[0]:
         return "ok"
       elif "TOO MANY CYCLES" in reslines[0]:
-        print("RunCrystal output: Too many cycles.")
+        print("CrystalRunner: Too many cycles.")
         return "too_many_cycles"
       else: # What else can happen?
-        print("RunCrystal output: Finished, but unknown state.")
+        print("CrystalRunner: Finished, but unknown state.")
         return "finished"
       
     detots = [float(line.split()[5]) for line in outlines if "DETOT" in line]
     if len(detots) == 0:
-      print("RunCrystal output: Last run completed no cycles.")
+      print("CrystalRunner: Last run completed no cycles.")
       return "scf_fail"
 
     detots_net = sum(detots[1:])
     if detots_net > acceptable_scf:
-      print("RunCrystal output: Last run performed poorly.")
+      print("CrystalRunner: Last run performed poorly.")
       return "not_enough_decrease"
 
     etots = [float(line.split()[3]) for line in outlines if "DETOT" in line]
     if etots[-1] > 0:
-      print("RunCrystal output: Energy divergence.")
+      print("CrystalRunner: Energy divergence.")
       return "divergence"
     
-    print("RunCrystal output: Not finished.")
+    print("CrystalRunner: Not finished.")
     return "not_finished"
   
 #-------------------------------------------------      
