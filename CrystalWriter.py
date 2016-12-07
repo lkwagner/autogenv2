@@ -8,6 +8,7 @@ from pymatgen.io.xyz import XYZ
 from pymatgen.core.periodic_table import Element
 from xml.etree.ElementTree import ElementTree
 import numpy as np
+import os
 
 class CrystalWriter:
   def __init__(self,cif=None,xyz=None,primitive=True):
@@ -17,6 +18,10 @@ class CrystalWriter:
     #Geometry input.
     self.cif=cif
     self.xyz=xyz
+
+    # Filename conventions.
+    self.cryinpfn='autogen.d12'
+    self.propinpfn='prop.in'
 
     #we want to save the dict representation because it's easier to store to JSON 
     #later
@@ -59,7 +64,7 @@ class CrystalWriter:
     self.restart=False
     
 
-  #---------------------------
+  #-----------------------------------------------
 
   def set_options(self, d):
     selfdict=self.__dict__
@@ -71,7 +76,7 @@ class CrystalWriter:
       
       
 
-########################################################
+  #-----------------------------------------------
   def crystal_input(self):
 
     geomlines=self.geom()
@@ -134,7 +139,7 @@ class CrystalWriter:
 
     return "\n".join(outlines)
 
-########################################################
+  #-----------------------------------------------
   def properties_input(self):
     outlines=['NEWK']
     if self.boundary=='3d':
@@ -147,7 +152,25 @@ class CrystalWriter:
       outlines+=["67 999"]
     outlines+=["END"]
     return "\n".join(outlines)
+
+  #-----------------------------------------------
+  def write(self):
+    """ Actually write the files, report status of write"""
+    with open(self.cryinpfn,'w') as outf:
+      outf.write(self.crystal_input())
+    with open(self.propinpfn,'w') as outf:
+      outf.write(self.properties_input())
+    return 'ok'
     
+  #-----------------------------------------------
+  def check_status(self):
+    # Could add consistancy check here.
+    status='unknown'
+    if os.path.isfile(self.cryinpfn) and os.path.isfile(self.propinpfn):
+      status='ok'
+    else:
+      status='not_started'
+    return status
 
 ########################################################
   def geom(self):

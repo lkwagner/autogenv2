@@ -1,4 +1,4 @@
-import subprocess
+import subprocess as sub
 import importlib
 import os
 import shutil
@@ -11,6 +11,7 @@ class JobRecord:
     self.queue_id=[]
     
 
+#####################################################################################
 class LocalSubmitter:
   """Abstract submission class. Child classes must define:
   __init__: 
@@ -27,7 +28,7 @@ class LocalSubmitter:
             )
             returns a list of queue ids (list of strings)
   """
-#---------------------------------------------------  
+  #---------------------------------------------------  
   def execute(self,job_record,dependencies,inpfns,outfn,name):
     """Generate qsub file for this job, run it, and return qid from qsub
     transaction. 
@@ -43,7 +44,7 @@ class LocalSubmitter:
     for q in qid:
       job_record.queue_id.append([name,q])
     return qid
-#---------------------------------------------------
+  #---------------------------------------------------
   def status(self,job_record,name):
     """ Returns a list of job status elements """
     status=[]
@@ -51,13 +52,40 @@ class LocalSubmitter:
       if q[0]==name:
         status.append(self._job_status(q[1]))
     return status
-#---------------------------------------------------
+  #---------------------------------------------------
   def transfer_output(self,job_record,outfiles):
     pass # Files should be already available locally.
-#---------------------------------------------------
+  #---------------------------------------------------
   def cancel(self, queue_id):
     output = []
     for q_id in queue_id:
       output.append(self._job_cancel(q_id))
-#####################################################################################
+
+  #-------------------------------------------------------
+  def _job_status(self,queue_id):
+    return "unknown"
+  #-------------------------------------------------------
+  def _job_cancel(self,queue_id):
+    # Should we raise NotImplemetedError, and catch?
+    print("Cancel was called, but not implemented")
+  #-------------------------------------------------------
+  def _qsub(self,exe,prep_commands=[],final_commands=[],
+      name="",stdout="",loc=""):
+    """ Helper function for executable submitters. 
+    Should work in most cases to simplify code."""
+
+    if stdout=="": stdout="stdout"
+    if loc=="": loc=os.getcwd()
+    if name=="": name=stdout
+    header = []
+    exeline = exe
+    commands = header +  prep_commands + [exeline] + final_commands
+
+    outstr = ""
+    for c in commands:
+      # Problem: this method doesn't allow you to watch it's progress.
+      outstr+=sub.check_output(c,shell=True).decode()
+    with open(stdout,'w') as outf:
+      outf.write(outstr)
+    return []
       
