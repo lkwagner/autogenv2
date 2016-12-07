@@ -2,7 +2,11 @@ import sys
 import numpy as np
 from pyscf import gto 
 
-
+##TODO:
+## Find out what order the d and f atomic orbitals are in and check vs QWalk's ordering
+## Fix the orbital coefficients (see gamess2qmc for how to do it) for normalization of the basis functions.
+## CI coefficients and occupations.
+## Periodic boundary conditions.
 ###########################################################
 def print_orb(mol,m,f):
   aos_atom=mol.offset_nr_by_atom()
