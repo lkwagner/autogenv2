@@ -1,6 +1,9 @@
 import sys
 import numpy as np
+from pyscf import gto 
 
+
+###########################################################
 def print_orb(mol,m,f):
   aos_atom=mol.offset_nr_by_atom()
   coeff=m.mo_coeff
@@ -27,6 +30,7 @@ def print_orb(mol,m,f):
   print("count",count)
   return 
 
+###########################################################
 
 def print_basis(mol, f):
   aos_atom= mol.offset_nr_by_atom()
@@ -53,6 +57,7 @@ def print_basis(mol, f):
   return 
 
 
+###########################################################
 
 def print_sys(mol, f):
   coords = mol.atom_coords()
@@ -117,6 +122,7 @@ def print_sys(mol, f):
     f.write("} \n")
   f.close() 
   return 
+###########################################################
 
 def print_slater(mol, mf, orbfile, basisfile, f):
   coeffs=(mf.mo_coeff)
@@ -166,5 +172,14 @@ def print_slater(mol, mf, orbfile, basisfile, f):
   }''' %(orb_type, max_orb,orbfile, basisfile, up_orb, down_orb ))
   f.close()
   return 
+###########################################################
 
 
+def print_qwalk(mol,mf, basename='qw'):
+  orbfile=basename+".orb"
+  basisfile=basename+".basis"
+
+  print_orb(mol,mf,open(orbfile,'w'))
+  print_basis(mol,open(basisfile,'w'))
+  print_sys(mol,open(basename+".sys",'w'))
+  print_slater(mol,mf,orbfile,basisfile,open(basename+".slater",'w'))
