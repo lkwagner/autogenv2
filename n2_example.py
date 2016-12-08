@@ -16,7 +16,7 @@ setup['crystal'].set_options({
     'spin_polarized':False
   })
 
-testjob = Manager.Manager(
+testjob = Manager.CrystalManager(
     writer=setup['crystal'],
     reader=CrystalReader.CrystalReader(),
     runner=CrystalRunner.LocalCrystalRunner()

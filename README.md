@@ -15,7 +15,9 @@ There may be some helper objects below this level.
 
 ## Level 2: Managing completion of a job element
 
- * The Manager object consists of a Writer, Reader, and Runner. It may consist of several of those object. Its role is to complete the job element according to the requirements set out in Reader.
+ * The Manager object consists of a Writer, Reader, and Runner. Its role is to complete the job element according to the requirements set out in Reader.
+
+The Manager owns the directory for the time of its execution, that is, until it says it's done.
 
 *[Comment: Maybe this should be ElementManager?]*
 

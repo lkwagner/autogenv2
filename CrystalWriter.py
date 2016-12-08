@@ -19,10 +19,6 @@ class CrystalWriter:
     self.cif=cif
     self.xyz=xyz
 
-    # Filename conventions.
-    self.cryinpfn='autogen.d12'
-    self.propinpfn='prop.in'
-
     #we want to save the dict representation because it's easier to store to JSON 
     #later
     if self.cif!=None:
@@ -153,15 +149,6 @@ class CrystalWriter:
     outlines+=["END"]
     return "\n".join(outlines)
 
-  #-----------------------------------------------
-  def write(self):
-    """ Actually write the files, report status of write"""
-    with open(self.cryinpfn,'w') as outf:
-      outf.write(self.crystal_input())
-    with open(self.propinpfn,'w') as outf:
-      outf.write(self.properties_input())
-    return 'ok'
-    
   #-----------------------------------------------
   def check_status(self):
     # Could add consistancy check here.

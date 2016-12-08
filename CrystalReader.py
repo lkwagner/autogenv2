@@ -2,24 +2,28 @@ import os
 
 class CrystalReader:
   """ Tries to extract properties of crystal run, or else diagnose what's wrong. """
-  def output(self):
+  def __init__(self):
+    self.completed=False
+    self.out={}
+#-------------------------------------------------      
+  def collect(self):
     """ Collect results from output."""
-    out={}
-    if os.path.isfile('autogen.d12.o'):
+    if not self.completed and os.path.isfile('autogen.d12.o'):
       f = open('autogen.d12.o', 'r')
       lines = f.readlines()
       for li,line in enumerate(lines):
         if 'SCF ENDED' in line:
-          out['total_energy']=float(line.split()[8])    
+          self.out['total_energy']=float(line.split()[8])    
         elif 'TOTAL ATOMIC SPINS' in line:
           moms = []
           shift = 1
           while "TTT" not in lines[li+shift]:
             moms += map(float,lines[li+shift].split())
             shift += 1
-          out['mag_moments']=moms
+          self.out['mag_moments']=moms
+    self.completed=True
+    return 'ok'
       
-    return out
 #-------------------------------------------------      
   # This can be made more efficient if it's a problem: searches whole file for
   # each query.
@@ -67,47 +71,10 @@ class CrystalReader:
     return "not_finished"
   
 #-------------------------------------------------      
-  # Diagnose routines basically decide 'not_finished' or 'failed'
-  def stubborn_diagnose(self,status):
-    if status in ['too_many_cycles','not_finished']:
-      return 'not_finished'
-    else:
-      return 'failed'
-#-------------------------------------------------      
-  def optimistic_diagnose(self,status):
-    if status == 'not_finished':
-      return 'not_finished'
-    else:
-      return 'failed'
-#-------------------------------------------------      
-  def conservative_diagnose(self,status):
-    return 'failed'
-#-------------------------------------------------      
-  def check_status(self):
+  def check_status(self,outfilename):
     """ Decide status of job (in queue or otherwise). """
-    outfilename="autogen.d12.o"
-    diagnose_options = {
-        'stubborn':self.stubborn_diagnose,
-        'optimistic':self.optimistic_diagnose,
-        'conservative':self.conservative_diagnose
-      }
 
     status=self.check_outputfile(outfilename)
     print("status",status)
     return status
     
-#-------------------------------------------------      
-  def resume(self,job_record,maxresume=5):
-    """ Continue a crystal run using GUESSP."""
-    trynum = 0
-    while os.path.isfile("%d.autogen.d12.o"%trynum):
-      trynum += 1
-      if trynum > maxresume:
-        print("Not resuming because resume limit reached ({}>{}).".format(
-          trynum,maxresume))
-        return 'failed'
-    for filename in ["autogen.d12","autogen.d12.o","fort.79"]:
-      shutil.copy(filename,"%d.%s"%(trynum,filename))
-    shutil.copy("fort.79","fort.20")
-    self._cwriter.set_restart(True)
-    return self.run(job_record)
