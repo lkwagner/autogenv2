@@ -11,7 +11,7 @@ Goal: Provide tools that make it easy to manage and store QWalk runs.
  * The Reader object can read the output of a run and report on its completion or lack thereof. This object defines what a successful run is. 
  * The Runner object executes a set of runs for a given code on a given computer system.
 
-There may be some helper objects slightly below this level.
+There may be some helper objects below this level.
 
 ## Level 2: Managing completion of a job element
 
