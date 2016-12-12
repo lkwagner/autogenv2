@@ -1,5 +1,6 @@
-import submitter,PropertiesRun,Manager
+import submitter,Manager
 import CrystalWriter,CrystalRunner,CrystalReader
+import PropertiesRunner,PropertiesReader
 import os,json
 
 
@@ -15,8 +16,10 @@ setup['crystal'].set_options({
 
 testjob = Manager.CrystalManager(
     writer=setup['crystal'],
-    reader=CrystalReader.CrystalReader(),
-    runner=CrystalRunner.LocalCrystalRunner()
+    crys_reader=CrystalReader.CrystalReader(),
+    crys_runner=CrystalRunner.LocalCrystalRunner(),
+    prop_reader=PropertiesReader.PropertiesReader(),
+    prop_runner=PropertiesRunner.LocalPropertiesRunner()
   )
 
 currwd=os.getcwd()

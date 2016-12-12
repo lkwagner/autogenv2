@@ -6,10 +6,10 @@ class CrystalReader:
     self.completed=False
     self.out={}
 #-------------------------------------------------      
-  def collect(self):
+  def collect(self,outfilename):
     """ Collect results from output."""
-    if not self.completed and os.path.isfile('autogen.d12.o'):
-      f = open('autogen.d12.o', 'r')
+    if not self.completed and os.path.isfile(outfilename):
+      f = open(outfilename, 'r')
       lines = f.readlines()
       for li,line in enumerate(lines):
         if 'SCF ENDED' in line:
@@ -34,8 +34,8 @@ class CrystalReader:
     no_record, not_started, ok, too_many_cycles, finished (fall-back),
     scf_fail, not_enough_decrease, divergence, not_finished
     """
-    if os.path.isfile("autogen.d12.o"):
-      outf = open("autogen.d12.o",'r')
+    if os.path.isfile(outfilename):
+      outf = open(outfilename,'r')
     else:
       return "not_started"
 
@@ -72,7 +72,7 @@ class CrystalReader:
   
 #-------------------------------------------------      
   def check_status(self,outfilename):
-    """ Decide status of job (in queue or otherwise). """
+    """ Decide status of crystal run. """
 
     status=self.check_outputfile(outfilename)
     print("status",status)

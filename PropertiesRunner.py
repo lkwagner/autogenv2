@@ -5,16 +5,14 @@ import subprocess as sub
 import shutil
 from submitter import LocalSubmitter
 
-####################################################
-
-class LocalCrystalRunner(LocalSubmitter):
-  """ Runs a crystal job defined by CrystalWriter. """
-  _name_='LocalCrystalRunner'
+class LocalPropertiesRunner(LocalSubmitter):
+  """ Runs a crystal properties job defined by CrystalWriter. """
+  _name_='LocalPropertiesRunner'
   def __init__(self, BIN='~/bin/'):
     self.BIN=BIN
     self.np=1
     self.nn=1
-    self.jobname='ag_crystal'
+    self.jobname='ag_properties'
     self._queueid=None
   #-------------------------------------------------      
   def check_status(self):
@@ -22,17 +20,17 @@ class LocalCrystalRunner(LocalSubmitter):
     return 'ok'
 
   #-------------------------------------------------      
-  def run(self,cryinpfn):
+  def run(self,propinpfn):
     """ Submits executibles using _qsub. """
     
-    exe = self.BIN+"crystal < %s"%cryinpfn
+    exe = self.BIN+"properties < %s"%propinpfn
 
-    prep_commands=["cp %s INPUT"%cryinpfn]
     # Not needed for nonparallel.
     #final_commands = ["rm *.pe[0-9]","rm *.pe[0-9][0-9]"]
+    prep_commands = []
     final_commands = []
 
-    outfn = cryinpfn+".o"
+    outfn = propinpfn+".o"
     loc = os.getcwd()
 
     qids=self._qsub(exe,prep_commands,final_commands,self.jobname,outfn,loc)
