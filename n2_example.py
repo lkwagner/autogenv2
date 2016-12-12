@@ -1,12 +1,9 @@
-import submission_tools,PropertiesRun,Manager
+import submitter,PropertiesRun,Manager
 import CrystalWriter,CrystalRunner,CrystalReader
-import local
 import os,json
 
 
-setup={'id':'n2',
-        'job_record':submission_tools.JobRecord()
-        }
+setup={'id':'n2'}
 setup['crystal']=CrystalWriter.CrystalWriter(xyz=open("n2.xyz").read())
 setup['crystal'].set_options({
     'xml_name':"../BFD_Library.xml",
@@ -30,6 +27,6 @@ except:
   pass
 os.chdir(d)
 
-testjob.update_status(job_record=setup['job_record'])
+testjob.update_status()
 
 

@@ -3,7 +3,7 @@ import os
 import numpy as np
 import subprocess as sub
 import shutil
-from submission_tools import LocalSubmitter
+from submitter import LocalSubmitter
 
 ####################################################
 
@@ -15,43 +15,26 @@ class LocalCrystalRunner(LocalSubmitter):
     self.BIN=BIN
     self.np=1
     self.nn=1
+    self.jobname='ag_crystal'
+    self._queueid=None
   #-------------------------------------------------      
   def check_status(self):
     # This is only for a queue, so just never return 'running'.
     return 'ok'
 
   #-------------------------------------------------      
-  def run(self,job_record):
-    """ Calls submitter with appropriate filenames. """
-    self.execute(
-        job_record,
-        [self.cryinpfn],
-        [self.cryinpfn],
-        self.cryinpfn+'.o',
-        'crystalrun'
-      )
-
-    # Local runner will not proceed until finished.
-    return 'ok'
-
-  #-------------------------------------------------      
-  def _submit_job(self,inpfns,outfn="stdout",jobname="",loc=""):
-    """ Sets up the execution line and calls _qsub. """
-
-    assert len(inpfns)==1, "Bundle not implmented yet."
-    inpfn=inpfns[0]
+  def run(self):
+    """ Submits executibles using _qsub. """
     
-    exe = self.BIN+"crystal < %s"%inpfn
+    exe = self.BIN+"crystal < %s"%self.cryinpfn
 
-    prep_commands=["cp %s INPUT"%inpfn]
+    prep_commands=["cp %s INPUT"%self.cryinpfn]
     # Not needed for nonparallel.
     #final_commands = ["rm *.pe[0-9]","rm *.pe[0-9][0-9]"]
     final_commands = []
 
-    if jobname == "":
-      jobname = outfn
-    if loc == "":
-      loc = os.getcwd()
+    outfn = self.cryinpfn+".o"
+    loc = os.getcwd()
 
-    qid = self._qsub(exe,prep_commands,final_commands,jobname,outfn,loc)
-    return qid
+    qids=self._qsub(exe,prep_commands,final_commands,self.jobname,outfn,loc)
+    self._queueid=qids

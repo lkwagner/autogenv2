@@ -7,7 +7,7 @@ class CrystalManager:
     self.runner=runner
 
   ####################################
-  def update_status(self,job_record):
+  def update_status(self):
     """ Check write status, then if it's running. If not running check if
     finished. If not finished, attempt to run. """ 
     write_status,read_status,run_status,status = 'unknown','unknown','unknown','unknown'
@@ -17,7 +17,7 @@ class CrystalManager:
 
     with open(crysbase,'w') as f:
       f.write(self.writer.crystal_input())
-    self.runner.run(job_record)
+    self.runner.run()
     
     stat=self.reader.check_status(crysbase+".o")
     print("Status",stat)
