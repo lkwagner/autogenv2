@@ -1,9 +1,9 @@
 import sys
 import numpy as np
 from pyscf import gto,fci, mcscf, scf 
+import math
 
 ##TODO:
-## Find out what order the d and f atomic orbitals are in and check vs QWalk's ordering
 ## Fix the orbital coefficients (see gamess2qmc for how to do it) for normalization of the basis functions.
 ## CI coefficients and occupations.
 ## Periodic boundary conditions.
@@ -23,12 +23,38 @@ def print_orb(mol,m,f):
     count=0
     f.write("COEFFICIENTS\n")
     print(coeff.shape)
+
+    snorm=1./math.sqrt(4.*math.pi)
+    pnorm=math.sqrt(3.)*snorm
+    dnorm=math.sqrt(5./4.*math.pi);
+    norms={'s':snorm,
+           'px':pnorm,
+           'py':pnorm,
+           'pz':pnorm,
+           'dxy':math.sqrt(15)*snorm,
+           'dyz':math.sqrt(15)*snorm,
+           'dz^2':0.5*math.sqrt(5)*snorm,
+           'dxz':math.sqrt(15)*snorm,
+           'dx2-y2':0.5*math.sqrt(15)*snorm,
+           'fy^3':1., 
+           'fxyz':1.,
+           'fyz^2':1.,
+           'fz^3':1.,
+           'fxz^2':1.,
+           'fzx^2':1.,
+           'fx^3':1. }
+    print(gto.mole.cart2sph(2))
+    aosym=[]
+    for i in gto.mole.spheric_labels(mol):
+      aosym.append(i.split()[2][1:])
+    print(aosym)
+
     for a in coeff.T:
-        for b in a:
-            f.write(str(b)+" ")
-            count+=1
-            if count%10==0:
-                f.write("\n")
+      for ib,b in enumerate(a):
+        f.write(str(norms[aosym[ib]]*b)+" ")
+        count+=1
+        if count%10==0:
+          f.write("\n")
 
     f.write("\n")
     f.close() 
@@ -39,9 +65,12 @@ def print_orb(mol,m,f):
 
 def print_basis(mol, f):
     aos_atom= mol.offset_nr_by_atom()
-    mom_to_letter ={0:'s', 1:'p', 2:'d', 3:'f'}
-
+    mom_to_letter ={0:'s', 1:'p', 2:'5D_siesta', 3:'f'}
+    already_written=[]
     for at, li  in enumerate(aos_atom):
+      sym=mol.atom_pure_symbol(at)
+      if sym not in already_written:
+        already_written.append(sym)
         f.write('''Basis { \n%s  \nAOSPLINE \nGAMESS {\n '''
                 %(mol.atom_pure_symbol(at))) 
  
@@ -89,17 +118,20 @@ def print_sys(mol, f):
 
     # write pseudopotential 
     if mol.ecp != {}:
+      written_out=[]
       for i in range(len(coords)):
-        print(mol.ecp, symbols[i])
-        ecp =  gto.basis.load_ecp(mol.ecp,symbols[i])
-        f.write('''PSEUDO { \n %s \nAIP %d \nBASIS 
+        if symbols[i] not in written_out:
+          written_out.append(symbols[i])
+          print(mol.ecp, symbols[i])
+          ecp =  gto.basis.load_ecp(mol.ecp,symbols[i])
+          f.write('''PSEUDO { \n %s \nAIP 6 \nBASIS 
         { \n%s \nRGAUSSIAN \nOLDQMC {\n  ''' 
-                %(symbols[i], charges[i], symbols[i]))
-        coeff =ecp[1]
-        numofpot =  len(coeff)  
-        data=[]     
-        N=[]        
-        for i in range(1, len(coeff)):
+                %(symbols[i], symbols[i]))
+          coeff =ecp[1]
+          numofpot =  len(coeff)  
+          data=[]     
+          N=[]        
+          for i in range(1, len(coeff)):
             num= coeff[i][0]  
             eff =coeff[i][1]  
             count=0           
@@ -109,24 +141,24 @@ def print_sys(mol, f):
                     data.append([j]+eff[j])       
             N.append(str(count))
 
-        num= coeff[0][0] 
-        eff =coeff[0][1]
-        count=0     
-        for j, val in enumerate(eff):
+          num= coeff[0][0] 
+          eff =coeff[0][1]
+          count=0     
+          for j, val in enumerate(eff):
             if(len(eff[j])>0) :
                 count+=1                
                 data.append([j]+eff[j]) 
-        N.append(str(count))
+          N.append(str(count))
 
-        C=0.0       
-        f.write("%f  %d\n" %(C, numofpot))
-        f.write(' '.join(N)+ '\n') 
-        for val in data:
+          C=0.0       
+          f.write("%f  %d\n" %(C, numofpot))
+          f.write(' '.join(N)+ '\n') 
+          for val in data:
             f.write(str(val[0]) +' ')
             S= list(map(str, val[1]))
             f.write(' '.join(S) + '\n')
 
-        f.write(" } \n } \n } \n")
+          f.write(" } \n } \n } \n")
     f.close() 
     return 
 ###########################################################
