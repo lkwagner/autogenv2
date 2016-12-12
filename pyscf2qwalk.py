@@ -88,7 +88,9 @@ def print_sys(mol, f):
     f.write('}\n')
 
     # write pseudopotential 
-    for i in range(len(coords)):
+    if mol.ecp != {}:
+      for i in range(len(coords)):
+        print(mol.ecp, symbols[i])
         ecp =  gto.basis.load_ecp(mol.ecp,symbols[i])
         f.write('''PSEUDO { \n %s \nAIP %d \nBASIS 
         { \n%s \nRGAUSSIAN \nOLDQMC {\n  ''' 
