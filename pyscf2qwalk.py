@@ -36,14 +36,16 @@ def print_orb(mol,m,f):
            'dz^2':0.5*math.sqrt(5)*snorm,
            'dxz':math.sqrt(15)*snorm,
            'dx2-y2':0.5*math.sqrt(15)*snorm,
-           'fy^3':1., 
-           'fxyz':1.,
-           'fyz^2':1.,
-           'fz^3':1.,
-           'fxz^2':1.,
-           'fzx^2':1.,
-           'fx^3':1. }
-    print(gto.mole.cart2sph(2))
+           'fy^3':math.sqrt(35./(32*math.pi)), 
+           'fxyz':math.sqrt(105./(4*math.pi)),
+           'fyz^2':math.sqrt(21./(32*math.pi)),
+           'fz^3':math.sqrt(7./(16*math.pi)),
+           'fxz^2':math.sqrt(21./(32*math.pi)),
+           'fzx^2':math.sqrt(105./(16.*math.pi)),
+           'fx^3':math.sqrt(35./(32*math.pi))}
+
+    #Can get these normalizations using this function.
+    print(gto.mole.cart2sph(3))
     aosym=[]
     for i in gto.mole.spheric_labels(mol):
       aosym.append(i.split()[2][1:])
@@ -65,7 +67,7 @@ def print_orb(mol,m,f):
 
 def print_basis(mol, f):
     aos_atom= mol.offset_nr_by_atom()
-    mom_to_letter ={0:'s', 1:'p', 2:'5D_siesta', 3:'f'}
+    mom_to_letter ={0:'s', 1:'p', 2:'5D_siesta', 3:'7F_siesta'}
     already_written=[]
     for at, li  in enumerate(aos_atom):
       sym=mol.atom_pure_symbol(at)
