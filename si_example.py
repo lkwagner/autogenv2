@@ -1,24 +1,27 @@
-import submission_tools,CrystalWriter,CrystalRun,PropertiesRun
-import local
+import submitter,Manager
+import CrystalWriter,CrystalRunner,CrystalReader
+import PropertiesRunner,PropertiesReader
 import os,json
 
 
-setup={'id':'si',
-        'job_record':submission_tools.JobRecord()
-      }
-setup['crystal']=CrystalWriter.CrystalWriter(open("si.cif").read() )
+setup={'id':'si'}
+setup['crystal']=CrystalWriter.CrystalWriter(cif=open("si.cif").read())
+setup['crystal'].set_options({
+    'xml_name':"../BFD_Library.xml",
+    'kmesh':[2,2,2],
+    'basis_params':[0.3,1,3],
+    'tolinteg':[8,8,8,8,16],
+    'spin_polarized':False,
+    'dftgrid':'LGRID'
+  })
 
-setup['crystal'].set_options( {'xml_name':"../BFD_Library.xml",
-                               'kmesh':[2,2,2],
-                               'basis_params':[0.3,1,3],
-                               'tolinteg':[8,8,8,8,16],
-                               'spin_polarized':False,
-                               'dftgrid':'LGRID'
-                               }
-                               ) 
-
-runcrys=CrystalRun.CrystalRun(local.LocalCrystal(),setup['crystal'])
-runprop=PropertiesRun.PropertiesRun(setup['crystal'])
+testjob = Manager.CrystalManager(
+    writer=setup['crystal'],
+    crys_reader=CrystalReader.CrystalReader(),
+    crys_runner=CrystalRunner.LocalCrystalRunner(),
+    prop_reader=PropertiesReader.PropertiesReader(),
+    prop_runner=PropertiesRunner.LocalPropertiesRunner()
+  )
 
 currwd=os.getcwd()
 d=setup['id']
@@ -28,10 +31,6 @@ except:
   pass
 os.chdir(d)
 
-runcrys.run(setup['job_record'])
-runprop.run(setup['job_record'])
+testjob.update_status()
 
-print(runcrys.check_status(setup['job_record']))
-
-setup['crystal_output']=runcrys.output()
 
