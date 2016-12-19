@@ -173,14 +173,19 @@ class CrystalWriter:
 
   #-----------------------------------------------
   def is_consistent(self,other):
+    skipkeys = ['completed']
     for otherkey in other.__dict__.keys():
       if otherkey not in self.__dict__.keys():
+        print('other is missing a key.')
         return False
     for selfkey in self.__dict__.keys():
       if selfkey not in other.__dict__.keys():
+        print('self is missing a key.')
         return False
     for key in self.__dict__.keys():
-      if self.__dict__[key]!=other.__dict__[key]:
+      if self.__dict__[key]!=other.__dict__[key] and key not in skipkeys:
+        print("Different keys [{}] = \n{}\n or \n {}"\
+            .format(key,self.__dict__[key],other.__dict__[key]))
         return False
     return True
 
@@ -378,12 +383,3 @@ class CrystalWriter:
         r_to_n = non_local_component.find('./r_to_n').text
         strlist.append(' '.join([exp_gaus, coeff_gaus,r_to_n]))
     return strlist
-
-
-if __name__=="__main__":
-  cwriter=CrystalWriter(open("si.cif").read())
-  import json,jsontools
-  with open("tmp.json",'w') as f:
-    f.write(json.dumps(cwriter.__dict__,cls=jsontools.NumpyAwareJSONEncoder))
-  pwriter=PropertiesWriter()
-  print(pwriter.properties_input())

@@ -40,7 +40,7 @@ class CrystalManager:
     if self.creader.completed and self.preader.completed:
       self.completed=True
 
-  def check_consistent(self,other):
+  def is_consistent(self,other):
     # This documents what needs to be checked.
     return self.writer.is_consistent(other.writer)
 

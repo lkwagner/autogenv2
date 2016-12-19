@@ -27,7 +27,7 @@ class JobEnsemble:
         with open(job.picklefn,'rb') as inpf:
           rec=pkl.load(inpf)
         if not job.is_consistent(rec):
-          raise NotImplementedError
+          raise NotImplementedError("Job not consistent.")
       else: # Nothing done yet. Record starts as plan.
         rec=deepcopy(job)
 
