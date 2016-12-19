@@ -48,6 +48,8 @@ class CrystalWriter:
     self.restart=False
     self.completed=False
     
+  #-----------------------------------------------
+    
   def set_struct_fromcif(self,cifstr):
     self.cif=cifstr
     self.struct=CifParser.from_string(cif).get_structures(primitive=self.primitive)[0].as_dict()

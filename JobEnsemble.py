@@ -12,9 +12,11 @@ class JobEnsemble:
     # Could have this read in a plan pickle from a filename instead.
     self.plan=joblist
 
+  #----------------------------------------------
   def addjob(self,job):
     self.plan.append(job)
-
+    
+  #----------------------------------------------
   def nextstep(self):
     for job in self.plan:
       print(" ### jobid %s"%job.jobid)
