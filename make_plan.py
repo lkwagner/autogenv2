@@ -4,7 +4,7 @@ import pickle as pkl
 from copy import deepcopy
 
 dft_opts={
-    'xml_name':'/home/brian/programs/autogenv2/BFD_Library.xml',
+    'xml_name':'BFD_Library.xml',
     'basis_params':[0.2,0,3],
     'cutoff':0.0,
     'dftgrid':'LGRID',
