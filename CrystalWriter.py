@@ -106,7 +106,6 @@ class CrystalWriter:
       self.dftgrid,
       "END",
       "SCFDIR",
-      "SAVEWF",
       "BIPOSIZE",
       str(self.biposize),
       "EXCHSIZE",
@@ -175,7 +174,7 @@ class CrystalWriter:
 
   #-----------------------------------------------
   def is_consistent(self,other):
-    skipkeys = ['completed']
+    skipkeys = ['completed','biposize','exchsize']
     for otherkey in other.__dict__.keys():
       if otherkey not in self.__dict__.keys():
         print('other is missing a key.')
