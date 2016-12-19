@@ -47,6 +47,6 @@ EnsembleRun will then loop through jobs and:
  * For each element in the job, compare plan to status. This is where discrepancies and changes in the plan get resolved.
  * Determine what the next step in the job is and execute it
 
+# Examples
 
-
-
+`make_plan.py` will make a sample plan with h2 and n2, and `run_plan.py` will run any plan.
