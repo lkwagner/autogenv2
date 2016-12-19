@@ -50,3 +50,15 @@ EnsembleRun will then loop through jobs and:
 # Examples
 
 `make_plan.py` will make a sample plan with h2 and n2, and `run_plan.py` will run any plan.
+
+# To Do/ideas
+Anyone who uses autogen is welcome to comment here.
+
+To Do:
+ * QWalk runs.
+ * Make it use a queuing system/run parallel.
+ * Export to database format.
+ * Bundling.
+
+Ideas:
+ * Instead of `self.completed` as a T/F flag, have `self.status` as an informative string.
