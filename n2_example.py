@@ -30,6 +30,6 @@ except:
   pass
 os.chdir(d)
 
-testjob.update_status()
+testjob.nextstep()
 
 

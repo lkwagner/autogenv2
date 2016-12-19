@@ -22,18 +22,17 @@ class LocalCrystalRunner(LocalSubmitter):
     return 'ok'
 
   #-------------------------------------------------      
-  def run(self,cryinpfn):
+  def run(self,crysinpfn,crysoutfn):
     """ Submits executibles using _qsub. """
     
-    exe = self.BIN+"crystal < %s"%cryinpfn
+    exe = self.BIN+"crystal < %s"%crysinpfn
 
-    prep_commands=["cp %s INPUT"%cryinpfn]
+    prep_commands=["cp %s INPUT"%crysinpfn]
     # Not needed for nonparallel.
     #final_commands = ["rm *.pe[0-9]","rm *.pe[0-9][0-9]"]
     final_commands = []
 
-    outfn = cryinpfn+".o"
     loc = os.getcwd()
 
-    qids=self._qsub(exe,prep_commands,final_commands,self.jobname,outfn,loc)
+    qids=self._qsub(exe,prep_commands,final_commands,self.jobname,crysoutfn,loc)
     self._queueid=qids

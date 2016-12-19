@@ -20,7 +20,7 @@ class LocalPropertiesRunner(LocalSubmitter):
     return 'ok'
 
   #-------------------------------------------------      
-  def run(self,propinpfn):
+  def run(self,propinpfn,propoutfn):
     """ Submits executibles using _qsub. """
     
     exe = self.BIN+"properties < %s"%propinpfn
@@ -30,8 +30,7 @@ class LocalPropertiesRunner(LocalSubmitter):
     prep_commands = []
     final_commands = []
 
-    outfn = propinpfn+".o"
     loc = os.getcwd()
 
-    qids=self._qsub(exe,prep_commands,final_commands,self.jobname,outfn,loc)
+    qids=self._qsub(exe,prep_commands,final_commands,self.jobname,propoutfn,loc)
     self._queueid=qids

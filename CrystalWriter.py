@@ -46,6 +46,7 @@ class CrystalWriter:
     self.cryapi=False
 
     self.restart=False
+    self.completed=False
     
   def set_struct_fromcif(self,cifstr):
     self.cif=cifstr
@@ -145,6 +146,20 @@ class CrystalWriter:
       outlines+=["67 999"]
     outlines+=["END"]
     return "\n".join(outlines)
+
+  #-----------------------------------------------
+  def write_crys_input(self,filename):
+    outstr=self.crystal_input()
+    with open(filename,'w') as outf:
+      outf.write(outstr)
+    self.completed=True
+
+  #-----------------------------------------------
+  def write_prop_input(self,filename):
+    outstr=self.properties_input()
+    with open(filename,'w') as outf:
+      outf.write(outstr)
+    self.completed=True
 
   #-----------------------------------------------
   def check_status(self):
