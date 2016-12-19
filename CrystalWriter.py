@@ -58,7 +58,7 @@ class CrystalWriter:
     self.cryapi=False
 
     self.restart=False
-    
+    self.completed=False
 
   #-----------------------------------------------
 
@@ -150,6 +150,20 @@ class CrystalWriter:
     return "\n".join(outlines)
 
   #-----------------------------------------------
+  def write_crys_input(self,filename):
+    outstr=self.crystal_input()
+    with open(filename,'w') as outf:
+      outf.write(outstr)
+    self.completed=True
+
+  #-----------------------------------------------
+  def write_prop_input(self,filename):
+    outstr=self.properties_input()
+    with open(filename,'w') as outf:
+      outf.write(outstr)
+    self.completed=True
+
+  #-----------------------------------------------
   def check_status(self):
     # Could add consistancy check here.
     status='unknown'
@@ -158,6 +172,20 @@ class CrystalWriter:
     else:
       status='not_started'
     return status
+
+  #-----------------------------------------------
+  def is_consistent(self,other):
+    consistent=True
+    for otherkey in other.__dict__.keys():
+      if otherkey not in self.__dict__.keys():
+        consistent=False
+    for selfkey in self.__dict__.keys():
+      if selfkey not in other.__dict__.keys():
+        consistent=False
+    for selfkey in self.__dict__.keys():
+      if self.__dict__[selfkey]!=other.__dict__[selfkey]:
+        consistent=False
+    return consistent
 
 ########################################################
   def geom(self):

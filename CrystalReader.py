@@ -8,7 +8,7 @@ class CrystalReader:
 #-------------------------------------------------      
   def collect(self,outfilename):
     """ Collect results from output."""
-    if not self.completed and os.path.isfile(outfilename):
+    if os.path.isfile(outfilename):
       f = open(outfilename, 'r')
       lines = f.readlines()
       for li,line in enumerate(lines):
@@ -21,8 +21,10 @@ class CrystalReader:
             moms += map(float,lines[li+shift].split())
             shift += 1
           self.out['mag_moments']=moms
-    self.completed=True
-    return 'ok'
+      self.completed=True
+    else:
+      # Just to be sure/clear...
+      self.completed=False
       
 #-------------------------------------------------      
   # This can be made more efficient if it's a problem: searches whole file for
