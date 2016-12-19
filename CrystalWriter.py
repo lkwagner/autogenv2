@@ -11,23 +11,11 @@ import numpy as np
 import os
 
 class CrystalWriter:
-  def __init__(self,cif=None,xyz=None,primitive=True):
-    assert cif!=None or xyz!=None, "Need to specify cif or xyz input."
-    assert cif==None or xyz==None, "Can't specify both cif and xyz."
+  def __init__(self,primitive=True):
     self.primitive=primitive
     #Geometry input.
-    self.cif=cif
-    self.xyz=xyz
+    self.struct=None
 
-    #we want to save the dict representation because it's easier to store to JSON 
-    #later
-    if self.cif!=None:
-      self.struct=CifParser.from_string(cif).get_structures(primitive=self.primitive)[0].as_dict()
-      self.supercell=np.identity(3)
-      self.boundary="3d"
-    elif self.xyz!=None:
-      self.struct=XYZ.from_string(xyz).molecule.as_dict()
-      self.boundary="0d"
     #Electron model
     self.spin_polarized=True    
     self.xml_name="BFD_Library.xml"
@@ -59,6 +47,16 @@ class CrystalWriter:
 
     self.restart=False
     
+  def set_struct_fromcif(self,cifstr):
+    self.cif=cifstr
+    self.struct=CifParser.from_string(cif).get_structures(primitive=self.primitive)[0].as_dict()
+    self.supercell=np.identity(3)
+    self.boundary="3d"
+
+  def set_struct_fromxyz(self,xyzstr):
+    self.xyz=xyzstr
+    self.struct=XYZ.from_string(xyzstr).molecule.as_dict()
+    self.boundary="0d"
 
   #-----------------------------------------------
 
@@ -69,12 +67,11 @@ class CrystalWriter:
         print("Error:",k,"not a keyword for CrystalWriter")
         raise InputError
       selfdict[k]=d[k]
-      
-      
 
   #-----------------------------------------------
   def crystal_input(self):
 
+    assert self.struct is not None,'Need to set "struct" first.'
     geomlines=self.geom()
     basislines=self.basis_section()
 
@@ -158,6 +155,19 @@ class CrystalWriter:
     else:
       status='not_started'
     return status
+
+  #-----------------------------------------------
+  def is_consistent(self,other):
+    for otherkey in other.__dict__.keys():
+      if otherkey not in self.__dict__.keys():
+        return False
+    for selfkey in self.__dict__.keys():
+      if selfkey not in other.__dict__.keys():
+        return False
+    for key in self.__dict__.keys():
+      if self.__dict__[key]!=other.__dict__[key]:
+        return False
+    return True
 
 ########################################################
   def geom(self):
