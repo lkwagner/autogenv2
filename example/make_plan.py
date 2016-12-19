@@ -1,10 +1,14 @@
+import sys
+sys.path.append("../")
+
 from JobEnsemble import JobEnsemble
 import Job as job
 import pickle as pkl
 from copy import deepcopy
+import os
 
 dft_opts={
-    'xml_name':'BFD_Library.xml',
+    'xml_name':os.getcwd()+'/../BFD_Library.xml',
     'basis_params':[0.2,0,3],
     'cutoff':0.0,
     'dftgrid':'LGRID',
