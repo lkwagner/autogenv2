@@ -13,7 +13,7 @@ class CrystalManager:
     self.propoutfn='prop.in.o'
     self.completed=False
 
-  ####################################
+  #----------------------------------------
   def nextstep(self):
     """ Check write status, then if it's running. If not running check if
     finished. If not finished, attempt to run. """ 
@@ -21,8 +21,6 @@ class CrystalManager:
     # Generate input files.
     if not self.writer.completed:
       with open(self.crysinpfn,'w') as f:
-        # Change: Need to have writer do the writing otherwise how does it *know* that
-        # it's actually done, if it just returns the string to write?
         self.writer.write_crys_input(self.crysinpfn)
       with open(self.propinpfn,'w') as f:
         self.writer.write_prop_input(self.propinpfn)
@@ -44,6 +42,6 @@ class CrystalManager:
     # This documents what needs to be checked.
     return self.writer.is_consistent(other.writer)
 
-  ####################################
+  #----------------------------------------
   def to_json(self):
     raise NotImplementedError

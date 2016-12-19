@@ -48,6 +48,8 @@ class CrystalWriter:
     self.restart=False
     self.completed=False
     
+  #-----------------------------------------------
+    
   def set_struct_fromcif(self,cifstr):
     self.cif=cifstr
     self.struct=CifParser.from_string(cif).get_structures(primitive=self.primitive)[0].as_dict()
@@ -104,7 +106,6 @@ class CrystalWriter:
       self.dftgrid,
       "END",
       "SCFDIR",
-      "SAVEWF",
       "BIPOSIZE",
       str(self.biposize),
       "EXCHSIZE",
@@ -173,7 +174,7 @@ class CrystalWriter:
 
   #-----------------------------------------------
   def is_consistent(self,other):
-    skipkeys = ['completed']
+    skipkeys = ['completed','biposize','exchsize']
     for otherkey in other.__dict__.keys():
       if otherkey not in self.__dict__.keys():
         print('other is missing a key.')

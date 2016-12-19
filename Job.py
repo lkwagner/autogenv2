@@ -5,16 +5,20 @@ from CrystalReader import CrystalReader
 from CrystalRunner import LocalCrystalRunner
 from PropertiesReader import PropertiesReader
 from PropertiesRunner import LocalPropertiesRunner
+
+
+#########################################################
 class Job:
   """ Contains lists DFT and QMC steps in the order they need to be performed.
 
   * One job per directory. 
   * For most users, a child class of this should be used."""
+  
   def __init__(self,jobid,jobplans,managers):
     self.jobid=jobid
     self.managers=managers
     self.picklefn="%s.pickle"%jobid
-
+#---------------------------------------
   def is_consistent(self,other):
     result=True
     if len(other.managers)!=len(self.managers):
@@ -28,14 +32,18 @@ class Job:
         print('You have modified a job.')
         result=False
     return result
+#---------------------------------------
 
   def nextstep(self):
     for manager in self.managers:
       manager.nextstep()
 
+
+##########################################################
 class LocalCrystalDFT(Job):
   """ An example of a Job where it simply calculates a crystal DFT job and
   quits. """
+  
   #TODO sometimes you don't need properties?
   def __init__(self,jobid,struct,crystal_opts,structtype='cif'):
     # May have it automatically detect file type? Probably wouldn't be too hard.
