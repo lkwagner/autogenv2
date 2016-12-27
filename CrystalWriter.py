@@ -52,7 +52,7 @@ class CrystalWriter:
     
   def set_struct_fromcif(self,cifstr):
     self.cif=cifstr
-    self.struct=CifParser.from_string(cif).get_structures(primitive=self.primitive)[0].as_dict()
+    self.struct=CifParser.from_string(self.cif).get_structures(primitive=self.primitive)[0].as_dict()
     self.supercell=np.identity(3)
     self.boundary="3d"
 

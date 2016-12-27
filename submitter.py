@@ -22,7 +22,7 @@ class LocalSubmitter:
   """
   #-------------------------------------------------------
   def _qsub(self,exe,prep_commands=[],final_commands=[],
-      name="",stdout="",loc=""):
+      name="",stdout="runstdout",loc=""):
     """ Helper function for executable submitters. 
     Should work in most cases to simplify code."""
 
@@ -35,9 +35,11 @@ class LocalSubmitter:
 
     outstr = ""
     for c in commands:
-      # Problem: this method doesn't allow you to watch it's progress.
-      outstr+=sub.check_output(c,shell=True).decode()
-    with open(stdout,'w') as outf:
-      outf.write(outstr)
+      print(c)
+      # Problem: this method doesn't allow you to watch its progress.
+      #outstr+=sub.check_output(c,shell=True).decode()
+      sub.call(c,stdout=open(stdout,'w'),shell=True)
+   # with open(stdout,'w') as outf:
+   #   outf.write(outstr)
     return []
       
