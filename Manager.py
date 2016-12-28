@@ -3,7 +3,7 @@
 class CrystalManager:
   """ Internal class managing process of running a DFT job though Crystal.
   Has authority over file names associated with this task."""
-  def __init__(self,writer,crys_reader,crys_runner,prop_reader,prop_runner):
+  def __init__(self,writer,crys_runner,crys_reader,prop_runner,prop_reader):
     self.writer=writer
     self.creader=crys_reader
     self.crunner=crys_runner
@@ -56,6 +56,7 @@ class QWalkfromCrystalManager:
   def __init__(self,convert_runner,convert_checker):
     self.convert_runner=convert_runner
     self.convert_checker=convert_checker
+    
   
   #------------------------------------------------
   def nextstep(self):

@@ -97,10 +97,10 @@ class LocalCrystalQWalk(Job):
     # For this simple case, only one Manager is needed.
     self.managers=[mgmt.CrystalManager(
         cwriter,
-        CrystalReader(),
         LocalCrystalRunner(),
-        PropertiesReader(),
-        LocalPropertiesRunner()
+        CrystalReader(),
+        LocalPropertiesRunner(),
+        PropertiesReader()
       ),
       mgmt.QWalkfromCrystalManager(
         LocalCrystal2QMCRunner(),
