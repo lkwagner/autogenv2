@@ -24,9 +24,9 @@ pbc_opts={
   }
 
 test = JobEnsemble([
-    job.LocalCrystalDFT('h2',open('h2.xyz','r').read(),dft_opts,'xyz'),
-    job.LocalCrystalDFT('n2',open('n2.xyz','r').read(),dft_opts,'xyz'),
-    job.LocalCrystalDFT('si',open('si.cif','r').read(),pbc_opts,'cif')
+    job.LocalCrystalQWalk('h2',open('h2.xyz','r').read(),dft_opts,'xyz'),
+#    job.LocalCrystalDFT('n2',open('n2.xyz','r').read(),dft_opts,'xyz'),
+#    job.LocalCrystalDFT('si',open('si.cif','r').read(),pbc_opts,'cif')
     
   ])
 

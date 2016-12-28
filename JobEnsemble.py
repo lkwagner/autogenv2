@@ -11,6 +11,7 @@ class JobEnsemble:
   def __init__(self,joblist):
     # Could have this read in a plan pickle from a filename instead.
     self.plan=joblist
+    self.executed_plan=[]
 
   #----------------------------------------------
   def addjob(self,job):
@@ -18,6 +19,7 @@ class JobEnsemble:
     
   #----------------------------------------------
   def nextstep(self):
+    self.executed_plan=[]
     for job in self.plan:
       print(" ### jobid %s"%job.jobid)
 
@@ -34,7 +36,14 @@ class JobEnsemble:
         rec=deepcopy(job)
 
       rec.nextstep()
+      self.executed_plan.append(rec)
       with open(rec.picklefn,'wb') as outf:
         pkl.dump(rec,outf)
-
+     
       os.chdir('..')
+
+  #-----------------------------------------------
+  def write_summary(self):
+    
+    for job in self.executed_plan:
+      job.write_summary()

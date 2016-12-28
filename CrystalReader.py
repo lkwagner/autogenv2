@@ -13,7 +13,9 @@ class CrystalReader:
       lines = f.readlines()
       for li,line in enumerate(lines):
         if 'SCF ENDED' in line:
+          print(line)
           self.out['total_energy']=float(line.split()[8])    
+
         elif 'TOTAL ATOMIC SPINS' in line:
           moms = []
           shift = 1
@@ -21,6 +23,7 @@ class CrystalReader:
             moms += map(float,lines[li+shift].split())
             shift += 1
           self.out['mag_moments']=moms
+      print(self.out)
       self.completed=True
     else:
       # Just to be sure/clear...

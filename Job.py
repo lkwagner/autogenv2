@@ -37,6 +37,11 @@ class Job:
   def nextstep(self):
     for manager in self.managers:
       manager.nextstep()
+#---------------------------------------
+  def write_summary(self):
+    for manager in self.managers:
+      manager.write_summary()
+    
 
 
 ##########################################################
@@ -75,8 +80,18 @@ class LocalCrystalDFT(Job):
 
 from Crystal2QMCRunner import LocalCrystal2QMCRunner
 from Crystal2QMCReader import Crystal2QMCReader
+from Variance import VarianceWriter,VarianceReader
+from QWalkRunner import LocalQWalkRunner
 class LocalCrystalQWalk(Job):
-  """ An example of a Job that perfoms a crystal DFT calculation and follows it up with a DMC calculation """
+  """ In this we will perform the following recipe:
+    1) A Crystal calculation. 
+    2) Convert the Crystal calculation to QWalk, form a Slater determinant trial function.
+    3) Run variance optimization on a Jastrow factor for the gamma point.
+    4) Remove OPTIMIZEBASIS from Jastrow, run energy optimization using LINEAR. 
+    5) Run DMC on all k-points, saving configurations to a .trace file.
+    6) Run properties on the .trace file.
+    
+    """
   
   def __init__(self,jobid,struct,crystal_opts,structtype='cif'):
     # May have it automatically detect file type? Probably wouldn't be too hard.
@@ -93,8 +108,9 @@ class LocalCrystalQWalk(Job):
       raise ValueError("structtype not recognized.")
     cwriter.set_options(crystal_opts)
 
-
-    # For this simple case, only one Manager is needed.
+    #TODO We don't currently pass the information from the 
+    #conversion to the runners as far as filenames.
+    #This will require us to change nextstep()
     self.managers=[mgmt.CrystalManager(
         cwriter,
         LocalCrystalRunner(),
@@ -105,6 +121,14 @@ class LocalCrystalQWalk(Job):
       mgmt.QWalkfromCrystalManager(
         LocalCrystal2QMCRunner(),
         Crystal2QMCReader()        
+        ),
+      mgmt.QWalkRunManager(
+        VarianceWriter(),
+        LocalQWalkRunner(),
+        VarianceReader()
         )]
     self.picklefn="%s.pickle"%jobid
+
+    
+    
 

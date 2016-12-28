@@ -18,6 +18,7 @@ class Crystal2QMCReader:
       print(self.out['slaterfiles'])
       print(self.out['orbfiles'])
       self.completed=False
+      raise Error
 
     self.out['basenames']=[x.replace('.sys','') for x in self.out['sysfiles']]
     print(self.out['basenames'])
