@@ -26,9 +26,8 @@ class LocalSubmitter:
     """ Helper function for executable submitters. 
     Should work in most cases to simplify code."""
 
-    if stdout=="": stdout="stdout"
     if loc=="": loc=os.getcwd()
-    if name=="": name=stdout
+    if name=="": name=loc
     header = []
     exeline = exe
     commands = header +  prep_commands + [exeline] + final_commands
@@ -36,10 +35,6 @@ class LocalSubmitter:
     outstr = ""
     for c in commands:
       print(c)
-      # Problem: this method doesn't allow you to watch its progress.
-      #outstr+=sub.check_output(c,shell=True).decode()
       sub.call(c,stdout=open(stdout,'w'),shell=True)
-   # with open(stdout,'w') as outf:
-   #   outf.write(outstr)
     return []
       

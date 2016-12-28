@@ -1,3 +1,5 @@
+
+#######################################################################
 class CrystalManager:
   """ Internal class managing process of running a DFT job though Crystal.
   Has authority over file names associated with this task."""
@@ -45,3 +47,18 @@ class CrystalManager:
   #----------------------------------------
   def to_json(self):
     raise NotImplementedError
+
+#######################################################################
+
+class QWalkfromCrystalManager:
+  """Set up and run a QWalk job from Crystal"""
+  #------------------------------------------------
+  def __init__(self,convert_runner,convert_checker):
+    self.convert_runner=convert_runner
+    self.convert_checker=convert_checker
+  
+  #------------------------------------------------
+  def nextstep(self):
+    if not self.convert_checker.completed:
+      self.convert_runner.run()
+      self.convert_checker.collect()

@@ -41,10 +41,8 @@ class Job:
 
 ##########################################################
 class LocalCrystalDFT(Job):
-  """ An example of a Job where it simply calculates a crystal DFT job and
-  quits. """
+  """ An example of a Job that perfoms a crystal DFT calculation """
   
-  #TODO sometimes you don't need properties?
   def __init__(self,jobid,struct,crystal_opts,structtype='cif'):
     # May have it automatically detect file type? Probably wouldn't be too hard.
     inpcopy=deepcopy(crystal_opts)
@@ -69,5 +67,44 @@ class LocalCrystalDFT(Job):
         PropertiesReader(),
         LocalPropertiesRunner()
       )]
+    self.picklefn="%s.pickle"%jobid
+
+
+
+##########################################################
+
+from Crystal2QMCRunner import LocalCrystal2QMCRunner
+from Crystal2QMCReader import Crystal2QMCReader
+class LocalCrystalQWalk(Job):
+  """ An example of a Job that perfoms a crystal DFT calculation and follows it up with a DMC calculation """
+  
+  def __init__(self,jobid,struct,crystal_opts,structtype='cif'):
+    # May have it automatically detect file type? Probably wouldn't be too hard.
+    inpcopy=deepcopy(crystal_opts)
+    self.jobid=jobid
+
+    #TODO primitive option.
+    cwriter=CrystalWriter()
+    if structtype=='cif':
+      cwriter.set_struct_fromcif(struct)
+    elif structtype=='xyz':
+      cwriter.set_struct_fromxyz(struct)
+    else:
+      raise ValueError("structtype not recognized.")
+    cwriter.set_options(crystal_opts)
+
+
+    # For this simple case, only one Manager is needed.
+    self.managers=[mgmt.CrystalManager(
+        cwriter,
+        CrystalReader(),
+        LocalCrystalRunner(),
+        PropertiesReader(),
+        LocalPropertiesRunner()
+      ),
+      mgmt.QWalkfromCrystalManager(
+        LocalCrystal2QMCRunner(),
+        Crystal2QMCReader()        
+        )]
     self.picklefn="%s.pickle"%jobid
 

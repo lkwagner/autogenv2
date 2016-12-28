@@ -43,7 +43,7 @@ class CrystalWriter:
     self.smear=0.0001
 
     # Use the new crystal2qmc script. This should change soon!
-    self.cryapi=False
+    self.cryapi=True
 
     self.restart=False
     self.completed=False
@@ -140,7 +140,7 @@ class CrystalWriter:
     if self.boundary=='3d':
       outlines+=[ "0 %i"%self.gmesh,
                   " ".join(map(str,self.kmesh))]
-    outlines+=["1 1"]
+    outlines+=["1 0"]
     if self.cryapi:
       outlines+=["CRYAPI_OUT"]
     else:
