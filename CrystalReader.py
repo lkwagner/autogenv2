@@ -5,6 +5,8 @@ class CrystalReader:
   def __init__(self):
     self.completed=False
     self.out={}
+
+    
 #-------------------------------------------------      
   def collect(self,outfilename):
     """ Collect results from output."""
@@ -28,7 +30,13 @@ class CrystalReader:
     else:
       # Just to be sure/clear...
       self.completed=False
-      
+
+
+#-------------------------------------------------      
+  def write_summary(self):
+    print("Crystal total energy",self.out['total_energy'])
+
+
 #-------------------------------------------------      
   # This can be made more efficient if it's a problem: searches whole file for
   # each query.
@@ -74,6 +82,7 @@ class CrystalReader:
     
     print("CrystalRunner: Not finished.")
     return "not_finished"
+  
   
 #-------------------------------------------------      
   def check_status(self,outfilename):

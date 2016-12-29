@@ -50,7 +50,7 @@ class CrystalManager:
 
   #----------------------------------------
   def write_summary(self):
-    print("Crystal energy",self.creader.out)
+    self.creader.write_summary()
 
 #######################################################################
 

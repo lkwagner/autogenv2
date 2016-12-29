@@ -13,6 +13,13 @@ Goal: Provide tools that make it easy to manage and store QWalk runs.
 
 There may be some helper objects below this level.
 
+| Object | Functions                                               | Members                       | Notes                                                                                                                                                              |
+|--------|---------------------------------------------------------|-------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Writer | __init__, set\_options(dictionary), is\_consistent(other) |                               | Write the input files and store the options for the calculation. Will typically have some version of write() or qwalk\_input, but we do not have a standard so far. |
+| Reader | __init__, collect(list of outputfiles), write\_summary() | output: dictionary of outputs | Analyze the output and store the results of the calculation in its member variable output.                                                                         |
+| Runner | __init__, check\_status(), run(inpfn,outfn)              | queue id                      | Execute the job, possibly using a queue system, and report on its completion.                                                                                      |
+
+
 ## Level 2: Managing completion of a job element
 
  * The Manager object consists of a Writer, Reader, and Runner. Its role is to complete the job element according to the requirements set out in Reader.
