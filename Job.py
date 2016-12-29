@@ -2,7 +2,7 @@ import Manager as mgmt
 from copy import deepcopy
 from CrystalWriter import CrystalWriter
 from CrystalReader import CrystalReader
-from CrystalRunner import LocalCrystalRunner
+from CrystalRunner import LocalCrystalRunner,CrystalRunnerPBS
 from PropertiesReader import PropertiesReader
 from PropertiesRunner import LocalPropertiesRunner
 
@@ -96,12 +96,12 @@ class LocalCrystalQWalk(Job):
     
     """
   
-  def __init__(self,jobid,struct,crystal_opts,structtype='cif'):
+  def __init__(self,jobid,struct,crystal_opts,structtype='cif',
+               crystalrunner=CrystalRunnerPBS() ):
     # May have it automatically detect file type? Probably wouldn't be too hard.
     inpcopy=deepcopy(crystal_opts)
     self.jobid=jobid
 
-    #TODO primitive option.
     cwriter=CrystalWriter()
     if structtype=='cif':
       cwriter.set_struct_fromcif(struct)
@@ -116,7 +116,7 @@ class LocalCrystalQWalk(Job):
     #This will require us to change nextstep()
     self.managers=[mgmt.CrystalManager(
         cwriter,
-        LocalCrystalRunner(),
+        crystalrunner,
         CrystalReader(),
         LocalPropertiesRunner(),
         PropertiesReader()
