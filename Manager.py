@@ -39,8 +39,6 @@ class CrystalManager:
 
     if self.creader.completed and self.preader.completed:
       self.completed=True
-    print("summary")
-    self.write_summary()
   #----------------------------------------
   def is_consistent(self,other):
     # This documents what needs to be checked.
