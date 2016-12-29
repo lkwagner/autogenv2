@@ -27,11 +27,17 @@ class JobEnsemble:
         os.mkdir(job.jobid)
       os.chdir(job.jobid)
 
+      
       if os.path.exists(job.picklefn):
         with open(job.picklefn,'rb') as inpf:
           rec=pkl.load(inpf)
         if not job.is_consistent(rec):
           raise NotImplementedError("Job not consistent.")
+        #TODO: Here we should update the options of the job
+        #in case the plan changed in a consistent way.
+        #For example, maybe it should say 
+        #rec.update_options(job)
+
       else: # Nothing done yet. Record starts as plan.
         rec=deepcopy(job)
 

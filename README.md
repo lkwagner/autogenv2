@@ -11,7 +11,6 @@ Goal: Provide tools that make it easy to manage and store QWalk runs.
  * The Reader object can read the output of a run and report on its completion or lack thereof. This object defines what a successful run is. 
  * The Runner object executes a set of runs for a given code on a given computer system.
 
-There may be some helper objects below this level.
 
 | Object | Functions                                               | Members                       | Notes                                                                                                                                                              |
 |--------|---------------------------------------------------------|-------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -20,19 +19,40 @@ There may be some helper objects below this level.
 | Runner | __init__, check\_status(), run(inpfn,outfn)              | queue id                      | Execute the job, possibly using a queue system, and report on its completion.                                                                                      |
 
 
-## Level 2: Managing completion of a job element
+## Level 2: Manager
 
- * The Manager object consists of a Writer, Reader, and Runner. Its role is to complete the job element according to the requirements set out in Reader.
+The Manager object consists of at least one Writer, Reader, and Runner. The Manager owns the directory for the time of its execution, that is, until it says it's done.
+A manager may need multiple nextstep() calls before it's done. For example, one might want to run crystal and then properties using a queue to run both. 
 
-The Manager owns the directory for the time of its execution, that is, until it says it's done.
+Functions
+ * __init__: Will be different for different managers, since they need different input objects.
+ * nextstep() : Attempt to complete the next step in the calculation.
+ * is\_consistent(other) : Check that the plan in other is consistent with the current plan.
+ * write\_summary() : Print out some information about the calculation
 
-*[Comment: Maybe this should be ElementManager?]*
-
-## Level 3: Job ensemble
+## Level 3: Job (or Job Recipe)
  
-Each Manager defines a job element, and a sequence of managers defines a job. A job ensemble is a sequence of jobs. 
+A Job manages a sequence of managers.
+These objects define a simulation protocol. 
+For example, one might perform:
+ * CRYSTAL DFT calculation
+ * convert to QWalk format
+ * variance optimize a Jastrow
+ * perform diffusion Monte Carlo. 
+The Job manages the Managers to attain this recipe. In this example, it would have four Managers to complete each of the steps, and coordinate the inputs and outputs to make sure that the QWalk converter knows where the CRYSTAL outputs are, etc.
 
-*[Comment: we may wish to define a Job object that formalizes this and comes with an 'id' variable]*
+The Job also has the responsibility of converting the raw data of the various managers into a coherent data structure. 
+
+Functions:
+ * __init__: options are set here. 
+ * nextstep() : run the next step
+ * status() : return the current status of the calculation
+  
+
+## Level 4: Job Ensemble
+
+A job ensemble is a sequence of jobs. It manages the directory structure and recovering state. 
+
 
 ## Storage
 
@@ -43,7 +63,7 @@ Assuming that we coded the Managers, Writers, Readers, and Runners correctly, th
 The above objects can be used in a program to do whatever run you'd like to do. However, typically there are some standard management tasks that can be handled with a job management program. 
 
 
-## EnsembleRun
+## EnsembleRun (run\_plan.py)
 
  * Input: plan.pickle *[Comment: should we use pickle or another storage mechanism here?]* This file should have a sequence of jobs
 
@@ -56,13 +76,12 @@ EnsembleRun will then loop through jobs and:
 
 # Examples
 
-`make_plan.py` will make a sample plan with h2 and n2, and `run_plan.py` will run any plan.
+`make_plan.py` will make a sample plan, and `run_plan.py` will run any plan and report on the results.
 
 # To Do/ideas
-Anyone who uses autogen is welcome to comment here.
 
 To Do:
- * QWalk runs.
+ * QWalk runs of LINEAR, DMC, and POSTPROCESS
  * Make it use a queuing system/run parallel.
  * Export to database format.
  * Bundling.
