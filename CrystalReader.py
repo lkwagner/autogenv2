@@ -62,7 +62,7 @@ class CrystalReader:
         print("CrystalRunner: Too many cycles.")
         return "too_many_cycles"
       else: # What else can happen?
-        print("CrystalRunner: Finished, but unknown state.")
+        print("CrystalReader: Finished, but unknown state.")
         return "finished"
       
     detots = [float(line.split()[5]) for line in outlines if "DETOT" in line]
@@ -85,7 +85,7 @@ class CrystalReader:
   
   
 #-------------------------------------------------      
-  def check_status(self,outfilename):
+  def status(self,outfilename):
     """ Decide status of crystal run. """
 
     status=self.check_outputfile(outfilename)

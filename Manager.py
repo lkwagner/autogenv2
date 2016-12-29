@@ -1,3 +1,25 @@
+import os
+def resolve_status(runner,reader,outfile):
+  #Check if the reader is done
+  if reader.completed:
+    return 'done'
+
+  #Check if the job is in the queue
+  # or running. If so, we just return that.
+  currstat=runner.check_status()
+  print("Current status:",currstat)
+  if currstat=='running':
+    return currstat
+  
+  #Now we are in a state where either there was an error,
+  #the job hasn't been run, or we haven't collected the results
+  if not os.path.exists(outfile):
+    return 'not_started'
+
+  #We are in an error state or we haven't collected 
+  #the results. 
+  return "ready_for_analysis"
+  
 
 #######################################################################
 class CrystalManager:
@@ -27,10 +49,20 @@ class CrystalManager:
       with open(self.propinpfn,'w') as f:
         self.writer.write_prop_input(self.propinpfn)
 
-    if not self.creader.completed:
+
+    #Check on the CRYSTAL run
+    status=resolve_status(self.crunner,self.creader,self.crysoutfn)
+    
+    print("status",status)
+    if status=="running":
+      return
+    elif status=="not_started":
       self.crunner.run(self.crysinpfn,self.crysoutfn)
+      return
+    elif status=="ready_for_analysis":
+      #This is where we (eventually) do error correction and resubmits
       self.creader.collect(self.crysoutfn)
-    print("Crystal done: ",self.creader.completed)
+
 
     if not self.preader.completed:
       self.prunner.run(self.propinpfn,self.propoutfn)
@@ -51,6 +83,13 @@ class CrystalManager:
   #----------------------------------------
   def write_summary(self):
     self.creader.write_summary()
+    
+  #----------------------------------------
+  def status(self):
+    if self.completed:
+      return 'ok'
+    else:
+      return 'not_finished'
 
 #######################################################################
 
@@ -76,6 +115,14 @@ class QWalkfromCrystalManager:
 
   def write_summary(self):
     print("K-points",self.convert_checker.out)
+
+  #----------------------------------------
+  def status(self):
+    if self.convert_checker.completed:
+      return 'ok'
+    else:
+      return 'not_finished'
+    
       
 
 #######################################################################
@@ -97,14 +144,30 @@ class QWalkRunManager:
   def nextstep(self):
     if not self.writer.completed:
       self.infiles,self.outfiles=self.writer.qwalk_input()
-
     
-    if not self.reader.completed:
+    status=resolve_status(self.runner,self.reader,self.outfiles[0])
+    
+    print("status",status)
+    if status=="running":
+      return
+    elif status=="not_started":
       self.runner.run(self.infiles,self.outfiles)
+      return
+    elif status=="ready_for_analysis":
+      #This is where we (eventually) do error correction and resubmits
       self.reader.collect(self.outfiles)
       
   #------------------------------------------------
 
   def write_summary(self):
     self.reader.write_summary()
+    
+
+  #----------------------------------------
+  def status(self):
+    if self.reader.completed:
+      return 'ok'
+    else:
+      return 'not_finished'
+    
     

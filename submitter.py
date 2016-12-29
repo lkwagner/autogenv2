@@ -37,4 +37,22 @@ class LocalSubmitter:
       print(c)
       sub.call(c,stdout=open(stdout,'w'),shell=True)
     return []
+
+#-------------------------------------------------------
+
+def check_PBS_status(queueid):
+  """Utility function to determine the status of a PBS job."""
+  try:
+    qstat = sub.check_output(
+        "qstat %s"%queueid, stderr=sub.STDOUT, shell=True
+      ).decode().split('\n')[-2].split()[4]
+  except sub.CalledProcessError:
+    return "unknown"
+  if qstat == "R" or qstat == "Q":
+    return "running"
+  if qstat == "C" or qstat == "E":
+    return "finished"
+  return status
+  
+#-------------------------------------------------------
       

@@ -39,10 +39,13 @@ class Job:
     #prevent moving to the next manager if one isn't done.
     for manager in self.managers:
       manager.nextstep()
+      if manager.status()!='ok':
+        break
 #---------------------------------------
   def write_summary(self):
     for manager in self.managers:
-      manager.write_summary()
+      if manager.status()=='ok':
+        manager.write_summary()
     
 
 
@@ -83,7 +86,7 @@ class LocalCrystalDFT(Job):
 from Crystal2QMCRunner import LocalCrystal2QMCRunner
 from Crystal2QMCReader import Crystal2QMCReader
 from Variance import VarianceWriter,VarianceReader
-from QWalkRunner import LocalQWalkRunner
+from QWalkRunner import LocalQWalkRunner,QWalkRunnerPBS
 
 class LocalCrystalQWalk(Job):
   """ In this we will perform the following recipe:
@@ -127,7 +130,7 @@ class LocalCrystalQWalk(Job):
         ),
       mgmt.QWalkRunManager(
         VarianceWriter(),
-        LocalQWalkRunner(),
+        QWalkRunnerPBS(np=6),
         VarianceReader()
         )]
     self.picklefn="%s.pickle"%jobid

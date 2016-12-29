@@ -3,6 +3,7 @@ import os
 import numpy as np
 import subprocess as sub
 import shutil
+import submitter
 from submitter import LocalSubmitter
 
 ####################################################
@@ -60,23 +61,18 @@ class CrystalRunnerPBS:
 
   #-------------------------------------
   def check_status(self):
-    try:
-      qstat = sub.check_output(
-          "qstat %s"%self.queueid, stderr=sub.STDOUT, shell=True
-        ).decode().split('\n')[-2].split()[4]
-    except sub.CalledProcessError:
-      return "unknown"
-    if qstat == "R" or qstat == "Q":
-      return "running"
-    if qstat == "C" or qstat == "E":
-      return "finished"
-    return status
+    return submitter.check_PBS_status(self.queueid)
   #-------------------------------------
 
   def run(self,crysinpfn,crysoutfn):
-    exe=self.BIN+"Pcrystal"
+    #just running in serial for now
+    #because I haven't gotten Pcrystal compiled for 
+    #hawk yet.
+    exe=self.BIN+"crystal"
     jobout=crysinpfn+".jobout"
     np_tot=self.np*self.nn
+ #"mpirun -np %i %s > %s\n"%(np_tot,exe,crysoutfn) +
+    
     qsub="#PBS -q %s \n"%self.queue +\
          "#PBS -l nodes=%i:ppn=%i\n"%(self.nn,self.np) +\
          "#PBS -l walltime=%s\n"%self.walltime +\
@@ -86,7 +82,7 @@ class CrystalRunnerPBS:
          self.prefix+"\n" +\
          "cd ${PBS_O_WORKDIR}\n" +\
          "cp %s INPUT\n"%(crysinpfn) +\
-         "mpirun -np %i %s > %s\n"%(np_tot,exe,crysoutfn) +\
+         "%s < %s > %s \n"%(exe,crysinpfn,crysoutfn) +\
          self.postfix
     qsubfile=crysinpfn+".qsub"
     with open(qsubfile,'w') as f:
