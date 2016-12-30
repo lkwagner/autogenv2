@@ -54,7 +54,7 @@ class CrystalManager:
     #Check on the CRYSTAL run
     status=resolve_status(self.crunner,self.creader,[self.crysoutfn])
     
-    print("status",status)
+    print("Crystal status",status)
     if status=="running":
       return
     elif status=="not_started":
@@ -115,7 +115,7 @@ class QWalkfromCrystalManager:
   #------------------------------------------------
 
   def write_summary(self):
-    print("K-points",self.convert_checker.out)
+    print("K-points",len(self.convert_checker.out['basenames']))
 
   #----------------------------------------
   def status(self):
@@ -148,7 +148,7 @@ class QWalkRunManager:
     
     status=resolve_status(self.runner,self.reader,self.outfiles)
     
-    print("status",status)
+    print("QWalk status",status)
     if status=="running":
       return
     elif status=="not_started":

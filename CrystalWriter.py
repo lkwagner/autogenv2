@@ -53,8 +53,9 @@ class CrystalWriter:
   def set_struct_fromcif(self,cifstr):
     self.cif=cifstr
     self.struct=CifParser.from_string(self.cif).get_structures(primitive=self.primitive)[0].as_dict()
-    self.supercell=np.identity(3)
+    self.supercell= [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]   #np.identity(3).to_list()
     self.boundary="3d"
+  #-----------------------------------------------
 
   def set_struct_fromxyz(self,xyzstr):
     self.xyz=xyzstr
@@ -175,19 +176,32 @@ class CrystalWriter:
   #-----------------------------------------------
   def is_consistent(self,other):
     skipkeys = ['completed','biposize','exchsize']
+    
     for otherkey in other.__dict__.keys():
       if otherkey not in self.__dict__.keys():
         print('other is missing a key.')
         return False
+
     for selfkey in self.__dict__.keys():
       if selfkey not in other.__dict__.keys():
         print('self is missing a key.')
         return False
+
+    #Compare the 
     for key in self.__dict__.keys():
-      if self.__dict__[key]!=other.__dict__[key] and key not in skipkeys:
-        print("Different keys [{}] = \n{}\n or \n {}"\
+      if key in skipkeys:
+        equal=True
+      else: 
+        if key=='supercell':
+          equal=(self.__dict__[key]==other.__dict__[key]).all()
+        else:
+          equal=self.__dict__[key]==other.__dict__[key] 
+
+      if not equal:
+        print("Different keys [{}] = \n{}\n or \n{}"\
             .format(key,self.__dict__[key],other.__dict__[key]))
         return False
+      
     return True
 
 ########################################################
@@ -199,6 +213,7 @@ class CrystalWriter:
     elif self.boundary=='0d': 
       return self.geom0d()
     else:
+      print("Weird value of self.boundary",self.boundary)
       quit() # This shouldn't happen.
 
 ########################################################
