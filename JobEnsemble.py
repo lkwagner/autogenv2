@@ -50,6 +50,12 @@ class JobEnsemble:
 
   #-----------------------------------------------
   def write_summary(self):
-    
     for job in self.executed_plan:
       job.write_summary()
+
+  #-----------------------------------------------
+  def generate_report(self):
+    ret=[]
+    for job in self.executed_plan:
+      ret.append(job.generate_report())
+    return ret

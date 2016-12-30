@@ -52,17 +52,22 @@ class CrystalManager:
 
 
     #Check on the CRYSTAL run
-    status=resolve_status(self.crunner,self.creader,[self.crysoutfn])
+    while True:
+      status=resolve_status(self.crunner,self.creader,[self.crysoutfn])
     
-    print("Crystal status",status)
-    if status=="running":
-      return
-    elif status=="not_started":
-      self.crunner.run(self.crysinpfn,self.crysoutfn)
-      return
-    elif status=="ready_for_analysis":
-      #This is where we (eventually) do error correction and resubmits
-      self.creader.collect(self.crysoutfn)
+      print("Crystal status",status)
+      if status=="running":
+        return
+      elif status=="not_started":
+        self.crunner.run(self.crysinpfn,self.crysoutfn)
+      elif status=="ready_for_analysis":
+        #This is where we (eventually) do error correction and resubmits
+        self.creader.collect(self.crysoutfn)
+        break
+      elif status=='done':
+        break
+      else:
+        return
 
 
     if not self.preader.completed:
@@ -145,17 +150,22 @@ class QWalkRunManager:
     if not self.writer.completed:
       self.infiles,self.outfiles=self.writer.qwalk_input()
     
-    status=resolve_status(self.runner,self.reader,self.outfiles)
-    
-    print("QWalk status",status)
-    if status=="running":
-      return
-    elif status=="not_started":
-      self.runner.run(self.infiles,self.outfiles)
-      return
-    elif status=="ready_for_analysis":
-      #This is where we (eventually) do error correction and resubmits
-      self.reader.collect(self.outfiles)
+    while True:
+      status=resolve_status(self.runner,self.reader,self.outfiles)
+      print("QWalk status",status)
+      if status=="running":
+        return
+      elif status=="not_started":
+        stdoutfiles=[x+".stdout" for x in self.infiles]
+        self.runner.run(self.infiles,stdoutfiles)
+      elif status=="ready_for_analysis":
+        #This is where we (eventually) do error correction and resubmits
+        self.reader.collect(self.outfiles)
+        break
+      elif status=='done':
+        break
+      else:
+        return
       
   #------------------------------------------------
 

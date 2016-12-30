@@ -9,4 +9,4 @@ with open('plan.pickle','rb') as inpf:
 plan.nextstep()
 
 print("\n\n\n###############################-- Summary \n")
-plan.write_summary()
+print(plan.generate_report())
