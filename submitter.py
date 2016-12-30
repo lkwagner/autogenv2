@@ -65,9 +65,15 @@ def check_PBS_stati(queueid):
   except sub.CalledProcessError:
     return "unknown"
   print(qstat)
-  if qstat == "R" or qstat == "Q":
-    return "running"
-  if qstat == "C" or qstat == "E":
-    return "finished"
+  qstat=qstat.split('\n')
+  for qid in queueid:
+    for line in qstat:
+      spl=line.split()
+      if len(spl) > 4:
+        stat=line.split()[4]
+        if stat == "R" or stat == "Q":
+          return "running"
+        if stat == "C" or stat == "E":
+          return "finished"
   return 'unknown'
 
