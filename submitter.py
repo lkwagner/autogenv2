@@ -52,7 +52,22 @@ def check_PBS_status(queueid):
     return "running"
   if qstat == "C" or qstat == "E":
     return "finished"
-  return status
-  
+  return 'unknown'
+
 #-------------------------------------------------------
-      
+def check_PBS_stati(queueid):
+  """Utility function to determine the status of a set PBS job.
+  Can be done with one qstat call which can improve speed."""
+  try:
+    qstat = sub.check_output(
+        "qstat ", stderr=sub.STDOUT, shell=True
+      ).decode()
+  except sub.CalledProcessError:
+    return "unknown"
+  print(qstat)
+  if qstat == "R" or qstat == "Q":
+    return "running"
+  if qstat == "C" or qstat == "E":
+    return "finished"
+  return 'unknown'
+

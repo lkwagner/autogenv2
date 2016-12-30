@@ -49,26 +49,27 @@ class QWalkRunnerPBS:
     self.exe=exe
     self.np=np
     self.nn=nn
-    self.jobname='CrystalRunnerPBS'
+    self.jobname='QWalkRunnerPBS'
     self.queue=queue
     self.walltime=walltime
     self.prefix=prefix
     self.postfix=postfix
-    self.queueid=None
+    self.queueid=[]
 
   #-------------------------------------
   def check_status(self):
-    return submitter.check_PBS_status(self.queueid)
+    return submitter.check_PBS_stati(self.queueid)
   #-------------------------------------
 
   def run(self,qwinps,qwouts):
     #Just supporting one run for the moment
     qwinp=qwinps[0]
     qwout=qwouts[0]
-    jobout=qwinp+".jobout"
-    np_tot=self.np*self.nn
+    for qwinp,qwout in zip(qwinps,qwouts):
+      jobout=qwinp+".jobout"
+      np_tot=self.np*self.nn
     
-    qsub="#PBS -q %s \n"%self.queue +\
+      qsub="#PBS -q %s \n"%self.queue +\
          "#PBS -l nodes=%i:ppn=%i\n"%(self.nn,self.np) +\
          "#PBS -l walltime=%s\n"%self.walltime +\
          "#PBS -j oe \n" +\
@@ -79,10 +80,10 @@ class QWalkRunnerPBS:
          "cp %s INPUT\n"%(qwinp) +\
          "mpirun -np %i %s %s \n"%(np_tot,self.exe,qwinp) +\
          self.postfix
-    qsubfile=qwinp+".qsub"
-    with open(qsubfile,'w') as f:
-      f.write(qsub)
-    result = sub.check_output("qsub %s"%(qsubfile),shell=True)
-    self.queueid = result.decode().split()[0]
-    print("Submitted as %s"%self.queueid)
+      qsubfile=qwinp+".qsub"
+      with open(qsubfile,'w') as f:
+        f.write(qsub)
+      result = sub.check_output("qsub %s"%(qsubfile),shell=True)
+      self.queueid.append(result.decode().split()[0])
+      print("Submitted as %s"%self.queueid)
       

@@ -44,6 +44,6 @@ class LocalCrystal2QMCRunner(LocalSubmitter):
 
   #-------------------------------------------------      
   def run(self):
-    self.kweights=crystal2qmc.convert_crystal(self.qwbase,self.propoutfn,
-                                self.kfmt,self.kset)
+    self.kweights=list(crystal2qmc.convert_crystal(self.qwbase,self.propoutfn,
+                                self.kfmt,self.kset))
     print(self.kweights)

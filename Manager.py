@@ -1,5 +1,5 @@
 import os
-def resolve_status(runner,reader,outfile):
+def resolve_status(runner,reader,outfiles):
   #Check if the reader is done
   if reader.completed:
     return 'done'
@@ -13,8 +13,9 @@ def resolve_status(runner,reader,outfile):
   
   #Now we are in a state where either there was an error,
   #the job hasn't been run, or we haven't collected the results
-  if not os.path.exists(outfile):
-    return 'not_started'
+  for outfile in outfiles:
+    if not os.path.exists(outfile):
+      return 'not_started'
 
   #We are in an error state or we haven't collected 
   #the results. 
@@ -51,7 +52,7 @@ class CrystalManager:
 
 
     #Check on the CRYSTAL run
-    status=resolve_status(self.crunner,self.creader,self.crysoutfn)
+    status=resolve_status(self.crunner,self.creader,[self.crysoutfn])
     
     print("status",status)
     if status=="running":
@@ -145,7 +146,7 @@ class QWalkRunManager:
     if not self.writer.completed:
       self.infiles,self.outfiles=self.writer.qwalk_input()
     
-    status=resolve_status(self.runner,self.reader,self.outfiles[0])
+    status=resolve_status(self.runner,self.reader,self.outfiles)
     
     print("status",status)
     if status=="running":

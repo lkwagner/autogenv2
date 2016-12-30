@@ -147,7 +147,7 @@ def read_gred():
   prefactors = np.array(gred_words[cursor:cursor+ngauss],dtype=float)
   cursor += ngauss
   # Store information nicely.
-  npjlen = headlen / len(pseudo_start)
+  npjlen = int(headlen / len(pseudo_start))
   for aidx,atom in enumerate(ions['atom_nums']):
     psidx = pseudo_atom[aidx]-1
     start = pseudo_start[psidx]
