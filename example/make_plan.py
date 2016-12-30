@@ -20,7 +20,8 @@ pbc_opts={
     'basis_params':[0.4,1,3],
     'cutoff':0.2,
     'dftgrid':'LGRID',
-    'spin_polarized':False
+    'spin_polarized':False,
+    'kmesh':[2,2,2] 
   }
 
 test = JobEnsemble([

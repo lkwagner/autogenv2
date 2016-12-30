@@ -35,8 +35,6 @@ class Job:
 #---------------------------------------
 
   def nextstep(self):
-    #This will not work with queuing. We need a status() to 
-    #prevent moving to the next manager if one isn't done.
     for manager in self.managers:
       manager.nextstep()
       if manager.status()!='ok':
@@ -100,7 +98,8 @@ class LocalCrystalQWalk(Job):
     """
   
   def __init__(self,jobid,struct,crystal_opts,structtype='cif',
-               crystalrunner=CrystalRunnerPBS() ):
+               crystalrunner=CrystalRunnerPBS(),
+               qwalkrunner=QWalkRunnerPBS(np=6)):
     # May have it automatically detect file type? Probably wouldn't be too hard.
     inpcopy=deepcopy(crystal_opts)
     self.jobid=jobid
@@ -114,9 +113,6 @@ class LocalCrystalQWalk(Job):
       raise ValueError("structtype not recognized.")
     cwriter.set_options(crystal_opts)
 
-    #TODO We don't currently pass the information from the 
-    #conversion to the runners as far as filenames.
-    #This will require us to change nextstep()
     self.managers=[mgmt.CrystalManager(
         cwriter,
         crystalrunner,
@@ -130,11 +126,32 @@ class LocalCrystalQWalk(Job):
         ),
       mgmt.QWalkRunManager(
         VarianceWriter(),
-        QWalkRunnerPBS(np=6),
+        qwalkrunner,
         VarianceReader()
         )]
     self.picklefn="%s.pickle"%jobid
 
+  #--------------------------------------------
+  def nextstep(self):
+    cry=0 #crystal index
+    con=1 #converter index
+    var=2 #variance index
+    self.managers[cry].nextstep()
+    if self.managers[cry].status()!='ok':
+      return 
+
+    self.managers[con].nextstep()
+    if self.managers[con].status()!='ok':
+      return
+
+    files={}
+    for key in ['sysfiles','slaterfiles','jastfiles','basenames']:
+      files[key]=self.managers[con].reader.out[key]
+    self.managers[var].writer.set_options(files)
+    self.managers[var].nextstep()
+    if self.managers[con].status()!='ok':
+      return
+    
     
     
 

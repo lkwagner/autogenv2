@@ -22,6 +22,7 @@ class Crystal2QMCReader:
 
     self.out['basenames']=[x.replace('.sys','') for x in self.out['sysfiles']]
     print(self.out['basenames'])
+    self.out['jastfiles']=[basename+".jast2" for x in self.out['basenames']]
     self.completed=True
 
     

@@ -100,26 +100,25 @@ class QWalkfromCrystalManager:
   """
   #------------------------------------------------
   def __init__(self,convert_runner,convert_checker):
-    self.convert_runner=convert_runner
-    self.convert_checker=convert_checker
+    self.runner=convert_runner
+    self.reader=convert_checker
     
   def is_consistent(self,other):
-    # This documents what needs to be checked.
-    return self.convert_runner.is_consistent(other.convert_runner)
+    return self.runner.is_consistent(other.runner)
   
   #------------------------------------------------
   def nextstep(self):
-    if not self.convert_checker.completed:
-      self.convert_runner.run()
-      self.convert_checker.collect()
+    if not self.reader.completed:
+      self.runner.run()
+      self.reader.collect()
   #------------------------------------------------
 
   def write_summary(self):
-    print("K-points",len(self.convert_checker.out['basenames']))
+    print("K-points",len(self.reader.out['basenames']))
 
   #----------------------------------------
   def status(self):
-    if self.convert_checker.completed:
+    if self.reader.completed:
       return 'ok'
     else:
       return 'not_finished'

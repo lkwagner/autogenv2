@@ -11,8 +11,7 @@ import numpy as np
 import os
 
 class CrystalWriter:
-  def __init__(self,primitive=True):
-    self.primitive=primitive
+  def __init__(self):
     #Geometry input.
     self.struct=None
 
@@ -26,7 +25,7 @@ class CrystalWriter:
     self.cutoff=0.2    
     self.kmesh=[8,8,8]
     self.gmesh=16
-    self.tolinteg=[10,10,10,10,18]
+    self.tolinteg=[8,8,8,8,18]
     self.dftgrid='XLGRID'
     
     #Memory
@@ -50,10 +49,11 @@ class CrystalWriter:
     
   #-----------------------------------------------
     
-  def set_struct_fromcif(self,cifstr):
+  def set_struct_fromcif(self,cifstr,primitive=True):
+    self.primitive=primitive
     self.cif=cifstr
     self.struct=CifParser.from_string(self.cif).get_structures(primitive=self.primitive)[0].as_dict()
-    self.supercell= [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]   #np.identity(3).to_list()
+    self.supercell= [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]  
     self.boundary="3d"
   #-----------------------------------------------
 
@@ -192,10 +192,7 @@ class CrystalWriter:
       if key in skipkeys:
         equal=True
       else: 
-        if key=='supercell':
-          equal=(self.__dict__[key]==other.__dict__[key]).all()
-        else:
-          equal=self.__dict__[key]==other.__dict__[key] 
+        equal=self.__dict__[key]==other.__dict__[key] 
 
       if not equal:
         print("Different keys [{}] = \n{}\n or \n{}"\

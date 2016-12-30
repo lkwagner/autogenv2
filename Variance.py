@@ -21,7 +21,10 @@ class VarianceWriter:
       selfdict[k]=d[k]
   #-----------------------------------------------
   def is_consistent(self,other):
-    skipkeys = ['completed']
+    #In principle we should check for the files, but 
+    #they are often determined *after* the plan has been 
+    #written so it's not currently practical to check them.
+    skipkeys = ['completed','sysfiles','slaterfiles','jastfiles','basenames']
     for otherkey in other.__dict__.keys():
       if otherkey not in self.__dict__.keys():
         print('other is missing a key.')
