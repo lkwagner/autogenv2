@@ -154,6 +154,7 @@ class CrystalWriter:
     outstr=self.crystal_input()
     with open(filename,'w') as outf:
       outf.write(outstr)
+      outf.close()
     self.completed=True
 
   #-----------------------------------------------

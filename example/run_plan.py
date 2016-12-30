@@ -9,4 +9,10 @@ with open('plan.pickle','rb') as inpf:
 plan.nextstep()
 
 print("\n\n\n###############################-- Summary \n")
-print(plan.generate_report())
+report=plan.generate_report()
+
+for rep in report:
+  print(rep['id'],rep.keys())
+
+import json
+json.dump(report,open("report.json",'w'),indent=1)

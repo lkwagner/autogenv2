@@ -84,6 +84,6 @@ class QWalkRunnerPBS:
       with open(qsubfile,'w') as f:
         f.write(qsub)
       result = sub.check_output("qsub %s"%(qsubfile),shell=True)
-      self.queueid.append(result.decode().split()[0])
+      self.queueid.append(result.decode().split()[0].split('.')[0])
       print("Submitted as %s"%self.queueid)
       

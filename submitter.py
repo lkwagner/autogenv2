@@ -69,11 +69,9 @@ def check_PBS_stati(queueid):
   for qid in queueid:
     for line in qstat:
       spl=line.split()
-      if len(spl) > 4:
+      if qid in line and len(spl) > 4:
         stat=line.split()[4]
         if stat == "R" or stat == "Q":
           return "running"
-        if stat == "C" or stat == "E":
-          return "finished"
   return 'unknown'
 
