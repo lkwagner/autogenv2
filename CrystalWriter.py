@@ -11,23 +11,10 @@ import numpy as np
 import os
 
 class CrystalWriter:
-  def __init__(self,cif=None,xyz=None,primitive=True):
-    assert cif!=None or xyz!=None, "Need to specify cif or xyz input."
-    assert cif==None or xyz==None, "Can't specify both cif and xyz."
-    self.primitive=primitive
+  def __init__(self):
     #Geometry input.
-    self.cif=cif
-    self.xyz=xyz
+    self.struct=None
 
-    #we want to save the dict representation because it's easier to store to JSON 
-    #later
-    if self.cif!=None:
-      self.struct=CifParser.from_string(cif).get_structures(primitive=self.primitive)[0].as_dict()
-      self.supercell=np.identity(3)
-      self.boundary="3d"
-    elif self.xyz!=None:
-      self.struct=XYZ.from_string(xyz).molecule.as_dict()
-      self.boundary="0d"
     #Electron model
     self.spin_polarized=True    
     self.xml_name="BFD_Library.xml"
@@ -38,7 +25,7 @@ class CrystalWriter:
     self.cutoff=0.2    
     self.kmesh=[8,8,8]
     self.gmesh=16
-    self.tolinteg=[10,10,10,10,18]
+    self.tolinteg=[8,8,8,8,18]
     self.dftgrid='XLGRID'
     
     #Memory
@@ -55,10 +42,25 @@ class CrystalWriter:
     self.smear=0.0001
 
     # Use the new crystal2qmc script. This should change soon!
-    self.cryapi=False
+    self.cryapi=True
 
     self.restart=False
+    self.completed=False
     
+  #-----------------------------------------------
+    
+  def set_struct_fromcif(self,cifstr,primitive=True):
+    self.primitive=primitive
+    self.cif=cifstr
+    self.struct=CifParser.from_string(self.cif).get_structures(primitive=self.primitive)[0].as_dict()
+    self.supercell= [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]  
+    self.boundary="3d"
+  #-----------------------------------------------
+
+  def set_struct_fromxyz(self,xyzstr):
+    self.xyz=xyzstr
+    self.struct=XYZ.from_string(xyzstr).molecule.as_dict()
+    self.boundary="0d"
 
   #-----------------------------------------------
 
@@ -69,12 +71,11 @@ class CrystalWriter:
         print("Error:",k,"not a keyword for CrystalWriter")
         raise InputError
       selfdict[k]=d[k]
-      
-      
 
   #-----------------------------------------------
   def crystal_input(self):
 
+    assert self.struct is not None,'Need to set "struct" first.'
     geomlines=self.geom()
     basislines=self.basis_section()
 
@@ -106,7 +107,6 @@ class CrystalWriter:
       self.dftgrid,
       "END",
       "SCFDIR",
-      "SAVEWF",
       "BIPOSIZE",
       str(self.biposize),
       "EXCHSIZE",
@@ -141,13 +141,28 @@ class CrystalWriter:
     if self.boundary=='3d':
       outlines+=[ "0 %i"%self.gmesh,
                   " ".join(map(str,self.kmesh))]
-    outlines+=["1 1"]
+    outlines+=["1 0"]
     if self.cryapi:
       outlines+=["CRYAPI_OUT"]
     else:
       outlines+=["67 999"]
     outlines+=["END"]
     return "\n".join(outlines)
+
+  #-----------------------------------------------
+  def write_crys_input(self,filename):
+    outstr=self.crystal_input()
+    with open(filename,'w') as outf:
+      outf.write(outstr)
+      outf.close()
+    self.completed=True
+
+  #-----------------------------------------------
+  def write_prop_input(self,filename):
+    outstr=self.properties_input()
+    with open(filename,'w') as outf:
+      outf.write(outstr)
+    self.completed=True
 
   #-----------------------------------------------
   def check_status(self):
@@ -159,6 +174,34 @@ class CrystalWriter:
       status='not_started'
     return status
 
+  #-----------------------------------------------
+  def is_consistent(self,other):
+    skipkeys = ['completed','biposize','exchsize']
+    
+    for otherkey in other.__dict__.keys():
+      if otherkey not in self.__dict__.keys():
+        print('other is missing a key.')
+        return False
+
+    for selfkey in self.__dict__.keys():
+      if selfkey not in other.__dict__.keys():
+        print('self is missing a key.')
+        return False
+
+    #Compare the 
+    for key in self.__dict__.keys():
+      if key in skipkeys:
+        equal=True
+      else: 
+        equal=self.__dict__[key]==other.__dict__[key] 
+
+      if not equal:
+        print("Different keys [{}] = \n{}\n or \n{}"\
+            .format(key,self.__dict__[key],other.__dict__[key]))
+        return False
+      
+    return True
+
 ########################################################
   def geom(self):
     """Generate the geometry section for CRYSTAL"""
@@ -168,6 +211,7 @@ class CrystalWriter:
     elif self.boundary=='0d': 
       return self.geom0d()
     else:
+      print("Weird value of self.boundary",self.boundary)
       quit() # This shouldn't happen.
 
 ########################################################
@@ -353,12 +397,3 @@ class CrystalWriter:
         r_to_n = non_local_component.find('./r_to_n').text
         strlist.append(' '.join([exp_gaus, coeff_gaus,r_to_n]))
     return strlist
-
-
-if __name__=="__main__":
-  cwriter=CrystalWriter(open("si.cif").read())
-  import json,jsontools
-  with open("tmp.json",'w') as f:
-    f.write(json.dumps(cwriter.__dict__,cls=jsontools.NumpyAwareJSONEncoder))
-  pwriter=PropertiesWriter()
-  print(pwriter.properties_input())
