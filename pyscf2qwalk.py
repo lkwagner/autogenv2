@@ -44,7 +44,7 @@ def print_orb(mol,m,f):
          'fx^3':math.sqrt(35./(32*math.pi))}
 
     #Can get these normalizations using this function.
-    print(gto.mole.cart2sph(3))
+    #print(gto.mole.cart2sph(3))
     #Translation from pyscf -> qwalk:
     # y^3 -> Fm3, xyz -> Fxyz, fyz^2 -> Fm1, fz^3 -> F0, 
     # fxz^2 -> Fp1, Fxz^2 -> Fp1, Fzx^2 -> Fp2, Fx^3 -> Fp3mod
