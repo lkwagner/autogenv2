@@ -8,6 +8,23 @@ from PropertiesRunner import LocalPropertiesRunner
 import copy
 import numpy as np
 
+def separate_jastrow(f):
+  tokens=f.readlines()
+  in_jastrow=False
+  nopen=0
+  nclose=0
+  ret=""
+  for line in tokens:
+    if line.find("JASTROW2") != -1:
+      in_jastrow=True
+    if in_jastrow:
+      nopen+=line.count("{")
+      nclose+=line.count("}")
+    if in_jastrow and nopen >= nclose:
+      ret+=line
+  return ret
+  
+
 #########################################################
 class Job:
   """ Contains lists DFT and QMC steps in the order they need to be performed.
@@ -167,9 +184,11 @@ class LocalCrystalQWalk(Job):
       print("I think crystal is still running")
       return
 
+    bases=self.managers[con].reader.out['basenames']
+    ind=bases.index('qw_000')
     files={}
     for key in ['sysfiles','slaterfiles','jastfiles','basenames']:
-      files[key]=self.managers[con].reader.out[key]
+      files[key]=[self.managers[con].reader.out[key][ind]]
     self.managers[var].writer.set_options(files)
     self.managers[var].nextstep()
     if self.managers[var].status()!='ok':
@@ -179,7 +198,7 @@ class LocalCrystalQWalk(Job):
            'sysfiles':[],
            'wffiles':[] } 
     
-    for base in self.managers[con].reader.out['basenames']:
+    for base in [bases[ind]]:#self.managers[con].reader.out['basenames']:
       files['basenames'].append(base)
       files['wffiles'].append(base+".energywfin")
       files['sysfiles'].append(base+".sys")
@@ -196,9 +215,20 @@ class LocalCrystalQWalk(Job):
       return
 
 
-    files['wffiles']=[]
-    for i in files['basenames']:
-      files['wffiles'].append(i+".energy.wfout")
+    jast=separate_jastrow(open("qw_000.energy.wfout"))
+    files={'basenames':[],
+           'sysfiles':[],
+           'wffiles':[] } 
+    for i in bases:
+      wfname=i+'.dmc.wf'
+      with open(wfname,'w') as f:
+        f.write("slater-jastrow  \n" +\
+            "wf1 { include %s.slater }\n"%i +\
+            "wf2 { " + jast + "} \n ")
+        f.close()
+      files['wffiles'].append(wfname)
+      files['sysfiles'].append(i+".sys")
+      files['basenames'].append(i)
 
     self.managers[dmc].writer.set_options(files)
     self.managers[dmc].nextstep()
