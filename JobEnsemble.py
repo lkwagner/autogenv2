@@ -3,10 +3,10 @@ import pickle as pkl
 from copy import deepcopy
 
 class JobEnsemble:
-  """ List of Jobs that will be run in different directories. 
+  """ List of Recipes that will be run in different directories. 
 
-  * Manages directories and calls Job methods in appropriate places.
-  * Performs consistency check between Job objects recorded in directories and
+  * Manages directories and calls Recipe methods in appropriate places.
+  * Performs consistency check between Recipe objects recorded in directories and
     plan object that exists outside directories."""
   def __init__(self,joblist):
     # Could have this read in a plan pickle from a filename instead.
@@ -32,7 +32,7 @@ class JobEnsemble:
         with open(job.picklefn,'rb') as inpf:
           rec=pkl.load(inpf)
         if not job.is_consistent(rec):
-          raise NotImplementedError("Job not consistent.")
+          raise NotImplementedError("Recipe not consistent.")
         #TODO: Here we should update the options of the job
         #in case the plan changed in a consistent way.
         #For example, maybe it should say 
