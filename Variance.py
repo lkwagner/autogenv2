@@ -1,7 +1,7 @@
 from __future__ import print_function
 ####################################################
 class VarianceWriter:
-  def __init__(self):
+  def __init__(self,options={}):
     self.sysfiles=['qw_000.sys']
     self.slaterfiles=['qw_000.slater']
     self.jastfiles=['qw.jast2']
@@ -9,6 +9,7 @@ class VarianceWriter:
     self.iterations=10
     self.macro_iterations=3
     self.completed=False
+    self.set_options(options)
     
   #-----------------------------------------------
     

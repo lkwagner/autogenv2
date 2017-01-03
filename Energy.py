@@ -1,12 +1,13 @@
 from __future__ import print_function
 ####################################################
 class EnergyWriter:
-  def __init__(self):
+  def __init__(self,options={}):
     self.sysfiles=['qw_000.sys']
     self.wffiles=[]
     self.basenames=['qw_000']
     self.completed=False
     self.total_nstep=2048
+    self.set_options(options)
   #-----------------------------------------------
     
   def set_options(self, d):

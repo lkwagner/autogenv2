@@ -122,6 +122,9 @@ class LocalCrystalQWalk(Job):
   
   def __init__(self,jobid,struct,
                crystal_opts={},
+               variance_opts={},
+               energy_opts={},
+               dmc_opts={},
                structtype='cif',
                crystalrunner=CrystalRunnerPBS(),
                qwalkrunner=QWalkRunnerPBS(np=6)):
@@ -150,17 +153,17 @@ class LocalCrystalQWalk(Job):
         Crystal2QMCReader()        
         ),
       mgmt.QWalkRunManager(
-        VarianceWriter(),
+        VarianceWriter(variance_opts),
         copy.deepcopy(qwalkrunner),
         VarianceReader()
         ),
       mgmt.QWalkRunManager(
-        EnergyWriter(),
+        EnergyWriter(energy_opts),
         copy.deepcopy(qwalkrunner),
         EnergyReader()
         ),
       mgmt.QWalkRunManager(
-        DMCWriter(),
+        DMCWriter(dmc_opts),
         copy.deepcopy(qwalkrunner),
         DMCReader()
         )

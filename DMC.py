@@ -1,13 +1,14 @@
 from __future__ import print_function
 ####################################################
 class DMCWriter:
-  def __init__(self):
+  def __init__(self,options={}):
     self.sysfiles=['qw_000.sys']
     self.wffiles=[]
     self.basenames=['qw_000']
     self.completed=False
     self.timesteps=[0.01]
     self.nblock=20
+    self.set_options(options)
     
   #-----------------------------------------------
     
