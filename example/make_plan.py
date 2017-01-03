@@ -16,8 +16,8 @@ dft_opts={
   }
 
 test = JobEnsemble([
-    #job.LocalCrystalDFTQMC('h2',open('h2.xyz','r').read(),dft_opts,'xyz'),
-    job.LocalCrystalDFTQMC('n2',open('n2.xyz','r').read(),dft_opts,'xyz')
+    job.LocalCrystalDFT('h2',open('h2.xyz','r').read(),dft_opts,'xyz'),
+    job.LocalCrystalDFT('n2',open('n2.xyz','r').read(),dft_opts,'xyz')
   ])
 
 with open('plan.pickle','wb') as outf:

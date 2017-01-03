@@ -3,18 +3,17 @@ import os
 import numpy as np
 import subprocess as sub
 import shutil
-from submitter import LocalTorqueSubmitter
+from submitter import LocalSubmitter
 
 ####################################################
-class LocalCrystalRunner(LocalTorqueSubmitter):
+
+class LocalCrystalRunner(LocalSubmitter):
   """ Runs a crystal job defined by CrystalWriter. """
   _name_='LocalCrystalRunner'
-  def __init__(self,nn=1,np=1,queue='batch',walltime='4:00:00',BIN='~/bin/'):
+  def __init__(self, BIN='~/bin/'):
     self.BIN=BIN
-    self.np=np
-    self.nn=nn
-    self.queue=queue
-    self.walltime=walltime
+    self.np=1
+    self.nn=1
     self.jobname='ag_crystal'
     self._queueid=None
   #-------------------------------------------------      
@@ -26,13 +25,12 @@ class LocalCrystalRunner(LocalTorqueSubmitter):
   def run(self,crysinpfn,crysoutfn):
     """ Submits executibles using _qsub. """
     
-    exe = self.BIN+"Pcrystal"
+    exe = self.BIN+"crystal < %s"%crysinpfn
 
-    prep_commands=[]
-    prep_commands+=[". ~/bin/add_intel"]
-    prep_commands+=[". ~/bin/add_ompi"]
-    prep_commands+=["cp %s INPUT"%crysinpfn]
-    final_commands = ["rm *.pe[0-9]","rm *.pe[0-9][0-9]"]
+    prep_commands=["cp %s INPUT"%crysinpfn]
+    # Not needed for nonparallel.
+    #final_commands = ["rm *.pe[0-9]","rm *.pe[0-9][0-9]"]
+    final_commands = []
 
     loc = os.getcwd()
 

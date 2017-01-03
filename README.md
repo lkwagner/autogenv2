@@ -62,7 +62,3 @@ To Do:
 
 Ideas:
  * Instead of `self.completed` as a T/F flag, have `self.status` as an informative string.
- * Automatically detect filetype for structure input.
- * `target_nblocks` computed by dividing estimate of variance by `target_error`.
- * Script that can read old output files into a form that can be merged with
-   this database.
