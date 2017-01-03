@@ -26,7 +26,7 @@ def separate_jastrow(f):
   
 
 #########################################################
-class Job:
+class Recipe:
   """ Contains lists DFT and QMC steps in the order they need to be performed.
 
   * One job per directory. 
@@ -65,13 +65,13 @@ class Job:
     
 #---------------------------------------
   def generate_report(self):
-    print("generate_report not implemented for this Job")
+    print("generate_report not implemented for this Recipe")
     return {'id':self.jobid}
     
 
 ##########################################################
-class LocalCrystalDFT(Job):
-  """ An example of a Job that perfoms a crystal DFT calculation """
+class LocalCrystalDFT(Recipe):
+  """ An example of a Recipe that perfoms a crystal DFT calculation """
   
   def __init__(self,jobid,struct,crystal_opts,structtype='cif'):
     # May have it automatically detect file type? Probably wouldn't be too hard.
@@ -106,10 +106,10 @@ class LocalCrystalDFT(Job):
 from Crystal2QMCRunner import LocalCrystal2QMCRunner
 from Crystal2QMCReader import Crystal2QMCReader
 from Variance import VarianceWriter,VarianceReader
-from Energy import EnergyWriter,EnergyReader
+from Linear import LinearWriter,LinearReader
 from QWalkRunner import LocalQWalkRunner,QWalkRunnerPBS
 from DMC import DMCWriter,DMCReader
-class LocalCrystalQWalk(Job):
+class LocalCrystalQWalk(Recipe):
   """ In this we will perform the following recipe:
     1) A Crystal calculation. 
     2) Convert the Crystal calculation to QWalk, form a Slater determinant trial function.
@@ -158,9 +158,9 @@ class LocalCrystalQWalk(Job):
         VarianceReader()
         ),
       mgmt.QWalkRunManager(
-        EnergyWriter(energy_opts),
+        LinearWriter(energy_opts),
         copy.deepcopy(qwalkrunner),
-        EnergyReader()
+        LinearReader()
         ),
       mgmt.QWalkRunManager(
         DMCWriter(dmc_opts),

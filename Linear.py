@@ -1,6 +1,6 @@
 from __future__ import print_function
 ####################################################
-class EnergyWriter:
+class LinearWriter:
   def __init__(self,options={}):
     self.sysfiles=['qw_000.sys']
     self.wffiles=[]
@@ -14,7 +14,7 @@ class EnergyWriter:
     selfdict=self.__dict__
     for k in d.keys():
       if not k in selfdict.keys():
-        print("Error:",k,"not a keyword for EnergyWriter")
+        print("Error:",k,"not a keyword for LinearWriter")
         raise InputError
       selfdict[k]=d[k]
   #-----------------------------------------------
@@ -58,7 +58,7 @@ class EnergyWriter:
 
      
 ####################################################
-class EnergyReader:
+class LinearReader:
   def __init__(self):
     self.output={}
     self.completed=False
@@ -84,7 +84,7 @@ class EnergyReader:
       
   #------------------------------------------------
   def write_summary(self):
-    print("#### Energy optimization")
+    print("#### Linear optimization")
     for f,out in self.output.items():
       nruns=len(out)
       print(f,"Number of runs",nruns)
