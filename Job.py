@@ -2,10 +2,28 @@ import Manager as mgmt
 from copy import deepcopy
 from CrystalWriter import CrystalWriter
 from CrystalReader import CrystalReader
-from CrystalRunner import LocalCrystalRunner
+from CrystalRunner import LocalCrystalRunner,CrystalRunnerPBS
 from PropertiesReader import PropertiesReader
 from PropertiesRunner import LocalPropertiesRunner
+import copy
+import numpy as np
 
+def separate_jastrow(f):
+  tokens=f.readlines()
+  in_jastrow=False
+  nopen=0
+  nclose=0
+  ret=""
+  for line in tokens:
+    if line.find("JASTROW2") != -1:
+      in_jastrow=True
+    if in_jastrow:
+      nopen+=line.count("{")
+      nclose+=line.count("}")
+    if in_jastrow and nopen >= nclose:
+      ret+=line
+  return ret
+  
 
 #########################################################
 class Job:
@@ -37,14 +55,24 @@ class Job:
   def nextstep(self):
     for manager in self.managers:
       manager.nextstep()
-
+      if manager.status()!='ok':
+        break
+#---------------------------------------
+  def write_summary(self):
+    for manager in self.managers:
+      if manager.status()=='ok':
+        manager.write_summary()
+    
+#---------------------------------------
+  def generate_report(self):
+    print("generate_report not implemented for this Job")
+    return {'id':self.jobid}
+    
 
 ##########################################################
 class LocalCrystalDFT(Job):
-  """ An example of a Job where it simply calculates a crystal DFT job and
-  quits. """
+  """ An example of a Job that perfoms a crystal DFT calculation """
   
-  #TODO sometimes you don't need properties?
   def __init__(self,jobid,struct,crystal_opts,structtype='cif'):
     # May have it automatically detect file type? Probably wouldn't be too hard.
     inpcopy=deepcopy(crystal_opts)
@@ -70,4 +98,196 @@ class LocalCrystalDFT(Job):
         LocalPropertiesRunner()
       )]
     self.picklefn="%s.pickle"%jobid
+
+
+
+##########################################################
+
+from Crystal2QMCRunner import LocalCrystal2QMCRunner
+from Crystal2QMCReader import Crystal2QMCReader
+from Variance import VarianceWriter,VarianceReader
+from Energy import EnergyWriter,EnergyReader
+from QWalkRunner import LocalQWalkRunner,QWalkRunnerPBS
+from DMC import DMCWriter,DMCReader
+class LocalCrystalQWalk(Job):
+  """ In this we will perform the following recipe:
+    1) A Crystal calculation. 
+    2) Convert the Crystal calculation to QWalk, form a Slater determinant trial function.
+    3) Run variance optimization on a Jastrow factor for the gamma point.
+    4) Remove OPTIMIZEBASIS from Jastrow, run energy optimization using LINEAR. 
+    5) Run DMC on all k-points, saving configurations to a .trace file.
+    6) Run properties on the .trace file.
+    
+    """
+  
+  def __init__(self,jobid,struct,
+               crystal_opts={},
+               variance_opts={},
+               energy_opts={},
+               dmc_opts={},
+               structtype='cif',
+               crystalrunner=CrystalRunnerPBS(),
+               qwalkrunner=QWalkRunnerPBS(np=6)):
+    # May have it automatically detect file type? Probably wouldn't be too hard.
+    inpcopy=deepcopy(crystal_opts)
+    self.jobid=jobid
+
+    cwriter=CrystalWriter()
+    if structtype=='cif':
+      cwriter.set_struct_fromcif(struct)
+    elif structtype=='xyz':
+      cwriter.set_struct_fromxyz(struct)
+    else:
+      raise ValueError("structtype not recognized.")
+    cwriter.set_options(crystal_opts)
+
+    self.managers=[mgmt.CrystalManager(
+        cwriter,
+        crystalrunner,
+        CrystalReader(),
+        LocalPropertiesRunner(),
+        PropertiesReader()
+      ),
+      mgmt.QWalkfromCrystalManager(
+        LocalCrystal2QMCRunner(),
+        Crystal2QMCReader()        
+        ),
+      mgmt.QWalkRunManager(
+        VarianceWriter(variance_opts),
+        copy.deepcopy(qwalkrunner),
+        VarianceReader()
+        ),
+      mgmt.QWalkRunManager(
+        EnergyWriter(energy_opts),
+        copy.deepcopy(qwalkrunner),
+        EnergyReader()
+        ),
+      mgmt.QWalkRunManager(
+        DMCWriter(dmc_opts),
+        copy.deepcopy(qwalkrunner),
+        DMCReader()
+        )
+      ]
+    self.picklefn="%s.pickle"%jobid
+
+  #--------------------------------------------
+  def nextstep(self):
+    cry=0 #crystal index
+    con=1 #converter index
+    var=2 #variance index
+    en=3 #energy index
+    dmc=4 
+
+    self.managers[cry].nextstep()
+    if self.managers[cry].status()!='ok':
+      return 
+
+    self.managers[con].nextstep()
+    if self.managers[con].status()!='ok':
+      print("I think crystal is still running")
+      return
+
+    bases=self.managers[con].reader.out['basenames']
+    ind=bases.index('qw_000')
+    files={}
+    for key in ['sysfiles','slaterfiles','jastfiles','basenames']:
+      files[key]=[self.managers[con].reader.out[key][ind]]
+    self.managers[var].writer.set_options(files)
+    self.managers[var].nextstep()
+    if self.managers[var].status()!='ok':
+      return
+   
+    files={'basenames':[],
+           'sysfiles':[],
+           'wffiles':[] } 
+    
+    for base in [bases[ind]]:#self.managers[con].reader.out['basenames']:
+      files['basenames'].append(base)
+      files['wffiles'].append(base+".energywfin")
+      files['sysfiles'].append(base+".sys")
+      with open(base+".variance.wfout") as fin:
+        fout=open(base+".energywfin",'w')
+        for line in fin:
+          fout.write(line.replace("OPTIMIZEBASIS",''))
+        fout.close()
+      
+
+    self.managers[en].writer.set_options(files)
+    self.managers[en].nextstep()
+    if self.managers[en].status()!='ok':
+      return
+
+
+    jast=separate_jastrow(open("qw_000.energy.wfout"))
+    files={'basenames':[],
+           'sysfiles':[],
+           'wffiles':[] } 
+    for i in bases:
+      wfname=i+'.dmc.wf'
+      with open(wfname,'w') as f:
+        f.write("slater-jastrow  \n" +\
+            "wf1 { include %s.slater }\n"%i +\
+            "wf2 { " + jast + "} \n ")
+        f.close()
+      files['wffiles'].append(wfname)
+      files['sysfiles'].append(i+".sys")
+      files['basenames'].append(i)
+
+    self.managers[dmc].writer.set_options(files)
+    self.managers[dmc].nextstep()
+    if self.managers[dmc].status()!='ok':
+      return
+    
+  #---------------------------------------
+  def generate_report(self):
+    cry=0 #crystal index
+    con=1 #converter index
+    var=2 #variance index
+    en=3 #energy index
+    dmc=4 
+    ret={'id':self.jobid}
+    
+    if self.managers[cry].status()=='ok':
+      ret['crystal_energy']=self.managers[cry].creader.out['total_energy']
+
+    if self.managers[var].status()=='ok':
+      varopt={}
+      for f,out in self.managers[var].reader.output.items():
+        sigma=[]
+        for run in out:
+          sigma.extend(run['sigma'])
+        varopt[f]=sigma
+      ret['variance_optimization']=varopt
+
+    if self.managers[en].status()=='ok':
+      enopt={}
+      for f,out in self.managers[en].reader.output.items():
+        en=[]
+        err=[]
+        for run in out:
+          en.extend(run['energy'])
+          err.extend(run['energy_err'])
+        enopt[f]={'energy':en,'energy_err':err}
+      ret['energy_optimization']=enopt
+      
+    if self.managers[dmc].status()=='ok':
+      #here we average over k-points
+      dmcret={'timestep':[],'energy':[],'energy_err':[]}
+      basenames=self.managers[con].reader.out['basenames']
+      timesteps=self.managers[dmc].writer.timesteps
+      for t in timesteps:
+        ens=[]
+        errs=[]
+        for base in basenames:
+          nm=base+'t'+str(t)+".dmc.log"
+          ens.append(self.managers[dmc].reader.output[nm]['properties']['total_energy']['value'][0])
+          err.append(self.managers[dmc].reader.output[nm]['properties']['total_energy']['error'][0])
+        dmcret['timestep'].append(t)
+        dmcret['energy'].append(np.mean(ens))
+        dmcret['energy_err'].append(np.sqrt(np.mean(np.array(err)**2)))
+      ret['dmc']=dmcret
+    return ret
+        
+    
+    
 

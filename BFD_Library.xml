@@ -6,7 +6,7 @@
         <Atomic_number>1</Atomic_number>
         <Number_of_replaced_protons>0</Number_of_replaced_protons>
         <Effective_core_charge>1</Effective_core_charge>
-        <Number_of_projectors>0</Number_of_projectors>
+        <Number_of_projectors>1</Number_of_projectors>
         <Gaussian_expansion>
             <Local_component>
                 <Coeff>1.00000000</Coeff>
@@ -23,6 +23,12 @@
                 <r_to_n>0</r_to_n>
                 <Exp>3.01841596</Exp>
             </Local_component>
+              <Non-local_component>
+                <Coeff>0.0</Coeff>
+                <r_to_n>0</r_to_n>
+                <Exp>5.</Exp>
+                <Proj>0</Proj>
+            </Non-local_component>
         </Gaussian_expansion>
         <Fit-data>
             <Valence-Configuration>H(0) 1s1</Valence-Configuration>

@@ -11,6 +11,7 @@ class JobEnsemble:
   def __init__(self,joblist):
     # Could have this read in a plan pickle from a filename instead.
     self.plan=joblist
+    self.executed_plan=[]
 
   #----------------------------------------------
   def addjob(self,job):
@@ -18,6 +19,7 @@ class JobEnsemble:
     
   #----------------------------------------------
   def nextstep(self):
+    self.executed_plan=[]
     for job in self.plan:
       print(" ### jobid %s"%job.jobid)
 
@@ -25,16 +27,35 @@ class JobEnsemble:
         os.mkdir(job.jobid)
       os.chdir(job.jobid)
 
+      
       if os.path.exists(job.picklefn):
         with open(job.picklefn,'rb') as inpf:
           rec=pkl.load(inpf)
         if not job.is_consistent(rec):
           raise NotImplementedError("Job not consistent.")
+        #TODO: Here we should update the options of the job
+        #in case the plan changed in a consistent way.
+        #For example, maybe it should say 
+        #rec.update_options(job)
+
       else: # Nothing done yet. Record starts as plan.
         rec=deepcopy(job)
 
       rec.nextstep()
+      self.executed_plan.append(rec)
       with open(rec.picklefn,'wb') as outf:
         pkl.dump(rec,outf)
-
+     
       os.chdir('..')
+
+  #-----------------------------------------------
+  def write_summary(self):
+    for job in self.executed_plan:
+      job.write_summary()
+
+  #-----------------------------------------------
+  def generate_report(self):
+    ret=[]
+    for job in self.executed_plan:
+      ret.append(job.generate_report())
+    return ret

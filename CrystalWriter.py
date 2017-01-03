@@ -11,8 +11,7 @@ import numpy as np
 import os
 
 class CrystalWriter:
-  def __init__(self,primitive=True):
-    self.primitive=primitive
+  def __init__(self):
     #Geometry input.
     self.struct=None
 
@@ -26,7 +25,7 @@ class CrystalWriter:
     self.cutoff=0.2    
     self.kmesh=[8,8,8]
     self.gmesh=16
-    self.tolinteg=[10,10,10,10,18]
+    self.tolinteg=[8,8,8,8,18]
     self.dftgrid='XLGRID'
     
     #Memory
@@ -43,18 +42,20 @@ class CrystalWriter:
     self.smear=0.0001
 
     # Use the new crystal2qmc script. This should change soon!
-    self.cryapi=False
+    self.cryapi=True
 
     self.restart=False
     self.completed=False
     
   #-----------------------------------------------
     
-  def set_struct_fromcif(self,cifstr):
+  def set_struct_fromcif(self,cifstr,primitive=True):
+    self.primitive=primitive
     self.cif=cifstr
-    self.struct=CifParser.from_string(cif).get_structures(primitive=self.primitive)[0].as_dict()
-    self.supercell=np.identity(3)
+    self.struct=CifParser.from_string(self.cif).get_structures(primitive=self.primitive)[0].as_dict()
+    self.supercell= [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]  
     self.boundary="3d"
+  #-----------------------------------------------
 
   def set_struct_fromxyz(self,xyzstr):
     self.xyz=xyzstr
@@ -140,7 +141,7 @@ class CrystalWriter:
     if self.boundary=='3d':
       outlines+=[ "0 %i"%self.gmesh,
                   " ".join(map(str,self.kmesh))]
-    outlines+=["1 1"]
+    outlines+=["1 0"]
     if self.cryapi:
       outlines+=["CRYAPI_OUT"]
     else:
@@ -153,6 +154,7 @@ class CrystalWriter:
     outstr=self.crystal_input()
     with open(filename,'w') as outf:
       outf.write(outstr)
+      outf.close()
     self.completed=True
 
   #-----------------------------------------------
@@ -175,19 +177,29 @@ class CrystalWriter:
   #-----------------------------------------------
   def is_consistent(self,other):
     skipkeys = ['completed','biposize','exchsize']
+    
     for otherkey in other.__dict__.keys():
       if otherkey not in self.__dict__.keys():
         print('other is missing a key.')
         return False
+
     for selfkey in self.__dict__.keys():
       if selfkey not in other.__dict__.keys():
         print('self is missing a key.')
         return False
+
+    #Compare the 
     for key in self.__dict__.keys():
-      if self.__dict__[key]!=other.__dict__[key] and key not in skipkeys:
-        print("Different keys [{}] = \n{}\n or \n {}"\
+      if key in skipkeys:
+        equal=True
+      else: 
+        equal=self.__dict__[key]==other.__dict__[key] 
+
+      if not equal:
+        print("Different keys [{}] = \n{}\n or \n{}"\
             .format(key,self.__dict__[key],other.__dict__[key]))
         return False
+      
     return True
 
 ########################################################
@@ -199,6 +211,7 @@ class CrystalWriter:
     elif self.boundary=='0d': 
       return self.geom0d()
     else:
+      print("Weird value of self.boundary",self.boundary)
       quit() # This shouldn't happen.
 
 ########################################################

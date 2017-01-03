@@ -5,6 +5,8 @@ class CrystalReader:
   def __init__(self):
     self.completed=False
     self.out={}
+
+    
 #-------------------------------------------------      
   def collect(self,outfilename):
     """ Collect results from output."""
@@ -13,7 +15,9 @@ class CrystalReader:
       lines = f.readlines()
       for li,line in enumerate(lines):
         if 'SCF ENDED' in line:
+          print(line)
           self.out['total_energy']=float(line.split()[8])    
+
         elif 'TOTAL ATOMIC SPINS' in line:
           moms = []
           shift = 1
@@ -21,11 +25,18 @@ class CrystalReader:
             moms += map(float,lines[li+shift].split())
             shift += 1
           self.out['mag_moments']=moms
+      print(self.out)
       self.completed=True
     else:
       # Just to be sure/clear...
       self.completed=False
-      
+
+
+#-------------------------------------------------      
+  def write_summary(self):
+    print("Crystal total energy",self.out['total_energy'])
+
+
 #-------------------------------------------------      
   # This can be made more efficient if it's a problem: searches whole file for
   # each query.
@@ -51,7 +62,7 @@ class CrystalReader:
         print("CrystalRunner: Too many cycles.")
         return "too_many_cycles"
       else: # What else can happen?
-        print("CrystalRunner: Finished, but unknown state.")
+        print("CrystalReader: Finished, but unknown state.")
         return "finished"
       
     detots = [float(line.split()[5]) for line in outlines if "DETOT" in line]
@@ -72,8 +83,9 @@ class CrystalReader:
     print("CrystalRunner: Not finished.")
     return "not_finished"
   
+  
 #-------------------------------------------------      
-  def check_status(self,outfilename):
+  def status(self,outfilename):
     """ Decide status of crystal run. """
 
     status=self.check_outputfile(outfilename)
