@@ -3,15 +3,17 @@ import os
 import numpy as np
 import subprocess as sub
 import shutil
-from submitter import LocalSubmitter
+from submitter import LocalTorqueSubmitter
 
-class LocalPropertiesRunner(LocalSubmitter):
+class LocalPropertiesRunner(LocalTorqueSubmitter):
   """ Runs a crystal properties job defined by CrystalWriter. """
   _name_='LocalPropertiesRunner'
-  def __init__(self, BIN='~/bin/'):
+  def __init__(self,nn=1,np=1,queue='batch',walltime='4:00:00',BIN='~/bin/'):
     self.BIN=BIN
     self.np=1
     self.nn=1
+    self.queue=queue
+    self.walltime=walltime
     self.jobname='ag_properties'
     self._queueid=None
   #-------------------------------------------------      
