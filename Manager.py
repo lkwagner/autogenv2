@@ -129,7 +129,6 @@ class QWalkfromCrystalManager:
       return 'not_finished'
     
       
-
 #######################################################################
 
 class QWalkRunManager:
@@ -139,8 +138,6 @@ class QWalkRunManager:
     self.reader=reader
     self.infiles=[]
     self.outfiles=[]
-  #------------------------------------------------
-    
   def is_consistent(self,other):
     # This documents what needs to be checked.
     return self.writer.is_consistent(other.writer)
@@ -158,6 +155,56 @@ class QWalkRunManager:
       elif status=="not_started":
         stdoutfiles=[x+".stdout" for x in self.infiles]
         self.runner.run(self.infiles,stdoutfiles)
+      elif status=="ready_for_analysis":
+        #This is where we (eventually) do error correction and resubmits
+        self.reader.collect(self.outfiles)
+        break
+      elif status=='done':
+        break
+      else:
+        return
+      
+  #------------------------------------------------
+
+  def write_summary(self):
+    self.reader.write_summary()
+    
+
+  #----------------------------------------
+  def status(self):
+    if self.reader.completed:
+      return 'ok'
+    else:
+      return 'not_finished'
+    
+
+#######################################################################
+
+class PySCFManager:
+  def __init__(self,writer,runner,reader):
+    self.writer=writer
+    self.runner=runner
+    self.reader=reader
+    self.infiles=[]
+    self.outfiles=[]
+  #------------------------------------------------
+    
+  def is_consistent(self,other):
+    # This documents what needs to be checked.
+    return self.writer.is_consistent(other.writer)
+    
+  #------------------------------------------------
+  def nextstep(self):
+    if not self.writer.completed:
+      self.infiles,self.outfiles=self.writer.pyscf_input("pyscf")
+    
+    while True:
+      status=resolve_status(self.runner,self.reader,self.outfiles)
+      print("PySCF status",status)
+      if status=="running":
+        return
+      elif status=="not_started":
+        self.runner.run(self.infiles,self.outfiles)
       elif status=="ready_for_analysis":
         #This is where we (eventually) do error correction and resubmits
         self.reader.collect(self.outfiles)

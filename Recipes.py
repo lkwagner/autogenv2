@@ -1,7 +1,6 @@
 import Manager as mgmt
 from copy import deepcopy
-from Crystal import CrystalWriter
-from Crystal import CrystalReader
+from Crystal import CrystalWriter,CrystalReader
 from CrystalRunner import LocalCrystalRunner,CrystalRunnerPBS
 from PropertiesReader import PropertiesReader
 from PropertiesRunner import LocalPropertiesRunner
@@ -27,7 +26,7 @@ def separate_jastrow(f):
 
 #########################################################
 class Recipe:
-  """ Contains lists DFT and QMC steps in the order they need to be performed.
+  """ Contains DFT and QMC steps in the order they need to be performed.
 
   * One job per directory. 
   * For most users, a child class of this should be used."""
@@ -290,4 +289,148 @@ class LocalCrystalQWalk(Recipe):
         
     
     
+#######################################################
+from PySCF import PySCFWriter,PySCFReader
+from PySCFRunner import LocalPySCFRunner
 
+class PySCFQWalk(Recipe):
+  
+  def __init__(self,jobid,struct,
+               pyscf_opts={},
+               variance_opts={},
+               energy_opts={},
+               dmc_opts={},
+               qwalkrunner=QWalkRunnerPBS(np=6)):
+    self.jobid=jobid
+    self.picklefn="%s.pickle"%jobid
+    
+    self.managers=[mgmt.PySCFManager(PySCFWriter(pyscf_opts),
+      LocalPySCFRunner(),PySCFReader()
+      ),
+      mgmt.QWalkRunManager(
+        VarianceWriter(variance_opts),
+        copy.deepcopy(qwalkrunner),
+        VarianceReader()
+        ),
+      mgmt.QWalkRunManager(
+        LinearWriter(energy_opts),
+        copy.deepcopy(qwalkrunner),
+        LinearReader()
+        ),
+      mgmt.QWalkRunManager(
+        DMCWriter(dmc_opts),
+        copy.deepcopy(qwalkrunner),
+        DMCReader()
+        )
+      ]
+  #-----------------------------
+  def nextstep(self):
+    pyscf=0 #crystal index
+    var=1 #variance index
+    en=2 #energy index
+    dmc=3 
+
+    self.managers[pyscf].nextstep()
+    if self.managers[pyscf].status()!='ok':
+      return 
+
+    base='qw'
+    files={}
+    files['sysfiles']=[base+'.sys']
+    files['slaterfiles']=[base+'.slater']
+    files['basenames']=[base]
+    files['jastfiles']=[base+'.jast2']
+    self.managers[var].writer.set_options(files)
+    self.managers[var].nextstep()
+    if self.managers[var].status()!='ok':
+      return
+   
+    files={'basenames':[],
+           'sysfiles':[],
+           'wffiles':[] } 
+    
+    files['basenames'].append(base)
+    files['wffiles'].append(base+".energywfin")
+    files['sysfiles'].append(base+".sys")
+    with open(base+".variance.wfout") as fin:
+      fout=open(base+".energywfin",'w')
+      for line in fin:
+        fout.write(line.replace("OPTIMIZEBASIS",''))
+      fout.close()
+      
+
+    self.managers[en].writer.set_options(files)
+    self.managers[en].nextstep()
+    if self.managers[en].status()!='ok':
+      return
+
+
+    jast=separate_jastrow(open("qw.energy.wfout"))
+    files={'basenames':[],
+           'sysfiles':[],
+           'wffiles':[] } 
+    for i in [base]:
+      wfname=i+'.dmc.wf'
+      with open(wfname,'w') as f:
+        f.write("slater-jastrow  \n" +\
+            "wf1 { include %s.slater }\n"%i +\
+            "wf2 { " + jast + "} \n ")
+        f.close()
+      files['wffiles'].append(wfname)
+      files['sysfiles'].append(i+".sys")
+      files['basenames'].append(i)
+
+    self.managers[dmc].writer.set_options(files)
+    self.managers[dmc].nextstep()
+    if self.managers[dmc].status()!='ok':
+      return
+    
+  #-----------------------------
+  def generate_report(self):
+    pyscf=0 #pyscf index
+    var=1 #variance index
+    en=2 #energy index
+    dmc=3 
+    ret={'id':self.jobid}
+    
+    if self.managers[pyscf].status()=='ok':
+      ret['pyscf_energy']='not read'
+
+    if self.managers[var].status()=='ok':
+      varopt={}
+      for f,out in self.managers[var].reader.output.items():
+        sigma=[]
+        for run in out:
+          sigma.extend(run['sigma'])
+        varopt[f]=sigma
+      ret['variance_optimization']=varopt
+
+    if self.managers[en].status()=='ok':
+      enopt={}
+      for f,out in self.managers[en].reader.output.items():
+        en=[]
+        err=[]
+        for run in out:
+          en.extend(run['energy'])
+          err.extend(run['energy_err'])
+        enopt[f]={'energy':en,'energy_err':err}
+      ret['energy_optimization']=enopt
+      
+    if self.managers[dmc].status()=='ok':
+      #here we average over k-points
+      dmcret={'timestep':[],'energy':[],'energy_err':[]}
+      basenames=self.managers[dmc].writer.basenames
+      timesteps=self.managers[dmc].writer.timesteps
+      for t in timesteps:
+        ens=[]
+        errs=[]
+        for base in basenames:
+          nm=base+'t'+str(t)+".dmc.log"
+          ens.append(self.managers[dmc].reader.output[nm]['properties']['total_energy']['value'][0])
+          err.append(self.managers[dmc].reader.output[nm]['properties']['total_energy']['error'][0])
+        dmcret['timestep'].append(t)
+        dmcret['energy'].append(np.mean(ens))
+        dmcret['energy_err'].append(np.sqrt(np.mean(np.array(err)**2)))
+      ret['dmc']=dmcret
+    return ret
+    
