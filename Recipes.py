@@ -266,7 +266,8 @@ class LocalCrystalQWalk(Recipe):
         for run in out:
           en.extend(run['energy'])
           err.extend(run['energy_err'])
-        enopt[f]={'energy':en,'energy_err':err}
+        enopt[f]={'energy':copy.deepcopy(en),
+                 'energy_err':copy.deepcopy(err)}
       ret['energy_optimization']=enopt
       
     if self.managers[dmc].status()=='ok':

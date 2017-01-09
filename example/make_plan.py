@@ -41,17 +41,22 @@ test = JobEnsemble([
     recipes.LocalCrystalQWalk('h2',open('h2.xyz','r').read(),
       crystal_opts=dft_opts,
       variance_opts=variance_opts,
+      energy_opts=energy_opts,
+      dmc_opts=dmc_opts,
       structtype='xyz'),
 
     recipes.LocalCrystalQWalk('n2',open('n2.xyz','r').read(),
       crystal_opts=dft_opts,
-      variance_opts=variance_opts,      
+      variance_opts=variance_opts,  
+      energy_opts=energy_opts,
+      dmc_opts=dmc_opts,      
       structtype='xyz'),
 
     recipes.LocalCrystalQWalk('si',open('si.cif','r').read(),
       crystal_opts=pbc_opts,
       variance_opts=variance_opts,
-            
+      energy_opts=energy_opts,
+      dmc_opts=dmc_opts,            
       structtype='cif')
     
   ])
