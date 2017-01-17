@@ -185,6 +185,7 @@ class PySCFManager:
     self.writer=writer
     self.runner=runner
     self.reader=reader
+    self.driverfn='pyscf_driver.py'
     self.infiles=[]
     self.outfiles=[]
   #------------------------------------------------
@@ -196,7 +197,7 @@ class PySCFManager:
   #------------------------------------------------
   def nextstep(self):
     if not self.writer.completed:
-      self.infiles,self.outfiles=self.writer.pyscf_input("pyscf_driver.py")
+      self.infiles,self.outfiles=self.writer.pyscf_input(self.driverfn)
     
     while True:
       status=resolve_status(self.runner,self.reader,self.outfiles)

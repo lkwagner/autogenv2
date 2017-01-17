@@ -292,7 +292,7 @@ class LocalCrystalQWalk(Recipe):
     
 #######################################################
 from PySCF import PySCFWriter,PySCFReader
-from PySCFRunner import LocalPySCFRunner
+from PySCFRunner import PySCFRunnerPBS
 
 class PySCFQWalk(Recipe):
   
@@ -306,7 +306,7 @@ class PySCFQWalk(Recipe):
     self.picklefn="%s.pickle"%jobid
     
     self.managers=[mgmt.PySCFManager(PySCFWriter(pyscf_opts),
-      LocalPySCFRunner(),PySCFReader()
+      PySCFRunnerPBS(),PySCFReader()
       ),
       mgmt.QWalkRunManager(
         VarianceWriter(variance_opts),
