@@ -196,7 +196,7 @@ class PySCFManager:
   #------------------------------------------------
   def nextstep(self):
     if not self.writer.completed:
-      self.infiles,self.outfiles=self.writer.pyscf_input("pyscf")
+      self.infiles,self.outfiles=self.writer.pyscf_input("pyscf.inp")
     
     while True:
       status=resolve_status(self.runner,self.reader,self.outfiles)

@@ -49,23 +49,40 @@ class PySCFWriter:
   #-----------------------------------------------
   def pyscf_input(self,fname):
     f=open(fname,'w')
-    append=""
+    add_paths=[]
     for i in self.pyscf_path:
-      append+="sys.path.append('"+i+"')\n" 
-    f.write("import sys\n"+\
-        append+\
-        """from pyscf import gto,scf,mcscf
-from pyscf2qwalk import print_qwalk
-mol=gto.Mole()
-"""+\
-"mol.build(atom='''"+self.xyz+"''',"+\
-"basis='%s',"%self.basis+\
-"ecp='%s')\n"%self.ecp+\
-"mol.charge=%i\n"%self.charge +\
-"mol.spin=%i\n"%self.spin +\
-"m=scf.ROHF(mol)\n"+\
-"print('E(HF) =',m.kernel())\n"+\
-"print_qwalk(mol,m)\n")
+      add_paths.append("sys.path.append('"+i+"')")
+#    f.write("import sys\n"+\
+#        append+\
+#        """from pyscf import gto,scf,mcscf
+#from pyscf2qwalk import print_qwalk
+#mol=gto.Mole()
+#"""+\
+#"mol.build(atom='''"+self.xyz+"''',"+\
+#"basis='%s',"%self.basis+\
+#"ecp='%s')\n"%self.ecp+\
+#"mol.charge=%i\n"%self.charge +\
+#"mol.spin=%i\n"%self.spin +\
+#"m=scf.ROHF(mol)\n"+\
+#"print('E(HF) =',m.kernel())\n"+\
+#"print_qwalk(mol,m)\n")
+    outlines=[
+        "import sys"
+      ] + add_paths + [
+        "from pyscf import gto,scf,mcscf",
+        "from pyscf2qwalk import print_qwalk",
+        "mol=gto.Mole()",
+        "mol.build(atom='''"+self.xyz+"''',",
+        "basis='%s',"%self.basis,
+        "ecp='%s')\n"%self.ecp,
+        "mol.charge=%i\n"%self.charge,
+        "mol.spin=%i\n"%self.spin,
+        "m=scf.ROHF(mol)",
+        "print('E(HF) =',m.kernel())",
+        "print_qwalk(mol,m)"
+      ]
+    f.write('\n'.join(outlines))
+
     self.completed=True
     return [fname],[fname+".o"]
 
