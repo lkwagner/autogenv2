@@ -76,7 +76,7 @@ EnsembleRun will then loop through jobs and:
 
 # Examples
 
-`make_plan.py` will make a sample plan, and `run_plan.py` will run any plan and report on the results.
+`make_X_plan.py` will make a sample plan using X to generate the trial wave function, and `run_plan.py` will run plan.pickle and report on the results.
 
 # To Do/ideas
 

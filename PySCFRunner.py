@@ -1,5 +1,6 @@
 from __future__ import print_function
 import os
+import sys
 import numpy as np
 import subprocess as sub
 import shutil
@@ -19,6 +20,7 @@ class LocalPySCFRunner(LocalSubmitter):
 
   #-------------------------------------------------      
   def run(self,inpfn,outfn):
+    # TODO This code organization doesn't match CRYSTAL.
     """ Submits executibles using _qsub. """
     
     exe = self.BIN+"python3  %s"%inpfn[0]

@@ -9,12 +9,10 @@ import os
 from QWalkRunner import LocalQWalkRunner
 
 dft_opts={
-    "xyz":"H 0. 0. 0.; H 0. 0. 0.7",
-    "pyscf_path":["/home/brian/programs/","../../"]
+    "xyz":"H 0. 0. 0.; H 0. 0. 0.7"
   }
 
-dft_opts_n2={'xyz':"N 0. 0. 0.; N 0. 0. 2.5",
-    "pyscf_path":["/home/brian/programs/","../../"]
+dft_opts_n2={'xyz':"N 0. 0. 0.; N 0. 0. 2.5"
   }
     
 

@@ -53,7 +53,8 @@ class PySCFWriter:
     for i in self.pyscf_path:
       add_paths.append("sys.path.append('"+i+"')")
     outlines=[
-        "import sys"
+        "import sys",
+        "sys.path.append('../..')" # For pyscf2qwalk.py TODO cleaner?
       ] + add_paths + [
         "from pyscf import gto,scf,mcscf",
         "from pyscf2qwalk import print_qwalk",
