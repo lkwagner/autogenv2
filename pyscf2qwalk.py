@@ -7,6 +7,16 @@ import math
 ## CI coefficients and occupations.
 ## Periodic boundary conditions.
 ###########################################################
+def find_label(sph_label):
+  data = sph_label.split( )
+  if(data[2][1]!='g'):
+    return data[2][1:]
+  elif(len(data)==3):
+    return 'gm'+data[2][3]
+  else:
+    return 'gp'+data[3] 
+
+
 def print_orb(mol,m,f):
     
   aos_atom=mol.offset_nr_by_atom()
@@ -41,16 +51,27 @@ def print_orb(mol,m,f):
          'fz^3':math.sqrt(7./(16*math.pi)),
          'fxz^2':math.sqrt(21./(32*math.pi)),
          'fzx^2':math.sqrt(105./(16.*math.pi)),
-         'fx^3':math.sqrt(35./(32*math.pi))}
+         'fx^3':math.sqrt(35./(32*math.pi)),
+         'gm4':2.50334294, 
+         'gm3':1.77013077, 
+         'gm2':0.9461747,
+         'gm1':0.6690465425,
+         'gp0':0.1057855475, 
+         'gp1':0.6690465425,
+         'gp2':0.47308735,
+         'gp3':1.77013077,
+         'gp4':0.62583574}
 
     #Can get these normalizations using this function.
     #print(gto.mole.cart2sph(3))
     #Translation from pyscf -> qwalk:
     # y^3 -> Fm3, xyz -> Fxyz, fyz^2 -> Fm1, fz^3 -> F0, 
     # fxz^2 -> Fp1, Fxz^2 -> Fp1, Fzx^2 -> Fp2, Fx^3 -> Fp3mod
+    # gm4 -> G8, gm3 -> G6, gm2 -> G4, gm1 -> G2, gm0 -> G0, 
+    # gp1-> G1, gp2 -> G3, gp3 -> G5, gp4 -> G7
   aosym=[]
   for i in gto.mole.spheric_labels(mol):
-    aosym.append(i.split()[2][1:])
+    aosym.append(find_label(i))
   print(aosym)
 
   for a in coeff.T:
@@ -69,7 +90,7 @@ def print_orb(mol,m,f):
 
 def print_basis(mol, f):
   aos_atom= mol.offset_nr_by_atom()
-  mom_to_letter ={0:'s', 1:'p', 2:'5D_siesta', 3:'7F_siesta'}
+  mom_to_letter ={0:'s', 1:'p', 2:'5D_siesta', 3:'7F_siesta', 4:'9G_pyscf'}
   already_written=[]
   for at, li  in enumerate(aos_atom):
     sym=mol.atom_pure_symbol(at)
@@ -169,30 +190,44 @@ def print_sys(mol, f):
 
 def print_slater(mol, mf, orbfile, basisfile, f):
   coeffs=(mf.mo_coeff)
-  occ=mf.get_occ()
-
-  if (isinstance(coeffs[0][0], np.float64)):
+  occ=mf.mo_occ 
+  s=len(occ.shape) 
+  tag='RHF'
+  corb = coeffs[0][0]
+  if(s==2): 
+    tag='UHF'
+    corb = coeffs[0][0][0]
+  
+  if (isinstance(corb, np.float64)):
     orb_type = 'ORBITALS'
   else:
     orb_type = 'CORBITALS'
 
-  te=sum(occ)
+  te=np.sum(occ)
   ts=mol.spin
   us= (ts+te)/2
   ds= (te-ts)/2
   us_orb=[]
   ds_orb=[]
   max_orb=0
-  for i in range(len(occ)):
-    if(len(us_orb) < us and occ[i]>0):
-      us_orb.append(i+1)
-      max_orb= max(max_orb, i+1)
-      occ[i]-=1 
-      
-    if(len(ds_orb)< ds and  occ[i]>0):
-      ds_orb.append(i+1)
-      max_orb= max(max_orb, i+1)
-
+  occup =[ ]
+  if(tag == 'UHF'): 
+    for i in range(len(occ)):
+      temp=[]
+      for j, c in enumerate(occ[i]):
+        if(c > 0):
+          temp += [j+1]
+      occup.append(temp)
+    us_orb = occup[0]
+    ds_orb = occup[1]
+  else:  
+    for i, c in enumerate(occ):
+      if(c>0):
+        us_orb.append(i+1)
+        c-=1 
+      if(c>0):
+        ds_orb.append(i+1)
+  max_orb = max(max(ds_orb), max(us_orb))  
   up_orb=' '.join(list(map(str, us_orb)))
   down_orb= ' '.join(list(map(str, ds_orb)))
 
