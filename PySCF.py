@@ -61,9 +61,9 @@ class PySCFWriter:
         "mol=gto.Mole()",
         "mol.build(atom='''"+self.xyz+"''',",
         "basis='%s',"%self.basis,
-        "ecp='%s')\n"%self.ecp,
-        "mol.charge=%i\n"%self.charge,
-        "mol.spin=%i\n"%self.spin,
+        "ecp='%s')"%self.ecp,
+        "mol.charge=%i"%self.charge,
+        "mol.spin=%i"%self.spin,
         "m=scf.ROHF(mol)",
         "print('E(HF) =',m.kernel())",
         "print_qwalk(mol,m)"
