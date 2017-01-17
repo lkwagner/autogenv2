@@ -81,10 +81,7 @@ EnsembleRun will then loop through jobs and:
 # To Do/ideas
 
 To Do:
- * QWalk runs of LINEAR, DMC, and POSTPROCESS
- * Make it use a queuing system/run parallel.
- * Export to database format.
  * Bundling.
+ * PySCF periodic boundary conditions.
+ * Model fitting
 
-Ideas:
- * Instead of `self.completed` as a T/F flag, have `self.status` as an informative string.
