@@ -52,20 +52,6 @@ class PySCFWriter:
     add_paths=[]
     for i in self.pyscf_path:
       add_paths.append("sys.path.append('"+i+"')")
-#    f.write("import sys\n"+\
-#        append+\
-#        """from pyscf import gto,scf,mcscf
-#from pyscf2qwalk import print_qwalk
-#mol=gto.Mole()
-#"""+\
-#"mol.build(atom='''"+self.xyz+"''',"+\
-#"basis='%s',"%self.basis+\
-#"ecp='%s')\n"%self.ecp+\
-#"mol.charge=%i\n"%self.charge +\
-#"mol.spin=%i\n"%self.spin +\
-#"m=scf.ROHF(mol)\n"+\
-#"print('E(HF) =',m.kernel())\n"+\
-#"print_qwalk(mol,m)\n")
     outlines=[
         "import sys"
       ] + add_paths + [
