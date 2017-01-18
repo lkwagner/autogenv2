@@ -9,11 +9,15 @@ class PySCFWriter:
     self.charge=0
     self.pyscf_path=[]
     self.completed=False
-    
+    self.method = 'ROHF' 
+    self.postHF =False   
+    self.basename ='qw'
     
     self.cas={'ncore':0,
               'nelec':(0,0),
-              'ncas':4
+              'ncas':4, 
+              'tol': 0.02,  
+              'method': 'CASCI'   #default value 
               }
               
 
@@ -64,10 +68,21 @@ class PySCFWriter:
         "ecp='%s')"%self.ecp,
         "mol.charge=%i"%self.charge,
         "mol.spin=%i"%self.spin,
-        "m=scf.ROHF(mol)",
-        "print('E(HF) =',m.kernel())",
-        "print_qwalk(mol,m)"
+        "m=scf.%s(mol)"%self.method,
+        "print('E(HF) =',m.kernel())"
       ]
+    
+    if self.postHF :
+      outlines += ["mc=mcscf.%s(m, ncas=%i, nelecas=(%i, %i),ncore= %i)"%( 
+                   self.cas['method'], self.cas['ncas'], self.cas['nelec'][0], 
+                   self.cas['nelec'][1], self.cas['ncore']), 
+
+                   "mc.kernel()",
+
+                   "print_qwalk(mol, mc, method= 'mcscf', tol = %f , basename = '%s')"%(
+                    self.cas['tol'], self.basename)]
+    else:
+      outlines +=[ "print_qwalk(mol,m)"]
     f.write('\n'.join(outlines))
 
     self.completed=True
