@@ -10,13 +10,12 @@ class PySCFWriter:
     self.pyscf_path=[]
     self.completed=False
     self.method = 'ROHF' 
-    self.mcscf=False 
+    self.postHF =""  # could set to "CASCI" or "CASSCF" 
     self.basename ='qw'
     
     self.cas={'ncore':0,
               'nelec':(0,0),
               'ncas':4, 
-              'method': 'CASCI', 
               'tol': 0.02 
               }
               
@@ -72,13 +71,12 @@ class PySCFWriter:
         "print('E(HF) =',m.kernel())"
       ]
     
-    if(self.mcscf):
-      print (self.cas['method']) 
+    if(self.postHF != "" ):
       outlines += ["mc=mcscf.%s(m, ncas=%i, nelecas=(%i, %i),ncore= %i)"%( 
-                   self.cas['method'], self.cas['ncas'], self.cas['nelec'][0], 
+                   self.postHF, self.cas['ncas'], self.cas['nelec'][0], 
                    self.cas['nelec'][1], self.cas['ncore']), 
 
-                   "print('E("+ self.cas['method'] +") = %.9g' %mc.casci()[0] )",
+                   "print('E("+ self.postHF +") = %.9g' %mc.casci()[0] )",
 
                    "print_qwalk(mol, mc, method= 'mcscf', tol = %f , basename = '%s')"%(
                     self.cas['tol'], self.basename)]
