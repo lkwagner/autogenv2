@@ -77,11 +77,3 @@ EnsembleRun will then loop through jobs and:
 # Examples
 
 `make_X_plan.py` will make a sample plan using X to generate the trial wave function, and `run_plan.py` will run plan.pickle and report on the results.
-
-# To Do/ideas
-
-To Do:
- * Bundling.
- * PySCF periodic boundary conditions.
- * Model fitting
-
