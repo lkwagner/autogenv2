@@ -296,7 +296,7 @@ from PySCFRunner import PySCFRunnerPBS
 
 class PySCFQWalk(Recipe):
   
-  def __init__(self,jobid,struct,
+  def __init__(self,jobid,
                pyscf_opts={},
                variance_opts={},
                energy_opts={},
