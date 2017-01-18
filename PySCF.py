@@ -13,13 +13,7 @@ class PySCFWriter:
     self.postHF =False   
     self.basename ='qw'
     
-    self.cas={'ncore':0,
-              'nelec':(0,0),
-              'ncas':4, 
-              'tol': 0.02,  
-              'method': 'CASCI'   #default value 
-              }
-              
+    self.cas={}
 
     self.set_options(options)
     
@@ -27,6 +21,8 @@ class PySCFWriter:
     
   def set_options(self, d):
     selfdict=self.__dict__
+    if self.postHF=True:
+      assert self.cas!={},'You need to define cas parameters for PySCF!"
     for k in d.keys():
       if not k in selfdict.keys():
         print("Error:",k,"not a keyword for VarianceWriter")
