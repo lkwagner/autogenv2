@@ -9,11 +9,17 @@ class PySCFWriter:
     self.charge=0
     self.pyscf_path=[]
     self.completed=False
-    self.method = 'ROHF' 
-    self.postHF =False   
-    self.basename ='qw'
-    
+    self.method='ROHF' 
+    self.postHF=False   
+    # For Docs later:
+    # ncore: %d     -- Number of core outside active space.
+    # nelec: (%d,%d)-- Number of up (x) and down (y) electrons in active space.
+    # ncas: %d      -- Number of electrons in active space. 
+    # tol: %f       -- tolerance on coefficient for det to be included in QWalk calculations.
+    # method: %s    -- CASSCF or CASCI.
     self.cas={}
+
+    self.basename ='qw'
 
     self.set_options(options)
     
@@ -21,13 +27,19 @@ class PySCFWriter:
     
   def set_options(self, d):
     selfdict=self.__dict__
-    if self.postHF=True:
-      assert self.cas!={},'You need to define cas parameters for PySCF!"
+
+    # Check important keys are set. 
     for k in d.keys():
       if not k in selfdict.keys():
         print("Error:",k,"not a keyword for VarianceWriter")
         raise InputError
       selfdict[k]=d[k]
+
+    # If postHF got set, new options are required input.
+    if self.postHF==True:
+      for key in ['ncore','nelec','ncas','tol','method']:
+        assert key in self.cas.keys(),"%s missing from 'cas' settings! "%key+\
+            "Make sure all of 'ncore','nelec','ncas','tol','method' are set."
   #-----------------------------------------------
   def is_consistent(self,other):
     skipkeys = ['completed']
