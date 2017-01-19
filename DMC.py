@@ -41,6 +41,31 @@ class DMCWriter:
     return True
     
   #-----------------------------------------------
+  def _average_section(self,opts):
+    outlines=[]
+    if opts['name'].lower()=='average_derivative_dm':
+      outlines=[
+          "  average { average_derivative_dm",
+          "    average { tbdm_basis",
+          "      orbitals { ",
+          "        cutoff_mo",
+          "        magnify 1",
+          "        nmo %d"%opt['nmo'],
+          "        orbfile %s"%opt['orbfile'],
+          "        include %s"%opt['basis'],
+          "        centers { useglobal }",
+          "      }",
+          "      states { %s }"%' '.join(opt['states']),
+          "    }",
+          "  }"
+        ]
+    else:
+      raise NotImplementedError("""
+      '%s' is not implemented in autogen yet: 
+      You should implement it, it should be easy!"""%opts['name'])
+    return outlines
+
+  #-----------------------------------------------
   def qwalk_input(self):
     nfiles=len(self.sysfiles)
     infiles=[]
@@ -52,12 +77,19 @@ class DMCWriter:
       for t in self.timesteps:
         fname=base+'t'+str(t)+".dmc"
         infiles.append(fname)
+        outlines=[
+            "method { dmc timestep %g nblock %i"%(t,self.nblock)
+          ]
+        for avg_opts in self.extra_observables:
+          outlines+=self._average_section(avg_opts)
+        outlines+=[
+            "}",
+            "include %s"%sys,
+            "trialfunc { include %s }"%wf
+          ]
+
         with open(fname,'w') as f:
-          f.write("method { dmc timestep %g nblock %i }\n"\
-              %(t,self.nblock))
-          f.write("include "+sys+"\n")
-          f.write("trialfunc { include %s\n"%wf)
-          f.write("}\n")
+          f.write('\n'.join(outlines))
     outfiles=[x+".log" for x in infiles]        
     self.completed=True
     return infiles,outfiles
