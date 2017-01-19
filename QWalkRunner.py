@@ -43,7 +43,7 @@ class QWalkRunnerPBS:
                     queue='batch',
                     walltime='12:00:00',
                     prefix="",#for example, load modules
-                    postfix="rm fort.*.pe*",
+                    postfix="",#for any clean-up.
                     np=1,nn=1
                     ):
     self.exe=exe

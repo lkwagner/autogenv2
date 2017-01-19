@@ -9,12 +9,15 @@ class PySCFWriter:
     self.charge=0
     self.pyscf_path=[]
     self.completed=False
+    # For docs later:
+    # Options include: 'ROHF','UHF'
+    # TODO: RKS,UKS (DFT)
     self.method='ROHF' 
     self.postHF=False   
     # For Docs later:
-    # ncore: %d     -- Number of core outside active space.
+    # ncore: %d     -- Number of core states.
+    # ncas: %d      -- Number of states in active space. 
     # nelec: (%d,%d)-- Number of up (x) and down (y) electrons in active space.
-    # ncas: %d      -- Number of electrons in active space. 
     # tol: %f       -- tolerance on coefficient for det to be included in QWalk calculations.
     # method: %s    -- CASSCF or CASCI.
     self.cas={}
