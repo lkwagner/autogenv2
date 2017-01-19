@@ -228,4 +228,3 @@ class PySCFManager:
     else:
       return 'not_finished'
     
-    

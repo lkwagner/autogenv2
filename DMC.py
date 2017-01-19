@@ -8,6 +8,12 @@ class DMCWriter:
     self.completed=False
     self.timesteps=[0.01]
     self.nblock=20
+    # For Docs:
+    # nmo: (int) number of orbitals needed from orbital file.
+    # orbfile: (str) location of QWalk orbital file.
+    # basis: (str) basis set the orbitals are expressed in.
+    # states: (list) of the orbitals read in, which states are you using?
+    self.extra_observables=[]
     self.set_options(options)
     
   #-----------------------------------------------
@@ -16,17 +22,16 @@ class DMCWriter:
     selfdict=self.__dict__
     for k in d.keys():
       if not k in selfdict.keys():
-        print("Error:",k,"not a keyword for EnergyWriter")
-        raise InputError
+        raise ValueError("Error:",k,"not a keyword for DMCWriter")
       selfdict[k]=d[k]
 
     # Check completeness of average generator options.
     for avg_generator in self.extra_observables:
-      check=['nmo','orbfile','include','orbfile','basis','states']
+      check=['nmo','orbfile','basis','states']
       for key in check:
         assert key in avg_generator.keys(),"""
-          %s missing from 'extra_observables' settings!
-          Make sure all of %s are set."""%', '.join(key,check)
+          '%s' missing from 'extra_observables' settings!
+          Make sure all of %s are set."""%(key,', '.join(check))
 
   #-----------------------------------------------
   def is_consistent(self,other):
@@ -59,12 +64,12 @@ class DMCWriter:
           "      orbitals { ",
           "        cutoff_mo",
           "        magnify 1",
-          "        nmo %d"%opt['nmo'],
-          "        orbfile %s"%opt['orbfile'],
-          "        include %s"%opt['basis'],
+          "        nmo %d"%opts['nmo'],
+          "        orbfile %s"%opts['orbfile'],
+          "        include %s"%opts['basis'],
           "        centers { useglobal }",
           "      }",
-          "      states { %s }"%' '.join(opt['states']),
+          "      states { %s }"%' '.join(map(str,opts['states'])),
           "    }",
           "  }"
         ]
