@@ -13,6 +13,11 @@ from QWalkRunner import QWalkRunnerPBS
 #    "xyz":"H 0. 0. 0.; H 0. 0. 0.7"
 #  }
 
+hf_opts={
+    'xyz':"N 0. 0. 0.; N 0. 0. 2.5",
+    'method':'ROHF',
+  }
+
 cas_opts={
     'xyz':"N 0. 0. 0.; N 0. 0. 2.5",
     'method':'ROHF',
@@ -39,7 +44,13 @@ dmc_opts={
   }
 
 test = JobEnsemble([
-    job.PySCFQWalk('n2',
+    job.PySCFQWalk('n2_hf',
+       pyscf_opts=hf_opts,
+       variance_opts=variance_opts,
+       energy_opts=energy_opts,
+       dmc_opts=dmc_opts,
+       qwalkrunner=QWalkRunnerPBS(np=6) ),
+    job.PySCFQWalk('n2_cas',
        pyscf_opts=cas_opts,
        variance_opts=variance_opts,
        energy_opts=energy_opts,
