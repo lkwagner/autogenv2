@@ -19,6 +19,15 @@ class DMCWriter:
         print("Error:",k,"not a keyword for EnergyWriter")
         raise InputError
       selfdict[k]=d[k]
+
+    # Check completeness of average generator options.
+    for avg_generator in self.extra_observables:
+      check=['nmo','orbfile','include','orbfile','basis','states']
+      for key in check:
+        assert key in avg_generator.keys(),"""
+          %s missing from 'extra_observables' settings!
+          Make sure all of %s are set."""%', '.join(key,check)
+
   #-----------------------------------------------
   def is_consistent(self,other):
     #In principle we should check for the files, but 
