@@ -429,4 +429,5 @@ class PySCFQWalk(Recipe):
       
     # Collect from DMC. 
     if self.managers[dmc].status()=='ok':
-      ret=self.managers[dmc].generate_report()
+      ret['dmc']=self.managers[dmc].generate_report()
+    return ret

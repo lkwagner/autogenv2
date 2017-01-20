@@ -1,4 +1,5 @@
 import os
+import numpy as np
 def resolve_status(runner,reader,outfiles):
   #Check if the reader is done
   if reader.completed:
@@ -170,22 +171,21 @@ class QWalkRunManager:
 
   #------------------------------------------------
   def generate_report(self):
-      #here we average over k-points
-      dmcret={'timestep':[],'energy':[],'energy_err':[]}
-      basenames=self.writer.basenames
-      timesteps=self.writer.timesteps
-      for t in timesteps:
-        ens=[]
-        errs=[]
-        for base in basenames:
-          nm=base+'t'+str(t)+".dmc.log"
-          ens.append(self.reader.output[nm]['properties']['total_energy']['value'][0])
-          err.append(self.reader.output[nm]['properties']['total_energy']['error'][0])
-        dmcret['timestep'].append(t)
-        dmcret['energy'].append(np.mean(ens))
-        dmcret['energy_err'].append(np.sqrt(np.mean(np.array(err)**2)))
-      ret['dmc']=dmcret
-    return ret
+    #here we average over k-points
+    dmcret={'timestep':[],'energy':[],'energy_err':[]}
+    basenames=self.writer.basenames
+    timesteps=self.writer.timesteps
+    for t in timesteps:
+      ens=[]
+      errs=[]
+      for base in basenames:
+        nm=base+'t'+str(t)+".dmc.log"
+        ens.append(self.reader.output[nm]['properties']['total_energy']['value'][0])
+        errs.append(self.reader.output[nm]['properties']['total_energy']['error'][0])
+      dmcret['timestep'].append(t)
+      dmcret['energy'].append(np.mean(ens))
+      dmcret['energy_err'].append(np.sqrt(np.mean(np.array(errs)**2)))
+    return dmcret
     
 
   #----------------------------------------
