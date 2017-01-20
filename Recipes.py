@@ -301,28 +301,31 @@ class PySCFQWalk(Recipe):
                variance_opts={},
                energy_opts={},
                dmc_opts={},
+               pyscfrunner=PyScfRunnerPBS(),
                qwalkrunner=QWalkRunnerPBS(np=6)):
     self.jobid=jobid
     self.picklefn="%s.pickle"%jobid
     
-    self.managers=[mgmt.PySCFManager(PySCFWriter(pyscf_opts),
-      PySCFRunnerPBS(),PySCFReader()
-      ),
+    self.managers=[mgmt.PySCFManager(
+                                     PySCFWriter(pyscf_opts),
+                                     copy.deepcopy(pyscfrunner),
+                                     PySCFReader()
+                                    ),
       mgmt.QWalkRunManager(
-        VarianceWriter(variance_opts),
-        copy.deepcopy(qwalkrunner),
-        VarianceReader()
-        ),
+                           VarianceWriter(variance_opts),
+                           copy.deepcopy(qwalkrunner),
+                           VarianceReader()
+                          ),
       mgmt.QWalkRunManager(
-        LinearWriter(energy_opts),
-        copy.deepcopy(qwalkrunner),
-        LinearReader()
-        ),
+                           LinearWriter(energy_opts),
+                           copy.deepcopy(qwalkrunner),
+                           LinearReader()
+                           ),
       mgmt.QWalkRunManager(
-        DMCWriter(dmc_opts),
-        copy.deepcopy(qwalkrunner),
-        DMCReader()
-        )
+                           DMCWriter(dmc_opts),
+                           copy.deepcopy(qwalkrunner),
+                           DMCReader()
+                          )
       ]
   #-----------------------------
   def nextstep(self):
