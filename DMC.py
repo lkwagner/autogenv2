@@ -85,7 +85,7 @@ class DMCWriter:
     infiles=[]
     for i in range(nfiles):
       sys=self.sysfiles[i]
-      wflines=self.wffiles[i].read().split('\n')
+      wflines=open(self.wffiles[i],'r').read().split('\n')
 
       # May need to modify wave function if doing derivatives.
       if any(['average_derivative_dm'==opts['name'] for opts in self.extra_observables]):

@@ -372,9 +372,10 @@ class PySCFQWalk(Recipe):
            'wffiles':[] } 
     for i in [base]:
       wfname=i+'.dmc.wf'
+      slat=open(i+'.slater','r').read()
       with open(wfname,'w') as f:
         f.write("slater-jastrow  \n" +\
-            "wf1 { include %s.slater }\n"%i +\
+            "wf1 { " + slat + " }\n" +\
             "wf2 { " + jast + "} \n ")
         f.close()
       files['wffiles'].append(wfname)
