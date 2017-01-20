@@ -398,13 +398,14 @@ class PySCFQWalk(Recipe):
     dmc=3 
     ret={'id':self.jobid}
     
+    # Collect from PySCF.
     if self.managers[pyscf].status()=='ok':
-#      ret['pyscf_energy']='not read'
       pyout={} 
       for f, out in self.managers[pyscf].reader.output.items(): 
         pyout[f]=out['energy']  
       ret['pyscf_energy']=pyout
 
+    # Collect from VMC variance optimization.
     if self.managers[var].status()=='ok':
       varopt={}
       for f,out in self.managers[var].reader.output.items():
@@ -414,6 +415,7 @@ class PySCFQWalk(Recipe):
         varopt[f]=sigma
       ret['variance_optimization']=varopt
 
+    # Collect from VMC energy optimization.
     if self.managers[en].status()=='ok':
       enopt={}
       for f,out in self.managers[en].reader.output.items():
@@ -425,6 +427,7 @@ class PySCFQWalk(Recipe):
         enopt[f]={'energy':en,'energy_err':err}
       ret['energy_optimization']=enopt
       
+    # Collect from DMC. 
     if self.managers[dmc].status()=='ok':
       #here we average over k-points
       dmcret={'timestep':[],'energy':[],'energy_err':[]}
