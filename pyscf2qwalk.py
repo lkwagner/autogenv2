@@ -232,6 +232,7 @@ def print_slater(mol, mf, orbfile, basisfile, f):
   down_orb= ' '.join(list(map(str, ds_orb)))
 
   f.write('''SLATER
+  OPTIMIZE_DET
   %s  { 
 	CUTOFF_MO
   MAGNIFY 1.0 
