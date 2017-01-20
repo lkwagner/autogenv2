@@ -73,6 +73,10 @@ class DMCWriter:
           "    }",
           "  }"
         ]
+    elif opts['name'].lower()=='region_fluctuation':
+      outlines=[
+          "  average { region_fluctuation maxn %i } "%opts['maxn']
+          ]
     else:
       raise NotImplementedError("""
       '%s' is not implemented in autogen yet: 

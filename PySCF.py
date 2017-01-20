@@ -108,17 +108,27 @@ class PySCFReader:
 
   def read_outputfile(self,outfile):
     ret={}
+    with open(outfile, 'r') as of: 
+      lines = of.readlines() 
+    for line in lines:
+      if 'E(HF)' in line:
+        ret['HF_Energy'] = float(line.split('=')[1]) 
+      if 'CASCI' in line: 
+        ret['CASCI_Energy'] =float(line.split()[3]) 
+      if 'CASSCF' in line:
+        ret['CASSCF_Energy'] =float(line.split()[3])
     return ret
           
   #------------------------------------------------
   def collect(self,outfiles):
     problem=False
-    for f in outfiles:
+    for f in outfiles: 
       if f not in self.output.keys():
-        self.output[f]=[]
+        self.output[f]={}
       if 'converged' not in open(f,'r').read().split():
         problem=True
-      self.output[f].append(self.read_outputfile(f))
+   #   self.output[f].append(self.read_outputfile(f))
+      self.output[f]['energy'] = self.read_outputfile(f)
     if not problem:
       self.completed=True
     else: 
