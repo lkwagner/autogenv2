@@ -85,7 +85,14 @@ class DMCWriter:
     infiles=[]
     for i in range(nfiles):
       sys=self.sysfiles[i]
-      wf=self.wffiles[i]
+      wflines=self.wffiles[i].read().split('\n')
+
+      # May need to modify wave function if doing derivatives.
+      if any(['average_derivative_dm'==opts['name'] for opts in self.extra_observables]):
+        for lidx,line in enumerate(wflines):
+          if 'slater' in line.lower() and 'jastrow' not in line.lower():
+            wflines.insert(lidx,'optimize_det')
+
       base=self.basenames[i]
       
       for t in self.timesteps:
@@ -99,7 +106,9 @@ class DMCWriter:
         outlines+=[
             "}",
             "include %s"%sys,
-            "trialfunc { include %s }"%wf
+            "trialfunc { ",
+          ] + wflines + [
+            '}'
           ]
 
         with open(fname,'w') as f:
