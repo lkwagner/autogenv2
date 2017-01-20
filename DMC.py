@@ -92,6 +92,7 @@ class DMCWriter:
         for lidx,line in enumerate(wflines):
           if 'slater' in line.lower() and 'jastrow' not in line.lower():
             wflines.insert(lidx,'optimize_det')
+            break
 
       base=self.basenames[i]
       
