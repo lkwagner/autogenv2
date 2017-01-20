@@ -1,4 +1,5 @@
 from __future__ import print_function
+import average_tools as avg
 ####################################################
 class DMCWriter:
   def __init__(self,options={}):
@@ -57,34 +58,6 @@ class DMCWriter:
         return False
     return True
     
-  #-----------------------------------------------
-  def _average_section(self,opts):
-    outlines=[]
-    if opts['name'].lower()=='average_derivative_dm':
-      outlines=[
-          "  average { average_derivative_dm",
-          "    average { tbdm_basis",
-          "      orbitals { ",
-          "        cutoff_mo",
-          "        magnify 1",
-          "        nmo %d"%opts['nmo'],
-          "        orbfile %s"%opts['orbfile'],
-          "        include %s"%opts['basis'],
-          "        centers { useglobal }",
-          "      }",
-          "      states { %s }"%' '.join(map(str,opts['states'])),
-          "    }",
-          "  }"
-        ]
-    elif opts['name'].lower()=='region_fluctuation':
-      outlines=[
-          "  average { region_fluctuation maxn %i } "%opts['maxn']
-          ]
-    else:
-      raise NotImplementedError("""
-      '%s' is not implemented in autogen yet: 
-      You should implement it, it should be easy!"""%opts['name'])
-    return outlines
 
   #-----------------------------------------------
   def qwalk_input(self):
@@ -111,7 +84,7 @@ class DMCWriter:
             "method { dmc timestep %g nblock %i"%(t,self.nblock)
           ]
         for avg_opts in self.extra_observables:
-          outlines+=self._average_section(avg_opts)
+          outlines+=avg.average_section(avg_opts)
         outlines+=[
             "}",
             "include %s"%sys,
