@@ -27,8 +27,11 @@ class DMCWriter:
 
     # Check completeness of average generator options.
     for avg_generator in self.extra_observables:
-      check=['nmo','orbfile','basis','states']
-      for key in check:
+      check={'average_derivative_dm':
+                ['nmo','orbfile','basis','states'],
+             'region_fluctuation':['maxn']
+             }
+      for key in check[avg_generator['name']]:
         assert key in avg_generator.keys(),"""
           '%s' missing from 'extra_observables' settings!
           Make sure all of %s are set."""%(key,', '.join(check))
