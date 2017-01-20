@@ -29,3 +29,15 @@ def average_section(opts):
     '%s' is not implemented in autogen yet: 
     You should implement it, it should be easy!"""%opts['name'])
   return outlines
+
+################################################
+def check_opts(opts):
+  ''' Make sure options are set completely.'''
+  check={'average_derivative_dm':
+            ['nmo','orbfile','basis','states'],
+         'region_fluctuation':['maxn']
+         }
+  for key in check[opts['name']]:
+    assert key in opts.keys(),"""
+      '%s' missing from 'extra_observables' settings!
+      Make sure all of %s are set."""%(key,', '.join(check))
