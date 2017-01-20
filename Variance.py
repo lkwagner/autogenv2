@@ -2,6 +2,7 @@ from __future__ import print_function
 ####################################################
 class VarianceWriter:
   def __init__(self,options={}):
+    self.qmc_type='Variance optimization'
     self.sysfiles=['qw_000.sys']
     self.slaterfiles=['qw_000.slater']
     self.jastfiles=['qw.jast2']

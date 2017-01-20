@@ -150,7 +150,7 @@ class QWalkRunManager:
     
     while True:
       status=resolve_status(self.runner,self.reader,self.outfiles)
-      print("QWalk status",status)
+      print("%s status: %s"%(self.writer.qmc_type,status))
       if status=="running":
         return
       elif status=="not_started":

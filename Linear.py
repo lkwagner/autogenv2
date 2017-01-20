@@ -2,6 +2,7 @@ from __future__ import print_function
 ####################################################
 class LinearWriter:
   def __init__(self,options={}):
+    self.qmc_type='Linear optimization'
     self.sysfiles=['qw_000.sys']
     self.wffiles=[]
     self.basenames=['qw_000']

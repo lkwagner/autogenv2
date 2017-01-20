@@ -3,6 +3,7 @@ import average_tools as avg
 ####################################################
 class DMCWriter:
   def __init__(self,options={}):
+    self.qmc_type='DMC'
     self.sysfiles=['qw_000.sys']
     self.wffiles=[]
     self.basenames=['qw_000']
