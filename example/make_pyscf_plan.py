@@ -24,7 +24,7 @@ cas_opts={
     'postHF':True,
     'cas': {
         'ncore':2, # s bonding and antibonding.
-        'ncas':5,
+        'ncas':6,
         'nelec':(3,3), 
         'tol': 0.02,
         'method': 'CASSCF'

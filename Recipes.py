@@ -301,7 +301,7 @@ class PySCFQWalk(Recipe):
                variance_opts={},
                energy_opts={},
                dmc_opts={},
-               pyscfrunner=PyScfRunnerPBS(),
+               pyscfrunner=PySCFRunnerPBS(),
                qwalkrunner=QWalkRunnerPBS(np=6)):
     self.jobid=jobid
     self.picklefn="%s.pickle"%jobid
