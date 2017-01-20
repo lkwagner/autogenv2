@@ -289,7 +289,9 @@ def print_cas_slater(mc,orbfile, basisfile,f, tol):
     orb_type = 'CORBITALS' 
     
     # write to file
-  f.write('''SLATER
+  f.write('''SLATER 
+  SLATER
+  OPTIMIZE_DET
   %s  { 
         CUTOFF_MO
   MAGNIFY 1.0 

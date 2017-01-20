@@ -87,12 +87,13 @@ class DMCWriter:
       sys=self.sysfiles[i]
       wflines=open(self.wffiles[i],'r').read().split('\n')
 
-      # May need to modify wave function if doing derivatives.
-      if any(['average_derivative_dm'==opts['name'] for opts in self.extra_observables]):
-        for lidx,line in enumerate(wflines):
-          if 'slater' in line.lower() and 'jastrow' not in line.lower():
-            wflines.insert(lidx,'optimize_det')
-            break
+      # NOTE: Not needed if default is to optimize determinants?
+      ## May need to modify wave function if doing derivatives.
+      #if any(['average_derivative_dm'==opts['name'] for opts in self.extra_observables]):
+      #  for lidx,line in enumerate(wflines):
+      #    if 'slater' in line.lower() and 'jastrow' not in line.lower():
+      #      wflines.insert(lidx,'optimize_det')
+      #      break
 
       base=self.basenames[i]
       
