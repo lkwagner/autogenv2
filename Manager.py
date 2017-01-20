@@ -165,9 +165,27 @@ class QWalkRunManager:
         return
       
   #------------------------------------------------
-
   def write_summary(self):
     self.reader.write_summary()
+
+  #------------------------------------------------
+  def generate_report(self):
+      #here we average over k-points
+      dmcret={'timestep':[],'energy':[],'energy_err':[]}
+      basenames=self.writer.basenames
+      timesteps=self.writer.timesteps
+      for t in timesteps:
+        ens=[]
+        errs=[]
+        for base in basenames:
+          nm=base+'t'+str(t)+".dmc.log"
+          ens.append(self.reader.output[nm]['properties']['total_energy']['value'][0])
+          err.append(self.reader.output[nm]['properties']['total_energy']['error'][0])
+        dmcret['timestep'].append(t)
+        dmcret['energy'].append(np.mean(ens))
+        dmcret['energy_err'].append(np.sqrt(np.mean(np.array(err)**2)))
+      ret['dmc']=dmcret
+    return ret
     
 
   #----------------------------------------

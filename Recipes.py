@@ -429,20 +429,4 @@ class PySCFQWalk(Recipe):
       
     # Collect from DMC. 
     if self.managers[dmc].status()=='ok':
-      #here we average over k-points
-      dmcret={'timestep':[],'energy':[],'energy_err':[]}
-      basenames=self.managers[dmc].writer.basenames
-      timesteps=self.managers[dmc].writer.timesteps
-      for t in timesteps:
-        ens=[]
-        errs=[]
-        for base in basenames:
-          nm=base+'t'+str(t)+".dmc.log"
-          ens.append(self.managers[dmc].reader.output[nm]['properties']['total_energy']['value'][0])
-          err.append(self.managers[dmc].reader.output[nm]['properties']['total_energy']['error'][0])
-        dmcret['timestep'].append(t)
-        dmcret['energy'].append(np.mean(ens))
-        dmcret['energy_err'].append(np.sqrt(np.mean(np.array(err)**2)))
-      ret['dmc']=dmcret
-    return ret
-    
+      ret=self.managers[dmc].generate_report()
