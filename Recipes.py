@@ -359,7 +359,7 @@ class PySCFQWalk(Recipe):
     with open(base+".variance.wfout") as fin:
       fout=open(base+".energywfin",'w')
       for line in fin:
-        fout.write(line.replace("OPTIMIZEBASIS",''))
+        fout.write(line.replace("OPTIMIZEBASIS",'').replace(" SLATER\n","SLATER OPTIMIZE_DET\n"))
       fout.close()
       
 

@@ -36,7 +36,7 @@ variance_opts={
   }
 
 energy_opts={
-    'total_nstep':512
+    'total_nstep':8192
   }
 
 dmc_opts={

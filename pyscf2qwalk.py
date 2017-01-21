@@ -291,7 +291,6 @@ def print_cas_slater(mc,orbfile, basisfile,f, tol):
     # write to file
   f.write('''SLATER 
   SLATER
-  OPTIMIZE_DET
   %s  { 
         CUTOFF_MO
   MAGNIFY 1.0 
