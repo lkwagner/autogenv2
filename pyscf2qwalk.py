@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-from pyscf import gto,fci, mcscf, scf 
+from pyscf import gto,fci, mcscf, scf,pbc
 import math
 
 ##TODO:
@@ -16,11 +16,13 @@ def find_label(sph_label):
   else:
     return 'gp'+data[3] 
 
-
-def print_orb(mol,m,f):
+#----------------------------------------------
+def print_orb(mol,m,f,k=0):
     
   aos_atom=mol.offset_nr_by_atom()
   coeff=m.mo_coeff
+  if len(coeff.shape)==3:
+    coeff=coeff[k]
   nmo=len(coeff)
   count=0
   for ni in range(nmo):
@@ -76,7 +78,11 @@ def print_orb(mol,m,f):
 
   for a in coeff.T:
     for ib,b in enumerate(a):
-      f.write(str(norms[aosym[ib]]*b)+" ")
+      c=norms[aosym[ib]]*b
+      if isinstance(c,float):
+        f.write(str(c)+" ")
+      else:
+        f.write("("+str(c.real)+","+str(c.imag)+") ")
       count+=1
       if count%10==0:
         f.write("\n")
@@ -118,7 +124,7 @@ def print_basis(mol, f):
 
 ###########################################################
 
-def print_sys(mol, f):
+def print_sys(mol, f,kpoint=[0.,0.,0.]):
   coords = mol.atom_coords()
   symbols=[]
   charges=[]
@@ -136,9 +142,21 @@ def print_sys(mol, f):
   spin_up =(T_charge + T_spin)/2
   spin_down = (T_charge - T_spin)/2
 
-  f.write('SYSTEM { MOLECULE \nNSPIN { %d  %d }\n' %(spin_up, spin_down))
+  if isinstance(mol,pbc.gto.Cell):
+    f.write('SYSTEM { PERIODIC \n')
+    f.write('LATTICEVEC {')
+    f.write(mol.a)
+    f.write('}\n')
+    f.write("KPOINT { %g %g %g }\n"%tuple(kpoint))
+  elif isinstance(mol,gto.Mole):
+    f.write('SYSTEM { MOLECULE \n') 
+      
+  
+  f.write('NSPIN { %d  %d }\n' %(spin_up, spin_down))
   for i in range(len(coords)):
     f.write('ATOM { %s  %d  COOR  %s }\n'   %(symbols[i], charges[i], coords_string[i]))
+
+
   f.write('}\n')
 
     # write pseudopotential 
