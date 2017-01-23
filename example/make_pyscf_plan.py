@@ -8,11 +8,6 @@ from copy import deepcopy
 import os
 from QWalkRunner import QWalkRunnerPBS
 
-# TODO
-#dft_opts={
-#    "xyz":"H 0. 0. 0.; H 0. 0. 0.7"
-#  }
-
 hf_opts={
     'xyz':"N 0. 0. 0.; N 0. 0. 2.5",
     'method':'ROHF',
@@ -36,18 +31,19 @@ variance_opts={
   }
 
 energy_opts={
-    'total_nstep':512
+    'total_nstep':8192
   }
 
 dmc_opts={
     'timesteps':[.03],
-    'extra_observables':[{
-      'name':'average_derivative_dm',
-      'nmo':8,
-      'orbfile':'qw.orb',
-      'basis':'qw.basis',
-      'states':[3,4,5,6,7,8]
-    }]
+#    'extra_observables':[{
+#      'name':'average_derivative_dm',
+#      'nmo':8,
+#      'orbfile':'qw.orb',
+#      'basis':'qw.basis',
+#      'states':[3,4,5,6,7,8]
+#    }]
+     'extra_observables':[ {'name':'region_fluctuation','maxn':6}] 
   }
 
 test = JobEnsemble([

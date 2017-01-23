@@ -359,7 +359,7 @@ class PySCFQWalk(Recipe):
     with open(base+".variance.wfout") as fin:
       fout=open(base+".energywfin",'w')
       for line in fin:
-        fout.write(line.replace("OPTIMIZEBASIS",''))
+        fout.write(line.replace("OPTIMIZEBASIS",'').replace(" SLATER\n","SLATER OPTIMIZE_DET\n"))
       fout.close()
       
 
@@ -429,5 +429,21 @@ class PySCFQWalk(Recipe):
       
     # Collect from DMC. 
     if self.managers[dmc].status()=='ok':
-      ret['dmc']=self.managers[dmc].generate_report()
+      #here we average over k-points
+      dmcret={'timestep':[],'energy':[],'energy_err':[]}
+      basenames=self.managers[dmc].writer.basenames
+      timesteps=self.managers[dmc].writer.timesteps
+      for t in timesteps:
+        ens=[]
+        errs=[]
+        for base in basenames:
+          nm=base+'t'+str(t)+".dmc.log"
+          en=self.managers[dmc].reader.output[nm]['properties']['total_energy']
+          ens.append(en['value'][0])
+          errs.append(en['error'][0])
+        dmcret['timestep'].append(t)
+        dmcret['energy'].append(np.mean(ens))
+        dmcret['energy_err'].append(np.sqrt(np.mean(np.array(errs)**2)))
+
+      ret['dmc']=dmcret
     return ret
