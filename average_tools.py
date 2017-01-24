@@ -41,3 +41,36 @@ def check_opts(opts):
     assert key in opts.keys(),"""
       '%s' missing from 'extra_observables' settings!
       Make sure all of %s are set."""%(key,', '.join(check))
+
+################################################
+def kaverage(name,data):
+  ''' kaverage the data for each property.'''
+  if name=='average_derivative_dm':
+    return _kaverage_deriv(data)
+  else:
+    raise NotImplementedError("""
+    '%s' is not implemented in autogen yet: 
+    You should implement it, it should be easy!"""%name)
+
+################################################
+def _kaverage_deriv(data):
+  res={}
+  nparm=len(data[0]['dpenergy']['vals'])
+  nkpt=len(data)
+
+  # Parameters with nparm values.
+  for prop in ['dpenergy','dpwf']:
+    res[prop]=[
+        sum([
+          data[i][prop]['vals'][j]
+          for i in range(nkpt)
+        ])/nparm
+        for j in range(nparm)
+      ]
+    res['%s_err'%prop]=[
+        (sum([
+          data[i][prop]['err'][j]**2
+          for i in range(nkpt)
+        ])/nparm)**0.5
+        for j in range(nparm)
+      ]

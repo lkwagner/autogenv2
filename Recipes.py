@@ -98,8 +98,6 @@ class LocalCrystalDFT(Recipe):
       )]
     self.picklefn="%s.pickle"%jobid
 
-
-
 ##########################################################
 
 from Crystal2QMCRunner import LocalCrystal2QMCRunner
@@ -429,11 +427,18 @@ class PySCFQWalk(Recipe):
       
     # Collect from DMC. 
     if self.managers[dmc].status()=='ok':
-      #here we average over k-points
-      dmcret={'timestep':[],'energy':[],'energy_err':[]}
+      extra_obs=self.managers[dmc].writer.extra_observables
       basenames=self.managers[dmc].writer.basenames
       timesteps=self.managers[dmc].writer.timesteps
+
+      dmcret={'timestep':[],'energy':[],'energy_err':[]}
+      for obs in extra_obs:
+        dmcret[obs['name']]=[]
+
       for t in timesteps:
+        dmcret['timestep'].append(t)
+
+        # Energy results.
         ens=[]
         errs=[]
         for base in basenames:
@@ -441,9 +446,17 @@ class PySCFQWalk(Recipe):
           en=self.managers[dmc].reader.output[nm]['properties']['total_energy']
           ens.append(en['value'][0])
           errs.append(en['error'][0])
-        dmcret['timestep'].append(t)
+        # k-average.
         dmcret['energy'].append(np.mean(ens))
         dmcret['energy_err'].append(np.sqrt(np.mean(np.array(errs)**2)))
+
+        # Property results (if any).
+        for obs in extra_obs:
+          obsres=deepcopy(obs)
+          fnames=[base+'t'+str(t)+".dmc.log" for base in basenames]
+          allk=[self.managers[dmc].reader[nm]['properties'][obs['name']]
+              for nm in fnames]
+
 
       ret['dmc']=dmcret
     return ret
