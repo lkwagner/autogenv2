@@ -4,6 +4,7 @@ from Crystal import CrystalWriter,CrystalReader
 from CrystalRunner import LocalCrystalRunner,CrystalRunnerPBS
 from PropertiesReader import PropertiesReader
 from PropertiesRunner import LocalPropertiesRunner
+import average_tools as avg
 import copy
 import numpy as np
 
@@ -454,7 +455,7 @@ class PySCFQWalk(Recipe):
         for obs in extra_obs:
           obsres=deepcopy(obs)
           fnames=[base+'t'+str(t)+".dmc.log" for base in basenames]
-          allk=[self.managers[dmc].reader[nm]['properties'][obs['name']]
+          allk=[self.managers[dmc].reader.output[nm]['properties'][avg.gosling_key(obs['name'])]
               for nm in fnames]
 
 

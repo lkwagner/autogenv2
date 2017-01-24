@@ -74,3 +74,16 @@ def _kaverage_deriv(data):
         ])/nparm)**0.5
         for j in range(nparm)
       ]
+
+################################################
+def gosling_key(input_keyword):
+  ''' Hack because gosling doesn't name json keys the same as the input keywords for QWalk '''
+  # Should we change this in QWalk?
+  propmap={
+      'average_derivative_dm':'derivative_dm',
+      'tbdm_basis':'tbdm'
+    }
+  if input_keyword in propmap:
+    return propmap[input_keyword]
+  else:
+    return input_keyword
