@@ -47,6 +47,8 @@ def kaverage(name,data):
   ''' kaverage the data for each property.'''
   if name=='average_derivative_dm':
     return _kaverage_deriv(data)
+  elif name=='region_fluctuation':
+    return [] # TODO
   else:
     raise NotImplementedError("""
     '%s' is not implemented in autogen yet: 
@@ -74,6 +76,7 @@ def _kaverage_deriv(data):
         ])/nparm)**0.5
         for j in range(nparm)
       ]
+  return res
 
 ################################################
 def gosling_key(input_keyword):

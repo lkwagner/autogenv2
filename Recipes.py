@@ -453,11 +453,11 @@ class PySCFQWalk(Recipe):
 
         # Property results (if any).
         for obs in extra_obs:
-          obsres=deepcopy(obs)
+          dmcret[obs['name']]=deepcopy(obs)
           fnames=[base+'t'+str(t)+".dmc.log" for base in basenames]
           allk=[self.managers[dmc].reader.output[nm]['properties'][avg.gosling_key(obs['name'])]
               for nm in fnames]
-
+          dmcret[obs['name']].update(avg.kaverage(obs['name'],allk))
 
       ret['dmc']=dmcret
     return ret
