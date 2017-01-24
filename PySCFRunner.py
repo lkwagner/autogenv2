@@ -39,11 +39,14 @@ class PySCFRunnerPBS:
   _name_='PySCFRunnerPBS'
   def __init__(self,queue='batch',
                     walltime='12:00:00',
+                    np=1,
+                    nn=1,
                     prefix="",#for example, load modules
                     postfix=""#for example, remove tmp files.
                     ):
-    self.np=1
-    self.nn=1
+    self.np=np
+    if nn!=1: raise NotImplementedError
+    self.nn=nn
     self.jobname='PySCFRunnerPBS'
     self.queue=queue
     self.walltime=walltime
