@@ -53,29 +53,76 @@ def kaverage(name,data):
     raise NotImplementedError("""
     '%s' is not implemented in autogen yet: 
     You should implement it, it should be easy!"""%name)
+################################################
+def _kaverage_tbdm(data):
+  nkpt=len(data)
+  nstates=len(data[0]['states'])
+  res={'obdm':{},'tbdm':{}}
+
+  # Wait, do we need this? This is already in tbdm, no?
+  for key in ['up','down']:
+    res['obdm'][key]=[
+        [
+          sum([
+            data[i]['obdm'][key][k][l]
+            for i in range(nkpt)
+          ])/nkpt 
+          for l in range(nstates)
+        ] 
+        for k in range(nstates)
+      ] 
+
+  for key in ['upup','updown','downup','downdown']:
+    res['tbdm'][key]=[
+        [
+          [
+            [
+              sum([
+                data[i]['tbdm'][key][k][l][m][n]
+                for i in range(nkpt)
+              ])/nkpt 
+              for n in range(nstates)
+            ] 
+            for m in range(nstates)
+          ]
+          for l in range(nstates)
+        ] 
+        for k in range(nstates)
+      ] 
+  return res
 
 ################################################
 def _kaverage_deriv(data):
   res={}
   nparm=len(data[0]['dpenergy']['vals'])
   nkpt=len(data)
+  nstates=len(data[0]['tbdm']['states'])
 
-  # Parameters with nparm values.
+  # Parameters with one value per parameter values.
   for prop in ['dpenergy','dpwf']:
     res[prop]=[
         sum([
           data[i][prop]['vals'][j]
           for i in range(nkpt)
-        ])/nparm
+        ])/nkpt
         for j in range(nparm)
       ]
     res['%s_err'%prop]=[
         (sum([
           data[i][prop]['err'][j]**2
           for i in range(nkpt)
-        ])/nparm)**0.5
+        ])/nkpt)**0.5
         for j in range(nparm)
       ]
+
+  res['tbdm']=_kaverage_tbdm([data[k]['tbdm'] for k in range(nkpt)])
+
+  res['dprdm']=[
+      _kaverage_tbdm(
+        [data[k]['dprdm'][i]['tbdm'] for k in range(nkpt)]
+      ) for i in range(nparm)
+    ]
+
   return res
 
 ################################################
