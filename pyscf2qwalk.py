@@ -2,10 +2,8 @@ import sys
 import numpy as np
 from pyscf import gto,fci, mcscf, scf,pbc
 import math
+import cmath
 
-##TODO:
-## CI coefficients and occupations.
-## Periodic boundary conditions.
 ###########################################################
 def find_label(sph_label):
   data = sph_label.split( )
@@ -21,8 +19,13 @@ def print_orb(mol,m,f,k=0):
     
   aos_atom=mol.offset_nr_by_atom()
   coeff=m.mo_coeff
+  kpt=[0.,0.,0.]
   if len(coeff.shape)==3:
+    print(coeff.shape)
     coeff=coeff[k]
+    kpt=m.kpts[k,:]
+
+
   nmo=len(coeff)
   count=0
   for ni in range(nmo):
@@ -30,6 +33,7 @@ def print_orb(mol,m,f,k=0):
       for bi,b in enumerate(range(a[2],a[3])):
         f.write("%i %i %i %i\n"%(ni+1,bi+1,ai+1,count+1))
         count += 1
+
 
   count=0
   f.write("COEFFICIENTS\n")
@@ -144,8 +148,13 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
 
   if isinstance(mol,pbc.gto.Cell):
     f.write('SYSTEM { PERIODIC \n')
+    f.write('cutoff_divider 0.1\n')
     f.write('LATTICEVEC {')
-    f.write(mol.a)
+    a=mol.lattice_vectors()
+    for i in a:
+      for j in i:
+        f.write(str(j)+" ")
+      f.write("\n")
     f.write('}\n')
     f.write("KPOINT { %g %g %g }\n"%tuple(kpoint))
   elif isinstance(mol,gto.Mole):
@@ -406,11 +415,10 @@ def print_jastrow(mol,basename='qw'):
 
 
 
-
 ###########################################################
 
+def print_qwalk_mol(mol, mf, method='scf', tol=0.01, basename='qw'):
 
-def print_qwalk(mol, mf, method='scf', tol=0.01, basename='qw'):
   orbfile=basename+".orb"
   basisfile=basename+".basis"
    
@@ -424,7 +432,32 @@ def print_qwalk(mol, mf, method='scf', tol=0.01, basename='qw'):
     print_cas_slater(mf,orbfile, basisfile,open(basename+".slater",'w'), tol)
   else:
     print ("Can't convert to qw.slater. Wait to be updated") 
-        
   return 
+###########################################################
 
+def print_qwalk_pbc(cell,mf,method,tol,basename):
+  basisfile=basename+".basis"
+  print_basis(cell,open(basisfile,'w'))
+  print_jastrow(cell,basename)
+  
+  nk=mf.kpts.shape[0]
+  kpoints=cell.get_scaled_kpts(mf.kpts)
+  for i in range(nk):
+    bask=basename+"_%i"%i
+    orbfile=bask+".orb"
+    print_slater(cell,mf,orbfile,basisfile,
+                 open(bask+".slater",'w'))
+    print_sys(cell,open(bask+".sys",'w'),kpoint=2.*kpoints[i,:])
+    print_orb(cell,mf,open(orbfile,'w'),k=i)
+    
+  
+###########################################################
+
+
+def print_qwalk(mol,mf,method='scf',tol=0.01,basename='qw'):
+  if isinstance(mol,pbc.gto.Cell):
+    print_qwalk_pbc(mol,mf,method,tol,basename)
+  else:
+    print_qwalk_mol(mol,mf,method,tol,basename)
+  
        
