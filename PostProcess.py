@@ -86,4 +86,28 @@ class PostProcessWriter:
     outfiles=[x+".log" for x in infiles]        
     self.completed=True
     return infiles,outfiles
+     
+####################################################
+import subprocess as sub
+import json
+class PostProcessReader:
+  def __init__(self):
+    self.output={}
+    self.completed=False
+    self.gosling="gosling"
 
+  def read_outputfile(self,outfile):
+    return json.loads(sub.check_output([self.gosling,"-json",outfile]).decode())
+          
+  #------------------------------------------------
+  def collect(self,outfiles):
+    for f in outfiles:
+      self.output[f]=self.read_outputfile(f)
+    self.completed=True
+      
+  #------------------------------------------------
+  def write_summary(self):
+    print("#### Post process")
+    for f,out in self.output.items():
+      print(f,out)
+      
