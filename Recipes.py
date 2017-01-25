@@ -294,6 +294,7 @@ from PySCF import PySCFWriter,PySCFReader
 from PySCFRunner import PySCFRunnerPBS
 
 class PySCFQWalk(Recipe):
+  """ Use PySCF to generate a QWalk run. """
   
   def __init__(self,jobid,
                pyscf_opts={},
@@ -367,19 +368,16 @@ class PySCFQWalk(Recipe):
     if self.managers[en].status()!='ok':
       return
 
-
-    jast=separate_jastrow(open("qw.energy.wfout"))
+    # Why does it need to seperate the jastrow?
+    #jast=separate_jastrow(open("qw.energy.wfout"))
     files={'basenames':[],
            'sysfiles':[],
            'wffiles':[] } 
     for i in [base]:
       wfname=i+'.dmc.wf'
-      slat=open(i+'.slater','r').read()
-      with open(wfname,'w') as f:
-        f.write("slater-jastrow  \n" +\
-            "wf1 { " + slat + " }\n" +\
-            "wf2 { " + jast + "} \n ")
-        f.close()
+      # Just copy over the results from the VMC energy minimization.
+      with open(wfname,'w') as outf:
+        outf.write(open(base+'energy.wfout').read())
       files['wffiles'].append(wfname)
       files['sysfiles'].append(i+".sys")
       files['basenames'].append(i)
@@ -461,3 +459,67 @@ class PySCFQWalk(Recipe):
 
       ret['dmc']=dmcret
     return ret
+
+class ModelMakingQWalk(PySCFQWalk):
+  """ Modified version of PySCFQWalk which takes derivatives of slater
+  determinant coefficients."""
+  #-----------------------------
+  def nextstep(self):
+    pyscf=0 #crystal index
+    var=1 #variance index
+    en=2 #energy index
+    dmc=3 
+
+    self.managers[pyscf].nextstep()
+    if self.managers[pyscf].status()!='ok':
+      return 
+
+    base='qw'
+    files={}
+    files['sysfiles']=[base+'.sys']
+    files['slaterfiles']=[base+'.slater']
+    files['basenames']=[base]
+    files['jastfiles']=[base+'.jast2']
+    self.managers[var].writer.set_options(files)
+    self.managers[var].nextstep()
+    if self.managers[var].status()!='ok':
+      return
+   
+    files={'basenames':[],
+           'sysfiles':[],
+           'wffiles':[] } 
+    
+    files['basenames'].append(base)
+    files['wffiles'].append(base+".energy.wfin")
+    files['sysfiles'].append(base+".sys")
+    with open(base+".variance.wfout") as fin:
+      fout=open(base+".energy.wfin",'w')
+      for line in fin:
+        fout.write(line.replace("OPTIMIZEBASIS",'').replace(" SLATER\n","SLATER OPTIMIZE_DET\n"))
+      fout.close()
+      
+
+    self.managers[en].writer.set_options(files)
+    self.managers[en].nextstep()
+    if self.managers[en].status()!='ok':
+      return
+
+
+    # Why does it need to seperate the jastrow?
+    #jast=separate_jastrow(open("qw.energy.wfout"))
+    files={'basenames':[],
+           'sysfiles':[],
+           'wffiles':[] } 
+    for i in [base]:
+      wfname=i+'.dmc.wf'
+      # Just copy over the results from the VMC energy minimization.
+      with open(wfname,'w') as outf:
+        outf.write(open(base+'energy.wfout').read())
+      files['wffiles'].append(wfname)
+      files['sysfiles'].append(i+".sys")
+      files['basenames'].append(i)
+
+    self.managers[dmc].writer.set_options(files)
+    self.managers[dmc].nextstep()
+    if self.managers[dmc].status()!='ok':
+      return
