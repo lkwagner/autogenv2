@@ -1,15 +1,15 @@
 from __future__ import print_function
 import average_tools as avg
 ####################################################
-class DMCWriter:
+class PostProcessWriter:
   def __init__(self,options={}):
-    self.qmc_type='DMC'
+    self.qmc_type='PostProcess'
     self.sysfiles=['qw_000.sys']
     self.wffiles=[]
+    self.nskip=0
+    self.configs=[]
     self.basenames=['qw_000']
     self.completed=False
-    self.timesteps=[0.01]
-    self.nblock=20
     # For Docs:
     # nmo: (int) number of orbitals needed from orbital file.
     # orbfile: (str) location of QWalk orbital file.
@@ -19,7 +19,7 @@ class DMCWriter:
     self.set_options(options)
     
   #-----------------------------------------------
-    
+
   def set_options(self, d):
     selfdict=self.__dict__
     for k in d.keys():
@@ -52,7 +52,7 @@ class DMCWriter:
             .format(key,self.__dict__[key],other.__dict__[key]))
         return False
     return True
-    
+
   #-----------------------------------------------
 
   def qwalk_input(self):
@@ -64,10 +64,14 @@ class DMCWriter:
       base=self.basenames[i]
       
       for t in self.timesteps:
-        fname=base+'t'+str(t)+".dmc"
+        fname=base+'t'+str(t)+".post"
         infiles.append(fname)
+        # TODO calculation skip.
         outlines=[
-            "method { dmc timestep %g nblock %i"%(t,self.nblock)
+            "method { postprocess",
+            "  noenergy",
+            "  readconfig %s"%self.configs[i],
+            "  nskip %s"%self.nskip
           ]
         for avg_opts in self.extra_observables:
           outlines+=avg.average_section(avg_opts)
@@ -82,32 +86,4 @@ class DMCWriter:
     outfiles=[x+".log" for x in infiles]        
     self.completed=True
     return infiles,outfiles
-
-     
-####################################################
-import subprocess as sub
-import json
-class DMCReader:
-  def __init__(self):
-    self.output={}
-    self.completed=False
-    self.gosling="gosling"
-
-  def read_outputfile(self,outfile):
-    return json.loads(sub.check_output([self.gosling,"-json",outfile]).decode())
-          
-  #------------------------------------------------
-  def collect(self,outfiles):
-    for f in outfiles:
-      self.output[f]=self.read_outputfile(f)
-    self.completed=True
-      
-  #------------------------------------------------
-  def write_summary(self):
-    print("#### Diffusion Monte Carlo")
-    for f,out in self.output.items():
-      print(f,out)
-      
-      
-      
 
