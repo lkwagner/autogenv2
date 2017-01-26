@@ -7,7 +7,7 @@ class PostProcessWriter:
     self.sysfiles=['qw_000.sys']
     self.wffiles=[]
     self.nskip=0
-    self.configs=[]
+    self.tracefiles=[]
     self.basenames=['qw_000']
     self.completed=False
     # For Docs:
@@ -70,7 +70,7 @@ class PostProcessWriter:
         outlines=[
             "method { postprocess",
             "  noenergy",
-            "  readconfig %s"%self.configs[i],
+            "  readconfig %s"%self.tracefiles[i],
             "  nskip %s"%self.nskip
           ]
         for avg_opts in self.extra_observables:

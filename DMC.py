@@ -10,6 +10,8 @@ class DMCWriter:
     self.completed=False
     self.timesteps=[0.01]
     self.nblock=20
+    self.savetrace=False
+    self.tracefiles=[]
     # For Docs:
     # nmo: (int) number of orbitals needed from orbital file.
     # orbfile: (str) location of QWalk orbital file.
@@ -32,7 +34,6 @@ class DMCWriter:
       avg.check_opts(avg_generator)
 
   #-----------------------------------------------
-
   def is_consistent(self,other):
     #In principle we should check for the files, but 
     #they are often determined *after* the plan has been 
@@ -53,8 +54,8 @@ class DMCWriter:
         return False
     return True
     
-  #-----------------------------------------------
 
+  #-----------------------------------------------
   def qwalk_input(self):
     nfiles=len(self.sysfiles)
     infiles=[]
@@ -69,6 +70,8 @@ class DMCWriter:
         outlines=[
             "method { dmc timestep %g nblock %i"%(t,self.nblock)
           ]
+        if self.savetrace:
+          outlines+=['save_trace %s'%self.tracefiles[i]]
         for avg_opts in self.extra_observables:
           outlines+=avg.average_section(avg_opts)
         outlines+=[

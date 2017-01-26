@@ -301,11 +301,15 @@ class PySCFQWalk(Recipe):
                variance_opts={},
                energy_opts={},
                dmc_opts={},
+               post_opts={},
                pyscfrunner=PySCFRunnerPBS(np=4),
                qwalkrunner=QWalkRunnerPBS(np=4)):
     self.jobid=jobid
     self.picklefn="%s.pickle"%jobid
-    
+
+    assert post_opts=={} or dmc_opts['savetrace'],"""
+      You need to save the trace (dmc_opts['savetrace']=True) to use postprocess options."""
+
     self.managers=[mgmt.PySCFManager(
                                      PySCFWriter(pyscf_opts),
                                      copy.deepcopy(pyscfrunner),
@@ -325,6 +329,11 @@ class PySCFQWalk(Recipe):
                            DMCWriter(dmc_opts),
                            copy.deepcopy(qwalkrunner),
                            DMCReader()
+                          ),
+      mgmt.QWalkRunManager(
+                           PostProcessWriter(post_opts),
+                           copy.deepcopy(qwalkrunner),
+                           PostProcessReader()
                           )
       ]
   #-----------------------------
@@ -333,11 +342,14 @@ class PySCFQWalk(Recipe):
     var=1 #variance index
     en=2 #energy index
     dmc=3 
+    post=4 
 
+    # PySCF.
     self.managers[pyscf].nextstep()
     if self.managers[pyscf].status()!='ok':
       return 
 
+    # Variance minimization.
     base='qw'
     files={}
     files['sysfiles']=[base+'.sys']
@@ -349,6 +361,7 @@ class PySCFQWalk(Recipe):
     if self.managers[var].status()!='ok':
       return
    
+    # Energy minimization.
     files={'basenames':[],
            'sysfiles':[],
            'wffiles':[] } 
@@ -368,11 +381,14 @@ class PySCFQWalk(Recipe):
     if self.managers[en].status()!='ok':
       return
 
+    # DMC.
+
     # Why does it need to seperate the jastrow?
     #jast=separate_jastrow(open("qw.energy.wfout"))
     files={'basenames':[],
            'sysfiles':[],
-           'wffiles':[] } 
+           'wffiles':[],
+           'tracefiles':[]} 
     for i in [base]:
       wfname=i+'.dmc.wf'
       # Just copy over the results from the VMC energy minimization.
@@ -381,11 +397,20 @@ class PySCFQWalk(Recipe):
       files['wffiles'].append(wfname)
       files['sysfiles'].append(i+".sys")
       files['basenames'].append(i)
+      files['tracefiles'].append(i+".trace")
 
     self.managers[dmc].writer.set_options(files)
     self.managers[dmc].nextstep()
     if self.managers[dmc].status()!='ok':
       return
+
+    # Post process.
+
+    self.managers[post].writer.set_options(files)
+    self.managers[post].nextstep()
+    if self.managers[post].status()!='ok':
+      return
+
     
   #-----------------------------
   def generate_report(self):
@@ -393,6 +418,7 @@ class PySCFQWalk(Recipe):
     var=1 #variance index
     en=2 #energy index
     dmc=3 
+    post=4
     ret={'id':self.jobid}
     
     # Collect from PySCF.
@@ -437,9 +463,7 @@ class PySCFQWalk(Recipe):
       for t in timesteps:
         dmcret['timestep'].append(t)
 
-        # Energy results.
-        ens=[]
-        errs=[]
+        # Energy results.  ens=[] errs=[]
         for base in basenames:
           nm=base+'t'+str(t)+".dmc.log"
           en=self.managers[dmc].reader.output[nm]['properties']['total_energy']
