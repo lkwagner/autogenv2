@@ -41,7 +41,6 @@ dmc_opts={
   }
 
 post_opts={
-    'timesteps':[.03],
     'extra_observables':[{
       'name':'average_derivative_dm',
       'nmo':8,

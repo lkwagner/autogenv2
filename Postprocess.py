@@ -64,8 +64,8 @@ class PostprocessWriter:
 
       base=self.basenames[i]
       
-      for t in self.timesteps:
-        fname=base+'t'+str(t)+".post"
+      for trace in self.tracefiles:
+        fname=trace.replace('trace','post')
         infiles.append(fname)
         # TODO calculation skip.
         outlines=[
