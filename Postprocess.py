@@ -1,9 +1,9 @@
 from __future__ import print_function
 import average_tools as avg
 ####################################################
-class PostProcessWriter:
+class PostprocessWriter:
   def __init__(self,options={}):
-    self.qmc_type='PostProcess'
+    self.qmc_type='Postprocess'
     self.sysfiles=['qw_000.sys']
     self.wffiles=[]
     self.nskip=0
@@ -91,7 +91,7 @@ class PostProcessWriter:
 ####################################################
 import subprocess as sub
 import json
-class PostProcessReader:
+class PostprocessReader:
   def __init__(self):
     self.output={}
     self.completed=False
@@ -109,7 +109,7 @@ class PostProcessReader:
       
   #------------------------------------------------
   def write_summary(self):
-    print("#### Post process")
+    print("#### Postprocess")
     for f,out in self.output.items():
       print(f,out)
       
