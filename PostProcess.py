@@ -84,7 +84,7 @@ class PostProcessWriter:
 
         with open(fname,'w') as f:
           f.write('\n'.join(outlines))
-    outfiles=[x+".log" for x in infiles]        
+    outfiles=[x+".json" for x in infiles]        
     self.completed=True
     return infiles,outfiles
      
@@ -98,10 +98,11 @@ class PostProcessReader:
     self.gosling="gosling"
 
   def read_outputfile(self,outfile):
-    return json.loads(sub.check_output([self.gosling,"-json",outfile]).decode())
+    return json.load(open(outfile,'r'))
           
   #------------------------------------------------
   def collect(self,outfiles):
+    print("DEBUG")
     for f in outfiles:
       self.output[f]=self.read_outputfile(f)
     self.completed=True

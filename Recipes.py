@@ -406,7 +406,6 @@ class PySCFQWalk(Recipe):
       return
 
     # Post process.
-    print("DEBUG started post")
 
     self.managers[post].writer.set_options(files)
     self.managers[post].nextstep()
@@ -486,4 +485,27 @@ class PySCFQWalk(Recipe):
           dmcret[obs['name']].update(avg.kaverage(obs['name'],allk))
 
       ret['dmc']=dmcret
+
+    # Collect from post processing. 
+    if self.managers[post].status()=='ok':
+      extra_obs=self.managers[post].writer.extra_observables
+      basenames=self.managers[post].writer.basenames
+      timesteps=self.managers[post].writer.timesteps
+
+      postret={'timestep':[],'energy':[],'energy_err':[]}
+      for obs in extra_obs:
+        postret[obs['name']]=[]
+
+      for t in timesteps:
+        postret['timestep'].append(t)
+
+        # Property results (if any).
+        for obs in extra_obs:
+          postret[obs['name']]=deepcopy(obs)
+          fnames=[base+'t'+str(t)+".post.json" for base in basenames]
+          allk=[self.managers[post].reader.output[nm]['properties'][avg.gosling_key(obs['name'])]
+              for nm in fnames]
+          postret[obs['name']].update(avg.kaverage(obs['name'],allk))
+
+      ret['post']=postret
     return ret
