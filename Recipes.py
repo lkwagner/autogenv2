@@ -398,7 +398,7 @@ class PySCFQWalk(Recipe):
       files['wffiles'].append(wfname)
       files['sysfiles'].append(i+".sys")
       files['basenames'].append(i)
-      files['tracefiles'].append(i+".trace")
+      files['tracefiles'].append(i+".dmc.trace")
 
     self.managers[dmc].writer.set_options(files)
     self.managers[dmc].nextstep()
@@ -406,6 +406,7 @@ class PySCFQWalk(Recipe):
       return
 
     # Post process.
+    print("DEBUG started post")
 
     self.managers[post].writer.set_options(files)
     self.managers[post].nextstep()
@@ -464,7 +465,9 @@ class PySCFQWalk(Recipe):
       for t in timesteps:
         dmcret['timestep'].append(t)
 
-        # Energy results.  ens=[] errs=[]
+        # Energy results.  
+        ens=[] 
+        errs=[]
         for base in basenames:
           nm=base+'t'+str(t)+".dmc.log"
           en=self.managers[dmc].reader.output[nm]['properties']['total_energy']

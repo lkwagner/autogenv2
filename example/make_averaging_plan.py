@@ -36,10 +36,12 @@ energy_opts={
 
 dmc_opts={
     'timesteps':[.03],
-    'nblock':5
+    'nblock':5,
+    'savetrace':True
   }
 
 post_opts={
+    'timesteps':[.03],
     'extra_observables':[{
       'name':'average_derivative_dm',
       'nmo':8,
@@ -56,12 +58,14 @@ test = JobEnsemble([
        variance_opts=variance_opts,
        energy_opts=energy_opts,
        dmc_opts=dmc_opts,
+       post_opts=post_opts,
        qwalkrunner=QWalkRunnerPBS(np=4) ),
     job.PySCFQWalk('n2_cas',
        pyscf_opts=cas_opts,
        variance_opts=variance_opts,
        energy_opts=energy_opts,
        dmc_opts=dmc_opts,
+       post_opts=post_opts,
        qwalkrunner=QWalkRunnerPBS(np=4) )
     ]
   )
