@@ -105,6 +105,7 @@ from Crystal2QMCRunner import LocalCrystal2QMCRunner
 from Crystal2QMCReader import Crystal2QMCReader
 from Variance import VarianceWriter,VarianceReader
 from Linear import LinearWriter,LinearReader
+from PostProcess import PostProcessWriter,PostProcessReader
 from QWalkRunner import LocalQWalkRunner,QWalkRunnerPBS
 from DMC import DMCWriter,DMCReader
 class LocalCrystalQWalk(Recipe):

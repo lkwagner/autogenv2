@@ -36,7 +36,10 @@ energy_opts={
 
 dmc_opts={
     'timesteps':[.03],
-    'nblock':5,
+    'nblock':5
+  }
+
+post_opts={
     'extra_observables':[{
       'name':'average_derivative_dm',
       'nmo':8,
