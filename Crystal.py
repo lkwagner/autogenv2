@@ -19,6 +19,7 @@ class CrystalWriter:
     self.spin_polarized=True    
     self.xml_name="BFD_Library.xml"
     self.functional={'exchange':'PBE','correlation':'PBE','hybrid':0}
+    self.total_spin=0
 
     #Numerical convergence parameters
     self.basis_params=[0.2,2,3]
@@ -123,6 +124,8 @@ class CrystalWriter:
       str(self.smear),
       "SAVEWF"
     ]
+    if self.spin_polarized:
+      outlines+=['SPINLOCK',str(self.total_spin)+" 200"]
 
     if self.levshift!=[]:
       outlines+=["LEVSHIFT"," ".join(map(str,self.levshift))]
