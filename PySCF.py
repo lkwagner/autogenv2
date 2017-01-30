@@ -21,6 +21,7 @@ class PySCFWriter:
     # tol: %f       -- tolerance on coefficient for det to be included in QWalk calculations.
     # method: %s    -- CASSCF or CASCI.
     self.cas={}
+    self.dft="" #Any valid result for PySCF. This gets put into the 'xc' variable
 
     self.basename ='qw'
 
@@ -72,6 +73,9 @@ class PySCFWriter:
         "sys.path.append('../..')" # For pyscf2qwalk.py TODO cleaner?
       ] + add_paths + [
         "from pyscf import gto,scf,mcscf",
+        "from pyscf.scf import ROHF, UHF",
+        "from pyscf.dft.rks import RKS",
+        "from pyscf.dft.uks import UKS",
         "from pyscf2qwalk import print_qwalk",
         "mol=gto.Mole()",
         "mol.build(atom='''"+self.xyz+"''',",
@@ -79,9 +83,11 @@ class PySCFWriter:
         "ecp='%s')"%self.ecp,
         "mol.charge=%i"%self.charge,
         "mol.spin=%i"%self.spin,
-        "m=scf.%s(mol)"%self.method,
-        "print('E(HF) =',m.kernel())"
-      ]
+        "m=%s(mol)"%self.method]
+
+    if self.dft!="":
+      outlines+=['m.xc="%s"'%self.dft]
+    outlines+=["print('E(HF) =',m.kernel())"]
     
     if self.postHF :
       outlines += ["mc=mcscf.%s(m, ncas=%i, nelecas=(%i, %i),ncore= %i)"%( 
