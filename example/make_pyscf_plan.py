@@ -46,9 +46,15 @@ methods={'UKS':['pbe,pbe','b3lyp','pbe0','lda,vwn'],
 joblist=[]
 for m,func in methods.items():
   for f in func:
+    pyscf_opts={'xyz':xyz,'method':m,'dft':f}
+    if m[0]=='U':
+      pyscf_opts['double_occ']={'N':[0]}
+      pyscf_opts['atomspins']=[1,-1]
+      pyscf_opts['special_guess']=True
+
     joblist.append(job.PySCFQWalk(
                                   'n2'+m+f.replace(',',''),
-                                  pyscf_opts={'xyz':xyz,'method':m,'dft':f},
+                                  pyscf_opts=pyscf_opts,
                                   variance_opts=variance_opts,
                                   energy_opts=energy_opts,
                                   dmc_opts=dmc_opts,

@@ -14,16 +14,41 @@ class PySCFWriter:
     # TODO: RKS,UKS (DFT)
     self.method='ROHF' 
     self.postHF=False   
-    # For Docs later:
+    
     # ncore: %d     -- Number of core states.
     # ncas: %d      -- Number of states in active space. 
     # nelec: (%d,%d)-- Number of up (x) and down (y) electrons in active space.
     # tol: %f       -- tolerance on coefficient for det to be included in QWalk calculations.
     # method: %s    -- CASSCF or CASCI.
     self.cas={}
-    self.dft="" #Any valid result for PySCF. This gets put into the 'xc' variable
+    self.dft="" #Any valid input for PySCF. This gets put into the 'xc' variable
 
     self.basename ='qw'
+
+
+    self.special_guess=False
+    self.dm_generator="""
+def generate_guess(atomspins,mol,
+                   double_occ={} ):
+  dm_init_guess=scf.uhf.init_guess_by_minao(mol)
+  print(dm_init_guess[0].diagonal())
+  for atmid, (shl0,shl1,ao0,ao1) in enumerate(mol.offset_nr_by_atom()):
+
+    opp=int((atomspins[atmid]+1)/2)
+    s=(opp+1)%2
+    sym=mol.atom_pure_symbol(atmid)
+    print(sym,atmid,s,opp)
+    docc=[]
+    if sym in double_occ:
+      docc=double_occ[sym]
+
+    for ii,i in enumerate(range(ao0,ao1)):
+      if ii not in docc:
+        dm_init_guess[opp][i,i]=0.0
+  return dm_init_guess
+"""    
+    self.double_occ={}
+    self.atomspins=[]
 
     self.set_options(options)
     
@@ -70,7 +95,6 @@ class PySCFWriter:
       add_paths.append("sys.path.append('"+i+"')")
     outlines=[
         "import sys",
-        "sys.path.append('../..')" # For pyscf2qwalk.py TODO cleaner?
       ] + add_paths + [
         "from pyscf import gto,scf,mcscf",
         "from pyscf.scf import ROHF, UHF",
@@ -87,7 +111,14 @@ class PySCFWriter:
 
     if self.dft!="":
       outlines+=['m.xc="%s"'%self.dft]
-    outlines+=["print('E(HF) =',m.kernel())"]
+
+    if self.special_guess:
+      outlines+=[self.dm_generator]
+      outlines+=["init_dm=generate_guess(%s,mol,%s)"%(str(self.atomspins),str(self.double_occ))]
+      outlines+=["print('E(HF) =',m.kernel(init_dm))"]
+      
+    else:
+      outlines+=["print('E(HF) =',m.kernel())"]
     
     if self.postHF :
       outlines += ["mc=mcscf.%s(m, ncas=%i, nelecas=(%i, %i),ncore= %i)"%( 
