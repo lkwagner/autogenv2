@@ -8,10 +8,7 @@ from copy import deepcopy
 import os
 from QWalkRunner import QWalkRunnerPBS
 
-hf_opts={
-    'xyz':"N 0. 0. 0.; N 0. 0. 2.5",
-    'method':'ROHF',
-  }
+xyz="N 0. 0. 0.; N 0. 0. 2.5"
 
 cas_opts={
     'xyz':"N 0. 0. 0.; N 0. 0. 2.5",
@@ -36,31 +33,44 @@ energy_opts={
 
 dmc_opts={
     'timesteps':[.03],
-#    'extra_observables':[{
-#      'name':'average_derivative_dm',
-#      'nmo':8,
-#      'orbfile':'qw.orb',
-#      'basis':'qw.basis',
-#      'states':[3,4,5,6,7,8]
-#    }]
      'extra_observables':[ {'name':'region_fluctuation','maxn':6}] 
   }
 
-test = JobEnsemble([
-    job.PySCFQWalk('n2_hf',
-       pyscf_opts=hf_opts,
-       variance_opts=variance_opts,
-       energy_opts=energy_opts,
-       dmc_opts=dmc_opts,
-       qwalkrunner=QWalkRunnerPBS(np=4) ),
+
+methods={'UKS':['pbe,pbe','b3lyp','pbe0','lda,vwn'],
+         'RKS':['pbe,pbe','b3lyp','pbe0','lda,vwn'],
+         'ROHF':[''],
+         'UHF':['']
+        }
+
+joblist=[]
+for m,func in methods.items():
+  for f in func:
+    pyscf_opts={'xyz':xyz,'method':m,'dft':f}
+    if m[0]=='U':
+      pyscf_opts['double_occ']={'N':[0]}
+      pyscf_opts['atomspins']=[1,-1]
+      pyscf_opts['special_guess']=True
+
+    joblist.append(job.PySCFQWalk(
+                                  'n2'+m+f.replace(',',''),
+                                  pyscf_opts=pyscf_opts,
+                                  variance_opts=variance_opts,
+                                  energy_opts=energy_opts,
+                                  dmc_opts=dmc_opts,
+                                  qwalkrunner=QWalkRunnerPBS(np=4) 
+                                 )
+                   )
+
+joblist.append(
     job.PySCFQWalk('n2_cas',
        pyscf_opts=cas_opts,
        variance_opts=variance_opts,
        energy_opts=energy_opts,
        dmc_opts=dmc_opts,
        qwalkrunner=QWalkRunnerPBS(np=4) )
-    ]
   )
 
+test=JobEnsemble(joblist)
 with open('plan.pickle','wb') as outf:
   pkl.dump(test,outf)

@@ -20,13 +20,19 @@ def print_orb(mol,m,f,k=0):
   aos_atom=mol.offset_nr_by_atom()
   coeff=m.mo_coeff
   kpt=[0.,0.,0.]
-  if len(coeff.shape)==3:
+  if isinstance(mol,pbc.gto.Cell):
     print(coeff.shape)
     coeff=coeff[k]
     kpt=m.kpts[k,:]
+  
+  
+  if len(coeff.shape)==3:
+    assert coeff.shape[0]==2
+    coeff=np.vstack((coeff[0].T,coeff[1].T))
+    coeff=coeff.T
 
 
-  nmo=len(coeff)
+  nmo=coeff.shape[1]
   count=0
   for ni in range(nmo):
     for ai,a in enumerate(aos_atom):
@@ -224,6 +230,7 @@ def print_slater(mol, mf, orbfile, basisfile, f):
   if(s==2): 
     tag='UHF'
     corb = coeffs[0][0][0]
+  print(occ,tag)
   
   if (isinstance(corb, np.float64)):
     orb_type = 'ORBITALS'
@@ -246,7 +253,7 @@ def print_slater(mol, mf, orbfile, basisfile, f):
           temp += [j+1]
       occup.append(temp)
     us_orb = occup[0]
-    ds_orb = occup[1]
+    ds_orb = list(np.array(occup[1])+len(occ[0]))
   else:  
     for i, c in enumerate(occ):
       if(c>0):
