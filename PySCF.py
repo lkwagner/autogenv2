@@ -6,6 +6,7 @@ class PySCFWriter:
     self.xyz=""
     self.ecp="bfd"
     self.spin=0
+    self.max_cycle=50
     self.charge=0
     self.pyscf_path=[]
     self.completed=False
@@ -80,6 +81,7 @@ class PySCFWriter:
         "mol.charge=%i"%self.charge,
         "mol.spin=%i"%self.spin,
         "m=scf.%s(mol)"%self.method,
+        "m.max_cycle=%d"%self.max_cycle,
         "print('E(HF) =',m.kernel())"
       ]
     
