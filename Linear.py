@@ -8,6 +8,7 @@ class LinearWriter:
     self.basenames=['qw_000']
     self.completed=False
     self.total_nstep=2048
+    self.total_fit=2048
     self.set_options(options)
   #-----------------------------------------------
     
@@ -48,7 +49,10 @@ class LinearWriter:
       base=self.basenames[i]
       
       with open(base+'.energy','w') as f:
-        f.write("method { linear total_nstep %i }\n"%self.total_nstep)
+        f.write("method { linear \n")
+        f.write("total_nstep %i \n"%self.total_nstep)
+        f.write("total_fit %i \n"%self.total_fit)
+        f.write("}\n")
         f.write("include "+sys+"\n")
         f.write("trialfunc { include %s\n"%wf)
         f.write("}\n")
