@@ -10,6 +10,7 @@ class DMCWriter:
     self.completed=False
     self.timesteps=[0.01]
     self.nblock=20
+    self.tmoves=True
     self.savetrace=False
     self.tracefiles=[]
     # For Docs:
@@ -70,6 +71,8 @@ class DMCWriter:
         outlines=[
             "method { dmc timestep %g nblock %i"%(t,self.nblock)
           ]
+        if self.tmoves:
+          outlines+=['tmoves']
         if self.savetrace:
           outlines+=['save_trace %s'%self.tracefiles[i]]
         for avg_opts in self.extra_observables:
