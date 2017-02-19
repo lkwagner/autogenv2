@@ -42,6 +42,7 @@ class QWalkRunnerPBS:
   def __init__(self,exe='~/bin/qwalk',
                     queue='batch',
                     walltime='12:00:00',
+                    jobname=os.getcwd().split('/')[-1]+'_qwalk',
                     prefix="",#for example, load modules
                     postfix="",#for any clean-up.
                     np=1,nn=1
@@ -49,7 +50,7 @@ class QWalkRunnerPBS:
     self.exe=exe
     self.np=np
     self.nn=nn
-    self.jobname='QWalkRunnerPBS'
+    self.jobname=jobname
     self.queue=queue
     self.walltime=walltime
     self.prefix=prefix
@@ -61,7 +62,9 @@ class QWalkRunnerPBS:
     return submitter.check_PBS_stati(self.queueid)
   #-------------------------------------
 
-  def run(self,qwinps,qwouts):
+  def run(self,qwinps,qwouts,jobname=None):
+    if jobname is None:
+      jobname=self.jobname
     #Just supporting one run for the moment
     qwinp=qwinps[0]
     qwout=qwouts[0]
@@ -73,7 +76,7 @@ class QWalkRunnerPBS:
          "#PBS -l nodes=%i:ppn=%i\n"%(self.nn,self.np) +\
          "#PBS -l walltime=%s\n"%self.walltime +\
          "#PBS -j oe \n" +\
-         "#PBS -N %s \n"%self.jobname +\
+         "#PBS -N %s \n"%jobname +\
          "#PBS -o %s \n"%jobout +\
          self.prefix+"\n" +\
          "cd ${PBS_O_WORKDIR}\n" +\
