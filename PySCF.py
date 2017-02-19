@@ -3,18 +3,19 @@ from __future__ import print_function
 class PySCFWriter:
   def __init__(self,options={}):
     self.basis='bfd_vtz'
-    self.xyz=""
-    self.ecp="bfd"
-    self.spin=0
-    self.max_cycle=50
     self.charge=0
-    self.pyscf_path=[]
     self.completed=False
-    # For docs later:
-    # Options include: 'ROHF','UHF'
-    # TODO: RKS,UKS (DFT)
+    self.dft="" #Any valid input for PySCF. This gets put into the 'xc' variable
+    self.diis=True
+    self.diis_start_cycle=1
+    self.ecp="bfd"
+    self.level_shift=0.0
+    self.max_cycle=50
     self.method='ROHF' 
     self.postHF=False   
+    self.pyscf_path=[]
+    self.spin=0
+    self.xyz=""
     
     # ncore: %d     -- Number of core states.
     # ncas: %d      -- Number of states in active space. 
@@ -22,10 +23,8 @@ class PySCFWriter:
     # tol: %f       -- tolerance on coefficient for det to be included in QWalk calculations.
     # method: %s    -- CASSCF or CASCI.
     self.cas={}
-    self.dft="" #Any valid input for PySCF. This gets put into the 'xc' variable
 
     self.basename ='qw'
-
 
     self.special_guess=False
     self.dm_generator="""
@@ -102,15 +101,19 @@ def generate_guess(atomspins,mol,
         "from pyscf.dft.rks import RKS",
         "from pyscf.dft.uks import UKS",
         "from pyscf2qwalk import print_qwalk",
-        "mol=gto.Mole()",
+        "mol=gto.Mole(verbose=4)",
         "mol.build(atom='''"+self.xyz+"''',",
         "basis='%s',"%self.basis,
         "ecp='%s')"%self.ecp,
         "mol.charge=%i"%self.charge,
         "mol.spin=%i"%self.spin,
         "m=%s(mol)"%self.method,
-        "m.max_cycle=%d"%self.max_cycle
+        "m.max_cycle=%d"%self.max_cycle,
+        "m.diis=%d"%self.diis,
+        "m.diis_start_cycle=%d"%self.diis_start_cycle
       ]
+    if self.level_shift>0.0:
+      outlines+=["m.level_shift=%d"%self.level_shift]
 
     if self.dft!="":
       outlines+=['m.xc="%s"'%self.dft]
@@ -151,11 +154,11 @@ class PySCFReader:
     with open(outfile, 'r') as of: 
       lines = of.readlines() 
     for line in lines:
-      if 'E(HF)' in line:
+      if 'E(HF)' in line and 'print' not in line:
         ret['HF_Energy'] = float(line.split('=')[1]) 
-      if 'CASCI' in line: 
+      if 'CASCI energy' in line and 'print' not in line: 
         ret['CASCI_Energy'] =float(line.split()[3]) 
-      if 'CASSCF' in line:
+      if 'CASSCF energy' in line and 'print' not in line:
         ret['CASSCF_Energy'] =float(line.split()[3])
     return ret
           

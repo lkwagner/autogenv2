@@ -46,12 +46,14 @@ class CrystalRunnerPBS:
   def __init__(self,BIN='~/bin/',
                     queue='batch',
                     walltime='12:00:00',
+                    np=1,
+                    nn=1,
                     prefix="",#for example, load modules
                     postfix="rm fort.*.pe*"
                     ):
     self.BIN=BIN
-    self.np=1
-    self.nn=1
+    self.np=np
+    self.nn=nn
     self.jobname='CrystalRunnerPBS'
     self.queue=queue
     self.walltime=walltime
@@ -68,7 +70,7 @@ class CrystalRunnerPBS:
     #just running in serial for now
     #because I haven't gotten Pcrystal compiled for 
     #hawk yet.
-    exe=self.BIN+"crystal"
+    exe=self.BIN+"Pcrystal"
     jobout=crysinpfn+".jobout"
     np_tot=self.np*self.nn
  #"mpirun -np %i %s > %s\n"%(np_tot,exe,crysoutfn) +
@@ -82,7 +84,63 @@ class CrystalRunnerPBS:
          self.prefix+"\n" +\
          "cd ${PBS_O_WORKDIR}\n" +\
          "cp %s INPUT\n"%(crysinpfn) +\
-         "%s < %s > %s \n"%(exe,crysinpfn,crysoutfn) +\
+         "mpirun -n %d %s > %s \n"%(self.nn*self.np,exe,crysoutfn) +\
+         self.postfix
+    qsubfile=crysinpfn+".qsub"
+    with open(qsubfile,'w') as f:
+      f.write(qsub)
+    result = sub.check_output("qsub %s"%(qsubfile),shell=True)
+    self.queueid = result.decode().split()[0]
+    print("Submitted as %s"%self.queueid)
+
+####################################################
+
+class CrystalRunnerVeritas:
+  _name_='CrystalRunnerPBS'
+  def __init__(self,BIN='~/bin/',
+                    queue='batch',
+                    walltime='12:00:00',
+                    np=1,
+                    nn=1,
+                    prefix="",#for example, load modules
+                    postfix="rm fort.*.pe*"
+                    ):
+    self.BIN=BIN
+    self.np=np
+    self.nn=nn
+    self.jobname='CrystalRunnerPBS'
+    self.queue=queue
+    self.walltime=walltime
+    self.prefix=prefix
+    self.postfix=postfix
+    self.queueid=None
+
+  #-------------------------------------
+  def check_status(self):
+    return submitter.check_PBS_status(self.queueid)
+  #-------------------------------------
+
+  def run(self,crysinpfn,crysoutfn):
+    #just running in serial for now
+    #because I haven't gotten Pcrystal compiled for 
+    #hawk yet.
+    exe=self.BIN+"Pcrystal"
+    jobout=crysinpfn+".jobout"
+    np_tot=self.np*self.nn
+ #"mpirun -np %i %s > %s\n"%(np_tot,exe,crysoutfn) +
+    
+    qsub="#PBS -q %s \n"%self.queue +\
+         "#PBS -l nodes=%i:ppn=%i\n"%(self.nn,self.np) +\
+         "#PBS -l walltime=%s\n"%self.walltime +\
+         "#PBS -j oe \n" +\
+         "#PBS -N %s \n"%self.jobname +\
+         "#PBS -o %s \n"%jobout +\
+         self.prefix+"\n" +\
+         "cd ${PBS_O_WORKDIR}\n" +\
+         ". ~/bin/add_intel\n" +\
+         ". ~/bin/add_ompi\n" +\
+         "cp %s INPUT\n"%(crysinpfn) +\
+         "/home/brian/programs/openmpi/openmpi-1.6.3/install/bin/mpirun -n %d %s &> %s \n"%(self.nn*self.np,exe,crysoutfn) +\
          self.postfix
     qsubfile=crysinpfn+".qsub"
     with open(qsubfile,'w') as f:
