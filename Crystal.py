@@ -70,7 +70,7 @@ class CrystalWriter:
     for k in d.keys():
       if not k in selfdict.keys():
         print("Error:",k,"not a keyword for CrystalWriter")
-        raise InputError
+        raise AssertionError
       selfdict[k]=d[k]
 
   #-----------------------------------------------
