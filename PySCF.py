@@ -1,4 +1,5 @@
 from __future__ import print_function
+import os
 import shutil as sh
 ####################################################
 class PySCFWriter:
@@ -80,7 +81,7 @@ def generate_guess(atomspins,mol,
             "Make sure all of 'ncore','nelec','ncas','tol','method' are set."
   #-----------------------------------------------
   def is_consistent(self,other):
-    skipkeys = ['completed']
+    skipkeys = ['completed','chkfile']
     for otherkey in other.__dict__.keys():
       if otherkey not in self.__dict__.keys():
         print('other is missing a key.')
@@ -119,7 +120,7 @@ def generate_guess(atomspins,mol,
         "mol.spin=%i"%self.spin,
         "m=%s(mol)"%self.method,
         "m.max_cycle=%d"%self.max_cycle,
-        "m.chkfile=%s"%self.chkfile,
+        "m.chkfile='%s'"%self.chkfile,
         "m.diis=%d"%self.diis,
         "m.diis_start_cycle=%d"%self.diis_start_cycle
       ]
@@ -130,7 +131,13 @@ def generate_guess(atomspins,mol,
       outlines+=['m.xc="%s"'%self.dft]
 
     if self.restart is not None:
-      sh.copy(self.restart,"%s/%s"%(os.getcwd(),self.chkfile))
+      if os.path.exists(self.restart):
+        sh.copy(self.restart,"%s/%s"%(os.getcwd(),self.chkfile))
+      else:
+        print("%s not found."%self.restart)
+        raise AssertionError("Currently, PySCFWriter can't handle this error")
+        self.completed=False
+        return [],[]
       outlines+=["m.init_guess='chkfile'"]
     elif self.special_guess: # Should this be changed to "spins" or something more specific?
       outlines+=[self.dm_generator]
