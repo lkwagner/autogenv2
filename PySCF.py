@@ -113,7 +113,7 @@ def generate_guess(atomspins,mol,
         "m.diis_start_cycle=%d"%self.diis_start_cycle
       ]
     if self.level_shift>0.0:
-      outlines+=["m.level_shift=%d"%self.level_shift]
+      outlines+=["m.level_shift=%f"%self.level_shift]
 
     if self.dft!="":
       outlines+=['m.xc="%s"'%self.dft]
