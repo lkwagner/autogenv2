@@ -139,6 +139,7 @@ def generate_guess(atomspins,mol,
         self.completed=False
         return [],[]
       outlines+=["m.init_guess='chkfile'"]
+      outlines+=["print('E(HF) =',m.kernel())"]
     elif self.special_guess: # Should this be changed to "spins" or something more specific?
       outlines+=[self.dm_generator]
       outlines+=["init_dm=generate_guess(%s,mol,%s)"%(str(self.atomspins),str(self.double_occ))]
