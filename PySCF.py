@@ -121,7 +121,7 @@ def generate_guess(atomspins,mol,
         "m=%s(mol)"%self.method,
         "m.max_cycle=%d"%self.max_cycle,
         "m.chkfile='%s'"%self.chkfile,
-        "m.diis=%d"%self.diis,
+        "m.diis=%b"%self.diis,
         "m.diis_start_cycle=%d"%self.diis_start_cycle
       ]
     if self.level_shift>0.0:
