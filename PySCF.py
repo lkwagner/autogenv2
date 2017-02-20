@@ -1,9 +1,11 @@
 from __future__ import print_function
+import shutil as sh
 ####################################################
 class PySCFWriter:
   def __init__(self,options={}):
     self.basis='bfd_vtz'
     self.charge=0
+    self.chkfile=None # Set at runtime.
     self.completed=False
     self.dft="" #Any valid input for PySCF. This gets put into the 'xc' variable
     self.diis=True
@@ -14,6 +16,7 @@ class PySCFWriter:
     self.method='ROHF' 
     self.postHF=False   
     self.pyscf_path=[]
+    self.restart=None
     self.spin=0
     self.xyz=""
     
@@ -64,6 +67,12 @@ def generate_guess(atomspins,mol,
         raise InputError
       selfdict[k]=d[k]
 
+    internal_keys=['chkfile']
+    for key in internal_keys:
+      if key in d.keys():
+        print("Warning: %s is internally set. Overriding setting."%key)
+        d.pop(key) # This will remove key from d, since it's passed bad ref.  Bad?
+
     # If postHF got set, new options are required input.
     if self.postHF==True:
       for key in ['ncore','nelec','ncas','tol','method']:
@@ -90,6 +99,7 @@ def generate_guess(atomspins,mol,
   #-----------------------------------------------
   def pyscf_input(self,fname):
     f=open(fname,'w')
+    self.chkfile=fname+".chkfile"
     add_paths=[]
     for i in self.pyscf_path:
       add_paths.append("sys.path.append('"+i+"')")
@@ -109,20 +119,23 @@ def generate_guess(atomspins,mol,
         "mol.spin=%i"%self.spin,
         "m=%s(mol)"%self.method,
         "m.max_cycle=%d"%self.max_cycle,
+        "m.chkfile=%s"%self.chkfile,
         "m.diis=%d"%self.diis,
         "m.diis_start_cycle=%d"%self.diis_start_cycle
       ]
     if self.level_shift>0.0:
       outlines+=["m.level_shift=%f"%self.level_shift]
-
+    
     if self.dft!="":
       outlines+=['m.xc="%s"'%self.dft]
 
-    if self.special_guess:
+    if self.restart is not None:
+      sh.copy(self.restart,"%s/%s"%(os.getcwd(),self.chkfile))
+      outlines+=["m.init_guess='chkfile'"]
+    elif self.special_guess: # Should this be changed to "spins" or something more specific?
       outlines+=[self.dm_generator]
       outlines+=["init_dm=generate_guess(%s,mol,%s)"%(str(self.atomspins),str(self.double_occ))]
       outlines+=["print('E(HF) =',m.kernel(init_dm))"]
-      
     else:
       outlines+=["print('E(HF) =',m.kernel())"]
     
