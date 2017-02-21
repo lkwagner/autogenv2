@@ -203,4 +203,8 @@ def dm_set_spins(atomspins,double_occ={}):
   ]
 
 def dm_from_chkfile(chkfile):
+  """ Read a dm from a chkfile produced by a PySCF calculation. 
+
+  It's preferrable to use absolute file paths, because the working directory
+  will change to the folder where the driver is executed when this line is read."""
   return ["init_dm=m.from_chk('%s')"%chkfile]
