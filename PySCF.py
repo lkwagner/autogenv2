@@ -203,18 +203,4 @@ def dm_set_spins(atomspins,double_occ={}):
   ]
 
 def dm_from_chkfile(chkfile):
-  # It might be nice to catch this error somewhere and have it just continue to
-  # the next job. The chkfile may be created by other members of the job
-  # ensemble.
-  assert os.path.exists(chkfile), """
-  chkfile doesn't exist. 
-
-  Supposedly it's
-
-  %s
-
-  I'm currently in 
-
-  %s
-  """%(chkfile,os.getcwd())
-  return ["init_dm=mol.from_chk(%s)"]
+  return ["init_dm=m.from_chk('%s')"%chkfile]
