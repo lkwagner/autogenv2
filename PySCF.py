@@ -1,6 +1,46 @@
 from __future__ import print_function
 import os
 import shutil as sh
+
+def dm_from_minao():
+  return ["init_dm=scf.uhf.init_guess_by_minao(mol)"]
+
+def dm_set_spins(spins,double_occ={}):
+  return [
+    "atomspins=%r"%spins
+    "double_occ=%r"%double_occ
+    "init_dm=scf.uhf.init_guess_by_minao(mol)",
+    "print(init_dm[0].diagonal())",
+    "for atmid, (shl0,shl1,ao0,ao1) in enumerate(mol.offset_nr_by_atom()):",
+    "  opp=int((atomspins[atmid]+1)/2)",
+    "  s=(opp+1)%2",
+    "  sym=mol.atom_pure_symbol(atmid)",
+    "  print(sym,atmid,s,opp)",
+    "  docc=[]",
+    "  if sym in double_occ:",
+    "    docc=double_occ[sym]",
+    "  for ii,i in enumerate(range(ao0,ao1)):",
+    "    if ii not in docc:",
+    "      init_dm[opp][i,i]=0.0",
+  ]
+
+def dm_from_chkfile(chkfile):
+  # It might be nice to catch this error somewhere and have it just continue to
+  # the next job. The chkfile may be created by other members of the job
+  # ensemble.
+  assert os.path.exists(chkfile), """
+  chkfile doesn't exist. 
+
+  Supposedly it's
+
+  %s
+
+  I'm currently in 
+
+  %s
+  """%(chkfile,os.getcwd())
+  return ["init_dm=mol.from_chk(%s)"]
+
 ####################################################
 class PySCFWriter:
   def __init__(self,options={}):
@@ -16,7 +56,6 @@ class PySCFWriter:
     self.method='ROHF' 
     self.postHF=False   
     self.pyscf_path=[]
-    self.restart=None
     self.spin=0
     self.xyz=""
     
@@ -29,27 +68,7 @@ class PySCFWriter:
 
     self.basename ='qw'
 
-    self.special_guess=False
-    self.dm_generator="""
-def generate_guess(atomspins,mol,
-                   double_occ={} ):
-  dm_init_guess=scf.uhf.init_guess_by_minao(mol)
-  print(dm_init_guess[0].diagonal())
-  for atmid, (shl0,shl1,ao0,ao1) in enumerate(mol.offset_nr_by_atom()):
-
-    opp=int((atomspins[atmid]+1)/2)
-    s=(opp+1)%2
-    sym=mol.atom_pure_symbol(atmid)
-    print(sym,atmid,s,opp)
-    docc=[]
-    if sym in double_occ:
-      docc=double_occ[sym]
-
-    for ii,i in enumerate(range(ao0,ao1)):
-      if ii not in docc:
-        dm_init_guess[opp][i,i]=0.0
-  return dm_init_guess
-"""    
+    self.dm_generator=dm_from_minao()
     self.double_occ={}
     self.atomspins=[]
 
@@ -116,29 +135,31 @@ def generate_guess(atomspins,mol,
         "m.chkfile='%s'"%chkfile,
         "m.diis=%r"%self.diis,
         "m.diis_start_cycle=%d"%self.diis_start_cycle
-      ]
+      ] + dm_generator
+
     if self.level_shift>0.0:
       outlines+=["m.level_shift=%f"%self.level_shift]
     
     if self.dft!="":
       outlines+=['m.xc="%s"'%self.dft]
 
-    if self.restart is not None:
-      if os.path.exists(self.restart):
-        sh.copy(self.restart,"%s/%s"%(os.getcwd(),chkfile))
-      else:
-        print("%s not found."%self.restart)
-        raise AssertionError("Currently, PySCFWriter can't handle this error")
-        self.completed=False
-        return [],[]
-      outlines+=["m.init_guess='chkfile'"]
-      outlines+=["print('E(HF) =',m.kernel())"]
-    elif self.special_guess: # Should this be changed to "spins" or something more specific?
-      outlines+=[self.dm_generator]
-      outlines+=["init_dm=generate_guess(%s,mol,%s)"%(str(self.atomspins),str(self.double_occ))]
-      outlines+=["print('E(HF) =',m.kernel(init_dm))"]
-    else:
-      outlines+=["print('E(HF) =',m.kernel())"]
+    #if self.restart is not None:
+    #  if os.path.exists(self.restart):
+    #    sh.copy(self.restart,"%s/%s"%(os.getcwd(),chkfile))
+    #  else:
+    #    print("%s not found."%self.restart)
+    #    raise AssertionError("Currently, PySCFWriter can't handle this error")
+    #    self.completed=False
+    #    return [],[]
+    #  outlines+=["m.init_guess='chkfile'"]
+    #  outlines+=["print('E(HF) =',m.kernel())"]
+    #elif self.special_guess: # Should this be changed to "spins" or something more specific?
+    #  outlines+=[self.dm_generator]
+    #  outlines+=["print('E(HF) =',m.kernel(init_dm))"]
+    #else:
+    #  outlines+=["print('E(HF) =',m.kernel())"]
+
+    outlines+=["print('E(HF) =',m.kernel(init_dm))"]
     
     if self.postHF :
       outlines += ["mc=mcscf.%s(m, ncas=%i, nelecas=(%i, %i),ncore= %i)"%( 
