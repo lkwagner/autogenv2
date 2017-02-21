@@ -7,6 +7,7 @@ import pickle as pkl
 from copy import deepcopy
 import os
 from QWalkRunner import QWalkRunnerPBS
+from PySCF import dm_set_spins
 
 xyz="N 0. 0. 0.; N 0. 0. 2.5"
 
@@ -48,9 +49,10 @@ for m,func in methods.items():
   for f in func:
     pyscf_opts={'xyz':xyz,'method':m,'dft':f}
     if m[0]=='U':
-      pyscf_opts['double_occ']={'N':[0]}
-      pyscf_opts['atomspins']=[1,-1]
-      pyscf_opts['special_guess']=True
+      pyscf_opts['dm_generator']=dm_set_spins(
+          atomspins=[-1,1],
+          double_occ={'N':[0]}
+        )
 
     joblist.append(job.PySCFQWalk(
                                   'n2'+m+f.replace(',',''),

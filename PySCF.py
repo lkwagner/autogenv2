@@ -2,44 +2,6 @@ from __future__ import print_function
 import os
 import shutil as sh
 
-def dm_from_minao():
-  return ["init_dm=scf.uhf.init_guess_by_minao(mol)"]
-
-def dm_set_spins(spins,double_occ={}):
-  return [
-    "atomspins=%r"%spins
-    "double_occ=%r"%double_occ
-    "init_dm=scf.uhf.init_guess_by_minao(mol)",
-    "print(init_dm[0].diagonal())",
-    "for atmid, (shl0,shl1,ao0,ao1) in enumerate(mol.offset_nr_by_atom()):",
-    "  opp=int((atomspins[atmid]+1)/2)",
-    "  s=(opp+1)%2",
-    "  sym=mol.atom_pure_symbol(atmid)",
-    "  print(sym,atmid,s,opp)",
-    "  docc=[]",
-    "  if sym in double_occ:",
-    "    docc=double_occ[sym]",
-    "  for ii,i in enumerate(range(ao0,ao1)):",
-    "    if ii not in docc:",
-    "      init_dm[opp][i,i]=0.0",
-  ]
-
-def dm_from_chkfile(chkfile):
-  # It might be nice to catch this error somewhere and have it just continue to
-  # the next job. The chkfile may be created by other members of the job
-  # ensemble.
-  assert os.path.exists(chkfile), """
-  chkfile doesn't exist. 
-
-  Supposedly it's
-
-  %s
-
-  I'm currently in 
-
-  %s
-  """%(chkfile,os.getcwd())
-  return ["init_dm=mol.from_chk(%s)"]
 
 ####################################################
 class PySCFWriter:
@@ -69,8 +31,6 @@ class PySCFWriter:
     self.basename ='qw'
 
     self.dm_generator=dm_from_minao()
-    self.double_occ={}
-    self.atomspins=[]
 
     self.set_options(options)
     
@@ -135,7 +95,7 @@ class PySCFWriter:
         "m.chkfile='%s'"%chkfile,
         "m.diis=%r"%self.diis,
         "m.diis_start_cycle=%d"%self.diis_start_cycle
-      ] + dm_generator
+      ] + self.dm_generator
 
     if self.level_shift>0.0:
       outlines+=["m.level_shift=%f"%self.level_shift]
@@ -176,7 +136,6 @@ class PySCFWriter:
 
     self.completed=True
     return [fname],[fname+".o"]
-
      
 ####################################################
 class PySCFReader:
@@ -221,6 +180,41 @@ class PySCFReader:
       for run in out:
         print("dispersion",run['sigma'])
       
-      
-      
+def dm_from_minao():
+  return ["init_dm=scf.uhf.init_guess_by_minao(mol)"]
 
+def dm_set_spins(atomspins,double_occ={}):
+  return [
+    "atomspins=%r"%atomspins,
+    "double_occ=%r"%double_occ,
+    "init_dm=scf.uhf.init_guess_by_minao(mol)",
+    "print(init_dm[0].diagonal())",
+    "for atmid, (shl0,shl1,ao0,ao1) in enumerate(mol.offset_nr_by_atom()):",
+    "  opp=int((atomspins[atmid]+1)/2)",
+    "  s=(opp+1)%2",
+    "  sym=mol.atom_pure_symbol(atmid)",
+    "  print(sym,atmid,s,opp)",
+    "  docc=[]",
+    "  if sym in double_occ:",
+    "    docc=double_occ[sym]",
+    "  for ii,i in enumerate(range(ao0,ao1)):",
+    "    if ii not in docc:",
+    "      init_dm[opp][i,i]=0.0",
+  ]
+
+def dm_from_chkfile(chkfile):
+  # It might be nice to catch this error somewhere and have it just continue to
+  # the next job. The chkfile may be created by other members of the job
+  # ensemble.
+  assert os.path.exists(chkfile), """
+  chkfile doesn't exist. 
+
+  Supposedly it's
+
+  %s
+
+  I'm currently in 
+
+  %s
+  """%(chkfile,os.getcwd())
+  return ["init_dm=mol.from_chk(%s)"]
