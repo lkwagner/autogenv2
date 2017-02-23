@@ -105,22 +105,6 @@ class PySCFWriter:
     if self.dft!="":
       outlines+=['m.xc="%s"'%self.dft]
 
-    #if self.restart is not None:
-    #  if os.path.exists(self.restart):
-    #    sh.copy(self.restart,"%s/%s"%(os.getcwd(),chkfile))
-    #  else:
-    #    print("%s not found."%self.restart)
-    #    raise AssertionError("Currently, PySCFWriter can't handle this error")
-    #    self.completed=False
-    #    return [],[]
-    #  outlines+=["m.init_guess='chkfile'"]
-    #  outlines+=["print('E(HF) =',m.kernel())"]
-    #elif self.special_guess: # Should this be changed to "spins" or something more specific?
-    #  outlines+=[self.dm_generator]
-    #  outlines+=["print('E(HF) =',m.kernel(init_dm))"]
-    #else:
-    #  outlines+=["print('E(HF) =',m.kernel())"]
-
     outlines+=["print('E(HF) =',m.kernel(init_dm))"]
     
     if self.postHF :
