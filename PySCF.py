@@ -17,6 +17,7 @@ class PySCFWriter:
     self.max_cycle=50
     self.method='ROHF' 
     self.postHF=False   
+    self.direct_scf_tol=1e-10
     self.pyscf_path=[]
     self.spin=0
     self.xyz=""
@@ -92,6 +93,7 @@ class PySCFWriter:
         "mol.spin=%i"%self.spin,
         "m=%s(mol)"%self.method,
         "m.max_cycle=%d"%self.max_cycle,
+        "m.direct_scf_tol=%f"%self.direct_scf_tol,
         "m.chkfile='%s'"%chkfile,
         "m.diis=%r"%self.diis,
         "m.diis_start_cycle=%d"%self.diis_start_cycle
