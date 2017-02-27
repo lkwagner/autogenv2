@@ -14,6 +14,7 @@ class PySCFWriter:
     self.diis_start_cycle=1
     self.ecp="bfd"
     self.level_shift=0.0
+    self.conv_tol=1e-10
     self.max_cycle=50
     self.method='ROHF' 
     self.postHF=False   
@@ -25,7 +26,7 @@ class PySCFWriter:
     # ncore: %d     -- Number of core states.
     # ncas: %d      -- Number of states in active space. 
     # nelec: (%d,%d)-- Number of up (x) and down (y) electrons in active space.
-    # tol: %f       -- tolerance on coefficient for det to be included in QWalk calculations.
+    # tol: %g       -- tolerance on coefficient for det to be included in QWalk calculations.
     # method: %s    -- CASSCF or CASCI.
     self.cas={}
 
@@ -44,7 +45,7 @@ class PySCFWriter:
     for k in d.keys():
       if not k in selfdict.keys():
         print("Error:",k,"not a keyword for VarianceWriter")
-        raise InputError
+        raise AssertionError
       selfdict[k]=d[k]
 
     # If postHF got set, new options are required input.
@@ -93,14 +94,15 @@ class PySCFWriter:
         "mol.spin=%i"%self.spin,
         "m=%s(mol)"%self.method,
         "m.max_cycle=%d"%self.max_cycle,
-        "m.direct_scf_tol=%f"%self.direct_scf_tol,
+        "m.direct_scf_tol=%g"%self.direct_scf_tol,
         "m.chkfile='%s'"%chkfile,
+        "m.conv_tol=%g"%self.conv_tol,
         "m.diis=%r"%self.diis,
         "m.diis_start_cycle=%d"%self.diis_start_cycle
       ] + self.dm_generator
 
     if self.level_shift>0.0:
-      outlines+=["m.level_shift=%f"%self.level_shift]
+      outlines+=["m.level_shift=%g"%self.level_shift]
     
     if self.dft!="":
       outlines+=['m.xc="%s"'%self.dft]
@@ -130,7 +132,7 @@ class PySCFWriter:
 
                    "mc.kernel()",
 
-                   "print_qwalk(mol, mc, method= 'mcscf', tol = %f , basename = '%s')"%(
+                   "print_qwalk(mol, mc, method= 'mcscf', tol = %g , basename = '%s')"%(
                     self.cas['tol'], self.basename)]
     else:
       outlines +=[ "print_qwalk(mol,m)"]
