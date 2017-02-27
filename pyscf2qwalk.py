@@ -3,7 +3,7 @@ import numpy as np
 from pyscf import gto,fci, mcscf, scf,pbc
 import math
 import cmath
-
+import json 
 ###########################################################
 def find_label(sph_label):
   data = sph_label.split( )
@@ -286,15 +286,16 @@ def print_slater(mol, mf, orbfile, basisfile, f):
   return 
 
 ############################################################
-def binary_to_str(S, ncore):
+def binary_to_occ(S, ncore):
   occup = [ i+1 for i in range(ncore)]
   occup += [ i+ncore+1  for i, c in enumerate(reversed(S)) 
           if c=='1']
   max_orb = max(occup) 
-  return  (' '.join([str(a) for a  in occup]), max_orb)
+  #return  (' '.join([str(a) for a  in occup]), max_orb)
+  return (occup, max_orb)
   
   
-def print_cas_slater(mc,orbfile, basisfile,f, tol):
+def print_cas_slater(mc,orbfile, basisfile,f, tol,fjson):
   norb  = mc.ncas 
   nelec = mc.nelecas
   ncore = mc.ncore 
@@ -306,15 +307,25 @@ def print_cas_slater(mc,orbfile, basisfile,f, tol):
      
   for x in deters:
     detwt.append(str(x[0]))
-    alpha_occ, alpha_max = binary_to_str(x[1], ncore)
-    beta_occ, beta_max =  binary_to_str(x[2], ncore)
+    alpha_occ, alpha_max = binary_to_occ(x[1], ncore)
+    beta_occ, beta_max =  binary_to_occ(x[2], ncore)
     orb_cutoff  = max(orb_cutoff, alpha_max, beta_max)
-    tmp= ("# spin up orbitals \n"+ alpha_occ 
-          + "\n#spin down orbitals \n" + beta_occ) 
-    occup.append(tmp) 
-  det = ' '.join(detwt) 
-  occ =  '\n\n'.join(occup) 
+    #tmp= ("# spin up orbitals \n"+ alpha_occ 
+    #      + "\n#spin down orbitals \n" + beta_occ) 
+    #occup.append(tmp) 
+    occup.append((alpha_occ,beta_occ))
     
+  json.dump({'detwt':detwt,'occupation':occup},fjson ) 
+
+
+  det = ' '.join(map(str,detwt))
+  occ=""
+  for d in occup:
+    occ+="#spin up orbitals \n"
+    occ+=" ".join(map(str,d[0])) + "\n"
+    occ+="#spin down orbitals \n"
+    occ+= " ".join(map(str,d[1])) + "\n"
+#  occ =  '\n\n'.join(occup) 
     # identify orbital type
   coeff = mc.mo_coeff[0][0] 
   if (isinstance(coeff, np.float64)):
@@ -436,7 +447,8 @@ def print_qwalk_mol(mol, mf, method='scf', tol=0.01, basename='qw'):
   if method == 'scf':
     print_slater(mol,mf,orbfile,basisfile,open(basename+".slater",'w'))
   elif method == 'mcscf':
-    print_cas_slater(mf,orbfile, basisfile,open(basename+".slater",'w'), tol)
+    print_cas_slater(mf,orbfile, basisfile,open(basename+".slater",'w'), 
+                     tol,open(basename+".ci.json",'w'))
   else:
     print ("Can't convert to qw.slater. Wait to be updated") 
   return 
