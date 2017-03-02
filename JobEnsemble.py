@@ -21,7 +21,7 @@ class JobEnsemble:
   def nextstep(self):
     self.executed_plan=[]
     for job in self.plan:
-      print(" ### jobid %s"%job.jobid)
+      print(" ### jobid %s ###############################"%job.jobid)
 
       if not os.path.exists(job.jobid):
         os.mkdir(job.jobid)
