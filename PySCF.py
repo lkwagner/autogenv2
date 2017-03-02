@@ -55,7 +55,8 @@ class PySCFWriter:
             "Make sure all of 'ncore','nelec','ncas','tol','method' are set."
   #-----------------------------------------------
   def is_consistent(self,other):
-    skipkeys = ['completed','chkfile']
+    # dm_generator currently gets printed differently because of the dictionaries.
+    skipkeys = ['completed','chkfile','dm_generator']
     for otherkey in other.__dict__.keys():
       if otherkey not in self.__dict__.keys():
         print('other is missing a key.')

@@ -64,7 +64,6 @@ def check_PBS_stati(queueid):
       ).decode()
   except sub.CalledProcessError:
     return "unknown"
-  print(qstat)
   qstat=qstat.split('\n')
   for qid in queueid:
     for line in qstat:

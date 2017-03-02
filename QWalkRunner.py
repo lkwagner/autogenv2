@@ -134,7 +134,7 @@ class QWalkRunnerTaub:
          "#PBS -o %s \n"%jobout +\
          self.prefix+"\n" +\
          "cd ${PBS_O_WORKDIR}\n" +\
-         "module load openmpi/1.4-gcc+ifort" +\
+         "module load openmpi/1.4-gcc+ifort\n" +\
          "mpirun -np %i %s %s > %s \n"%(np_tot,self.exe,qwinp,qwinp+'.out') +\
          self.postfix
       qsubfile=qwinp+".qsub"
