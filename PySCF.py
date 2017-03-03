@@ -32,7 +32,8 @@ class PySCFWriter:
 
     self.basename ='qw'
 
-    self.dm_generator=dm_from_minao()
+    # Default chosen by method at runtime.
+    self.dm_generator=None
 
     self.set_options(options)
     
@@ -77,6 +78,17 @@ class PySCFWriter:
     f=open(fname,'w')
     chkfile=fname+".chkfile"
     add_paths=[]
+
+    # Figure out correct default initial guess (if not set).
+    if self.dm_generator is None:
+      if self.method in ['RKS','RHF','ROHF']:
+        self.dm_generator=dm_from_rhf_minao()
+      elif self.method in ['UKS','UHF']:
+        self.dm_generator=dm_from_uhf_minao()
+      else:
+        print("Warning: default guess not set for method=%s.\n Trying UHF."%self.method)
+        self.dm_generator=dm_from_uhf_minao()
+
     for i in self.pyscf_path:
       add_paths.append("sys.path.append('"+i+"')")
     outlines=[
@@ -169,8 +181,11 @@ class PySCFReader:
       print(f,"Number of runs",nruns)
       for run in out:
         print("dispersion",run['sigma'])
+
+def dm_from_rhf_minao():
+  return ["init_dm=scf.rhf.init_guess_by_minao(mol)"]
       
-def dm_from_minao():
+def dm_from_uhf_minao():
   return ["init_dm=scf.uhf.init_guess_by_minao(mol)"]
 
 def dm_set_spins(atomspins,double_occ={}):
