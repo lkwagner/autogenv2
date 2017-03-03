@@ -362,7 +362,7 @@ def find_atom_types(mol):
   for i in range(n_atom):
     atom_types.append(mol.atom_pure_symbol(i))
 
-  return atom_types
+  return list(set(atom_types))
 
 def print_jastrow(mol,basename='qw'):
   
