@@ -151,8 +151,8 @@ def generate_pbc_basis(xml_name,symbol,min_exp=0.2,naug=2,alpha=3,
                        nangular={"s":1,"p":1,"d":1,"f":1,"g":0}
                        ):
   transition_metals=["Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn"]
-  if symbol in transition_metals and nangular['s']==1:
-    nangular['s']=2
+  if symbol in transition_metals:
+    nangular['s']=min(nangular['s'],2)
   tree = ElementTree()
   tree.parse(xml_name)
   element = tree.find('./Pseudopotential[@symbol="{}"]'.format(symbol))
@@ -217,6 +217,8 @@ class PySCFPBCWriter:
     self.latticevec=""
     self.kpts=[2,2,2]
     self.bfd_library="BFD_Library.xml"
+    self.basis_parameters={'cutoff':0.2,'basis_name':'vtz',
+                          'naug':2,'alpha':3,'min_exp':0.2 } 
     self.special_basis={}
     
     self.basename ='qw'
@@ -244,7 +246,7 @@ class PySCFPBCWriter:
       elements.add(s['species'][0]['element'])
 
     for e in elements:
-      self.special_basis[e]=generate_pbc_basis(self.bfd_library,e,naug=0,nangular={'s':1,'p':1,'d':0,'f':0,'g':0})
+      self.special_basis[e]=generate_pbc_basis(self.bfd_library,e,**self.basis_parameters)
     print(self.xyz)
     
     
