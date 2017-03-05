@@ -212,7 +212,7 @@ class PySCFPBCWriter:
     self.direct_scf_tol=1e-7
     self.pyscf_path=[]
     self.spin=0
-    self.gs=[8,8,8]
+    self.gs=[4,4,4]
     self.xyz=""
     self.latticevec=""
     self.kpts=[2,2,2]
@@ -302,6 +302,7 @@ class PySCFPBCWriter:
         "import sys",
       ] + add_paths + [
         "import pyscf",
+        "import numpy",
         "from pyscf.pbc import gto,scf",
         "from pyscf.pbc.scf import KRHF as RHF",
         "from pyscf.pbc.scf import KUHF as UHF",
@@ -327,7 +328,7 @@ class PySCFPBCWriter:
         "mol.spin=%i"%self.spin]
     #Set up k-points
     outlines+=['kpts=mol.make_kpts('+str(self.kpts) + ')']
-      
+    
     #Mean field
     outlines+=[
         "m=%s(mol,kpts)"%self.method,
@@ -340,6 +341,11 @@ class PySCFPBCWriter:
       ] 
       
     outlines+=self.dm_generator
+    if self.method in ['UKS','UHF']:
+      outlines+=['dm_kpts= numpy.array([[init_dm[0] for k in range(len(kpts))],' +\
+                          '[init_dm[1] for k in range(len(kpts))]])'] 
+    else: 
+      outlines+=['dm_kpts= [init_dm for k in range(len(kpts))]']
 
     if self.level_shift>0.0:
       outlines+=["m.level_shift=%g"%self.level_shift]
@@ -347,7 +353,7 @@ class PySCFPBCWriter:
     if self.dft!="":
       outlines+=['m.xc="%s"'%self.dft]
 
-    outlines+=["print('E(HF) =',m.kernel())"]
+    outlines+=["print('E(HF) =',m.kernel(dm_kpts))"]
     
     outlines +=[ "print_qwalk(mol,m)"]
     f.write('\n'.join(outlines))
