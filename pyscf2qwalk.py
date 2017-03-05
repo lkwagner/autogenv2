@@ -22,7 +22,10 @@ def print_orb(mol,m,f,k=0):
   kpt=[0.,0.,0.]
   if isinstance(mol,pbc.gto.Cell):
     print(coeff.shape)
-    coeff=coeff[k]
+    if len(coeff.shape)==4:
+      coeff=coeff[:,k,:,:]
+    else:
+      coeff=coeff[k]
     kpt=m.kpts[k,:]
   
   
@@ -221,15 +224,22 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
   return 
 ###########################################################
 
-def print_slater(mol, mf, orbfile, basisfile, f):
-  coeffs=(mf.mo_coeff)
+def print_slater(mol, mf, orbfile, basisfile, f,k=-1):
   occ=mf.mo_occ 
+  corb = mf.mo_coeff.flatten()[0]
+  
+  if k >=0:
+    if len(occ.shape)==3:
+      occ=mf.mo_occ[:,k,:]
+      corb=mf.mo_coeff[0,k,0,0]
+    else:
+      occ=mf.mo_occ[k,:]
+      corb=mf.mo_coeff[k,0,0]
+      
   s=len(occ.shape) 
   tag='RHF'
-  corb = coeffs[0][0]
   if(s==2): 
     tag='UHF'
-    corb = coeffs[0][0][0]
   print(occ,tag)
   
   if (isinstance(corb, np.float64)):
@@ -465,7 +475,7 @@ def print_qwalk_pbc(cell,mf,method,tol,basename):
     bask=basename+"_%i"%i
     orbfile=bask+".orb"
     print_slater(cell,mf,orbfile,basisfile,
-                 open(bask+".slater",'w'))
+                 open(bask+".slater",'w'),k=i)
     print_sys(cell,open(bask+".sys",'w'),kpoint=2.*kpoints[i,:])
     print_orb(cell,mf,open(orbfile,'w'),k=i)
     
