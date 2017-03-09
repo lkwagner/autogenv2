@@ -27,8 +27,7 @@ def average_section(opts):
 ################################################
 def check_opts(opts):
   ''' Make sure options are set completely.'''
-  check={'average_derivative_dm':
-            ['nmo','orbfile','basis','states'],
+  check={'average_derivative_dm': ['basis'],
          'region_fluctuation':['maxn']
          }
   for key in check[opts['name']]:
