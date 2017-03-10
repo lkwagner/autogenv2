@@ -18,7 +18,7 @@ class JobEnsemble:
     self.plan.append(job)
     
   #----------------------------------------------
-  def nextstep(self):
+  def nextstep(self,reset=False): 
     self.executed_plan=[]
     for job in self.plan:
       print(" ### jobid %s ###############################"%job.jobid)
@@ -32,7 +32,10 @@ class JobEnsemble:
         with open(job.picklefn,'rb') as inpf:
           rec=pkl.load(inpf)
         if not job.is_consistent(rec):
-          raise NotImplementedError("Recipe not consistent.")
+          if not reset:
+            raise NotImplementedError("Recipe not consistent.")
+          else:
+            rec=deepcopy(job)
         #TODO: Here we should update the options of the job
         #in case the plan changed in a consistent way.
         #For example, maybe it should say 
