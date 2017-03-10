@@ -95,6 +95,7 @@ class PySCFWriter:
     outlines=[
         "import sys",
       ] + add_paths + [
+        "import pyscf",
         "from pyscf import gto,scf,mcscf",
         "from pyscf.scf import ROHF, UHF",
         "from pyscf.dft.rks import RKS",

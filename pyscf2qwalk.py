@@ -122,14 +122,20 @@ def print_basis(mol, f):
         letter=mom_to_letter[mol.bas_angular(bas)]
         ex=mol.bas_exp(bas)
         c=mol.bas_ctr_coeff(bas)
-        if len(c[0]) >1:
-          print("skipping some coefficients")
 
-        nbas=len(ex)
-        f.write("%s  %i\n" %(letter,nbas))
+        nrep=len(c[0])
+        for r in range(nrep):
+        #  letter=mom_to_letter[mol.bas_angular(bas)]
+        #  ex=mol.bas_exp(bas)
+         # c=mol.bas_ctr_coeff(bas)
+  #        if len(c[0]) >1:
+  #        print("skipping some coefficients")
 
-        for i in range(nbas):
-          f.write("  %d %f %f \n" %(i+1,ex[i],c[i][0]))
+          nbas=len(ex)
+          f.write("%s  %i\n" %(letter,nbas))
+
+          for i in range(nbas):
+            f.write("  %d %f %f \n" %(i+1,ex[i],c[i][r]))
       f.write("}\n }\n")
   f.close() 
   return 
