@@ -5,18 +5,12 @@ def average_section(opts):
   ''' Generate QWalk input for average generator section. '''
   outlines=[]
   if opts['name'].lower()=='average_derivative_dm':
+    # opts['basis'] should be a fully defined orbitals section. 
+    # See the QWalk docs on tbdm_basis for details.
     outlines=[
         "  average { average_derivative_dm",
         "    average { tbdm_basis",
-        "      orbitals { ",
-        "        cutoff_mo",
-        "        magnify 1",
-        "        nmo %d"%opts['nmo'],
-        "        orbfile %s"%opts['orbfile'],
-        "        include %s"%opts['basis'],
-        "        centers { useglobal }",
-        "      }",
-        "      states { %s }"%' '.join(map(str,opts['states'])),
+        "      include %s"%opts['basis'],
         "    }",
         "  }"
       ]
@@ -33,8 +27,7 @@ def average_section(opts):
 ################################################
 def check_opts(opts):
   ''' Make sure options are set completely.'''
-  check={'average_derivative_dm':
-            ['nmo','orbfile','basis','states'],
+  check={'average_derivative_dm': ['basis'],
          'region_fluctuation':['maxn']
          }
   for key in check[opts['name']]:

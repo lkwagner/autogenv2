@@ -16,7 +16,9 @@ class PostprocessWriter:
     # orbfile: (str) location of QWalk orbital file.
     # basis: (str) basis set the orbitals are expressed in.
     # states: (list) of the orbitals read in, which states are you using?
-    self.extra_observables=[]
+    self.extra_observables=[
+        {'name':'region_fluctuation','maxn':20}
+      ]
     self.set_options(options)
     
   #-----------------------------------------------
