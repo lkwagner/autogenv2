@@ -414,11 +414,17 @@ def dm_from_rhf_minao():
 def dm_from_uhf_minao():
   return ["init_dm=pyscf.scf.uhf.init_guess_by_minao(mol)"]
 
-def dm_set_spins(atomspins,double_occ={}):
+def dm_set_spins(atomspins,double_occ={},startdm=None):
+  ''' startdm should be the location of a chkfile if not None. '''
+  if startdm is None:
+    dmstarter='scf.uhf.init_guess_by_minao(mol)'
+  else:
+    dmstarter="m.from_chk('%s')"%startdm
+
   return [
     "atomspins=%r"%atomspins,
     "double_occ=%r"%double_occ,
-    "init_dm=scf.uhf.init_guess_by_minao(mol)",
+    "init_dm=%s"%dmstarter,
     "print(init_dm[0].diagonal())",
     "for atmid, (shl0,shl1,ao0,ao1) in enumerate(mol.offset_nr_by_atom()):",
     "  opp=int((atomspins[atmid]+1)/2)",
