@@ -308,6 +308,17 @@ class PySCFQWalk(Recipe):
     self.jobid=jobid
     self.picklefn="%s.pickle"%jobid
 
+    # Flexible qwalk runners.
+    if type(qwalk_runner)==dict:
+      qwalkrunners=qwalkrunner
+    else: # old behavior maintained.
+      qwalkrunner={
+          'variance':copy.deepcopy(qwalkrunner),
+          'energy':copy.deepcopy(qwalkrunner),
+          'dmc':copy.deepcopy(qwalkrunner),
+          'postprocess':copy.deepcopy(qwalkrunner)
+        }
+
     assert post_opts=={} or dmc_opts['savetrace'],"""
       You need to save the trace (dmc_opts['savetrace']=True) to use postprocess options."""
 
@@ -318,22 +329,22 @@ class PySCFQWalk(Recipe):
                                     ),
       mgmt.QWalkRunManager(
                            VarianceWriter(variance_opts),
-                           copy.deepcopy(qwalkrunner),
+                           qwalkrunner['variance'],
                            VarianceReader()
                           ),
       mgmt.QWalkRunManager(
                            LinearWriter(energy_opts),
-                           copy.deepcopy(qwalkrunner),
+                           qwalkrunner['energy'],
                            LinearReader()
                            ),
       mgmt.QWalkRunManager(
                            DMCWriter(dmc_opts),
-                           copy.deepcopy(qwalkrunner),
+                           qwalkrunner['dmc'],
                            DMCReader()
                           ),
       mgmt.QWalkRunManager(
                            PostprocessWriter(post_opts),
-                           copy.deepcopy(qwalkrunner),
+                           qwalkrunner['postprocess'],
                            PostprocessReader()
                           )
       ]
