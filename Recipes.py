@@ -309,10 +309,10 @@ class PySCFQWalk(Recipe):
     self.picklefn="%s.pickle"%jobid
 
     # Flexible qwalk runners.
-    if type(qwalk_runner)==dict:
-      qwalkrunners=qwalkrunner
+    if type(qwalkrunner)==dict:
+      qwalkrunners=copy.deepcopy(qwalkrunner)
     else: # old behavior maintained.
-      qwalkrunner={
+      qwalkrunners={
           'variance':copy.deepcopy(qwalkrunner),
           'energy':copy.deepcopy(qwalkrunner),
           'dmc':copy.deepcopy(qwalkrunner),
@@ -329,22 +329,22 @@ class PySCFQWalk(Recipe):
                                     ),
       mgmt.QWalkRunManager(
                            VarianceWriter(variance_opts),
-                           qwalkrunner['variance'],
+                           qwalkrunners['variance'],
                            VarianceReader()
                           ),
       mgmt.QWalkRunManager(
                            LinearWriter(energy_opts),
-                           qwalkrunner['energy'],
+                           qwalkrunners['energy'],
                            LinearReader()
                            ),
       mgmt.QWalkRunManager(
                            DMCWriter(dmc_opts),
-                           qwalkrunner['dmc'],
+                           qwalkrunners['dmc'],
                            DMCReader()
                           ),
       mgmt.QWalkRunManager(
                            PostprocessWriter(post_opts),
-                           qwalkrunner['postprocess'],
+                           qwalkrunners['postprocess'],
                            PostprocessReader()
                           )
       ]
