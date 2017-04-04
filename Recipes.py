@@ -438,7 +438,7 @@ class PySCFQWalk(Recipe):
       pyout={'energy':[],'density_matrix':[]} 
       for f, out in self.managers[pyscf].reader.output.items(): 
         if out['mcscf'] is not None:
-          pyout['file']=f
+          pyout['file'].append(f)
           pyout['energy'].append(out['mcscf']['e_tot'])
           # TODO density matrix for MC state is more complicated...
         else:
