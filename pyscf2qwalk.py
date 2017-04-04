@@ -318,7 +318,7 @@ def binary_to_occ(S, ncore):
   return (occup, max_orb)
   
   
-def print_cas_slater(mc,orbfile, basisfile,f, tol,fjson):
+def print_cas_slater(mc,orbfile, basisfile,f, tol,fjson,root=None):
   norb  = mc.ncas 
   nelec = mc.nelecas
   ncore = mc.ncore 
@@ -326,7 +326,10 @@ def print_cas_slater(mc,orbfile, basisfile,f, tol,fjson):
     # find multi slater determinant occupation
   detwt = []
   occup = []
-  deters = fci.addons.large_ci(mc.ci, norb, nelec, tol)
+  if root==None:
+    deters = fci.addons.large_ci(mc.ci, norb, nelec, tol)
+  else: 
+    deters = fci.addons.large_ci(mc.ci[root], norb, nelec, tol)
      
   for x in deters:
     detwt.append(str(x[0]))
@@ -357,7 +360,7 @@ def print_cas_slater(mc,orbfile, basisfile,f, tol,fjson):
     orb_type = 'CORBITALS' 
     
     # write to file
-  f.write('''SLATER 
+  f.write('''
   SLATER
   %s  { 
         CUTOFF_MO
