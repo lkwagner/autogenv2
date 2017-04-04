@@ -3,6 +3,7 @@ import os
 import shutil as sh
 from pymatgen.io.cif import CifParser
 from pyscf import lib
+from pyscf.scf.uhf import UHF,mulliken_meta
 
 
 ####################################################
@@ -390,7 +391,13 @@ class PySCFReader:
   def read_chkfile(self,chkfile):
     ''' Read all data from the chkfile.'''
     ret={}
-    #ret['mol']=lib.chkfile.load_mol(chkfile)
+    mol=lib.chkfile.load_mol(chkfile)
+    uhf=UHF(mol)
+    dm=uhf.from_chk('pyscf_driver.py.chkfile')
+    pops=mulliken_meta(mol,dm,verbose=1)
+    ret['basis_labels']=mol.spherical_labels()
+    ret['orb_occs']=pops[0]
+    ret['net_atomic_charge']=pops[1]
     for key in ('scf','mcscf'):
       ret[key]=lib.chkfile.load(chkfile,key)
     return ret
