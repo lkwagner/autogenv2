@@ -435,13 +435,16 @@ class PySCFQWalk(Recipe):
     
     # Collect from PySCF.
     if self.managers[pyscf].status()=='ok':
-      pyout={} 
+      pyout={'energy':[],'density_matrix':[]} 
       for f, out in self.managers[pyscf].reader.output.items(): 
         if out['mcscf'] is not None:
-          pyout[f]=out['mcscf']['e_tot']  
+          pyout['file']=f
+          pyout['energy'].append(out['mcscf']['e_tot'])
+          # TODO density matrix for MC state is more complicated...
         else:
-          pyout[f]=out['scf']['e_tot']  
-      ret['pyscf_energy']=pyout
+          pyout['energy'].append(out['scf']['e_tot'])
+          pyout['density_matrix'].append(out['density_matrix'].tolist())
+      ret['pyscf']=pyout
 
     # Collect from VMC variance optimization.
     if self.managers[var].status()=='ok':

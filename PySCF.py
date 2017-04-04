@@ -393,10 +393,15 @@ class PySCFReader:
     ''' Read all data from the chkfile.'''
     ret={}
     mol=lib.chkfile.load_mol(chkfile)
+
+    # TODO density matrix for mcscf parts.
+    # I don't think those results are saved in the chkfile, necessarily,
+    # unfortunately.
     uhf=UHF(mol)
     dm=uhf.from_chk('pyscf_driver.py.chkfile')
     ret['basis_labels']=mol.spherical_labels()
     ret['density_matrix']=dm
+
     for key in ('scf','mcscf'):
       ret[key]=lib.chkfile.load(chkfile,key)
     return ret
@@ -426,6 +431,8 @@ class PySCFReader:
       for run in out:
         print("dispersion",run['sigma'])
 
+# You should be also able to use the DM read into autogenv2, but I haven't
+# thought about how precisely this should work.
 def dm_from_rhf_minao():
   return ["init_dm=pyscf.scf.rhf.init_guess_by_minao(mol)"]
       
