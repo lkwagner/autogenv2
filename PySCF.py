@@ -182,11 +182,12 @@ def generate_pbc_basis(xml_name,symbol,min_exp=0.2,naug=2,alpha=3,
 
   angular_uncontracted=['s','p']
   if symbol in transition_metals:
-    angular_uncontracted.append(['d'])
+    angular_uncontracted.append('d')
 
   for angular in angular_uncontracted:
     for i in range(0,naug):
       exp=min_exp*alpha**i
+      print(symbol,angular)
       basis_sec=symbol+ " " + angular + "\n"
       basis_sec+='{} {}\n'.format(exp,1.0)
       allbasis.append(basis_sec)

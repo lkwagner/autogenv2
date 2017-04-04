@@ -16,9 +16,11 @@ def find_label(sph_label):
 
 #----------------------------------------------
 def print_orb(mol,m,f,k=0):
-    
-  aos_atom=mol.offset_nr_by_atom()
   coeff=m.mo_coeff
+  print_orb_coeff(mol,coeff,f,k)
+    
+def print_orb_coeff(mol,coeff,f,k=0):
+  aos_atom=mol.offset_nr_by_atom()
   kpt=[0.,0.,0.]
   if isinstance(mol,pbc.gto.Cell):
     print(coeff.shape)
@@ -189,13 +191,18 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
     for i in range(len(coords)):
       if symbols[i] not in written_out:
         written_out.append(symbols[i])
+        ecp =  gto.basis.load_ecp(mol.ecp,symbols[i])        
         print(mol.ecp, symbols[i])
-        ecp =  gto.basis.load_ecp(mol.ecp,symbols[i])
-        f.write('''PSEUDO { \n %s \nAIP 6 \nBASIS 
-        { \n%s \nRGAUSSIAN \nOLDQMC {\n  ''' 
-                %(symbols[i], symbols[i]))
         coeff =ecp[1]
         numofpot =  len(coeff)  
+        aip=6
+        if numofpot > 2:
+          aip=12
+        f.write('''PSEUDO { \n %s \nAIP %i \nBASIS 
+        { \n%s \nRGAUSSIAN \nOLDQMC {\n  ''' 
+                %(symbols[i],aip, symbols[i]))
+#        coeff =ecp[1]
+#        numofpot =  len(coeff)  
         data=[]     
         N=[]        
         for i in range(1, len(coeff)):
@@ -311,7 +318,7 @@ def binary_to_occ(S, ncore):
   return (occup, max_orb)
   
   
-def print_cas_slater(mc,orbfile, basisfile,f, tol,fjson):
+def print_cas_slater(mc,orbfile, basisfile,f, tol,fjson,root=None):
   norb  = mc.ncas 
   nelec = mc.nelecas
   ncore = mc.ncore 
@@ -319,7 +326,10 @@ def print_cas_slater(mc,orbfile, basisfile,f, tol,fjson):
     # find multi slater determinant occupation
   detwt = []
   occup = []
-  deters = fci.addons.large_ci(mc.ci, norb, nelec, tol)
+  if root==None:
+    deters = fci.addons.large_ci(mc.ci, norb, nelec, tol)
+  else: 
+    deters = fci.addons.large_ci(mc.ci[root], norb, nelec, tol)
      
   for x in deters:
     detwt.append(str(x[0]))
@@ -350,7 +360,7 @@ def print_cas_slater(mc,orbfile, basisfile,f, tol,fjson):
     orb_type = 'CORBITALS' 
     
     # write to file
-  f.write('''SLATER 
+  f.write('''
   SLATER
   %s  { 
         CUTOFF_MO
