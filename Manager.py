@@ -201,10 +201,10 @@ class PySCFManager:
   #------------------------------------------------
   def nextstep(self):
     if not self.writer.completed:
-      self.infiles,self.outfiles=self.writer.pyscf_input(self.driverfn)
+      self.infiles,self.outfiles,self.chkfiles=self.writer.pyscf_input(self.driverfn)
     
     while True:
-      status=resolve_status(self.runner,self.reader,self.outfiles)
+      status=resolve_status(self.runner,self.reader,self.outfiles,self.chkfiles)
       print("PySCF status",status)
       if status=="running":
         return

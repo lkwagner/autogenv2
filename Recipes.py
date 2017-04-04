@@ -437,7 +437,10 @@ class PySCFQWalk(Recipe):
     if self.managers[pyscf].status()=='ok':
       pyout={} 
       for f, out in self.managers[pyscf].reader.output.items(): 
-        pyout[f]=out['energy']  
+        if out['mcscf']['e_tot'] is not None:
+          pyout[f]=out['mcscf']['e_tot']  
+        else:
+          pyout[f]=out['scf']['e_tot']  
       ret['pyscf_energy']=pyout
 
     # Collect from VMC variance optimization.

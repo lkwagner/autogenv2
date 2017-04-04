@@ -139,7 +139,7 @@ class PySCFWriter:
     f.write('\n'.join(outlines))
 
     self.completed=True
-    return [fname],[fname+".o"]
+    return [fname],[fname+".o"],[chkfile]
      
 
 ####################################################
@@ -362,7 +362,7 @@ class PySCFPBCWriter:
     f.write('\n'.join(outlines))
 
     self.completed=True
-    return [fname],[fname+".o"]
+    return [fname],[fname+".o"],[chkfile]
     
     
 ####################################################
@@ -372,6 +372,7 @@ class PySCFReader:
     self.completed=False
 
   def read_outputfile(self,outfile):
+    ''' Read energy from outputfile (obsolete).'''
     ret={}
     with open(outfile, 'r') as of: 
       lines = of.readlines() 
@@ -383,17 +384,26 @@ class PySCFReader:
       if 'CASSCF energy' in line and 'print' not in line:
         ret['CASSCF_Energy'] =float(line.split()[3])
     return ret
+
+  def read_chkfile(self,chkfile):
+    ''' Read all data from the chkfile.'''
+    ret={}
+    ret['mol']=chkfile.load_mol(chkfile)
+    for key in ('scf','mcscf'):
+      ret[key]=chkfile.load(chkfile,key)
+    return ret
           
   #------------------------------------------------
-  def collect(self,outfiles):
+  def collect(self,outfiles,chkfiles):
     problem=False
-    for f in outfiles: 
-      if f not in self.output.keys():
-        self.output[f]={}
-      if 'converged' not in open(f,'r').read().split():
+    for outf,chkf in zip(outfiles,chkfiles): 
+      if outf not in self.output.keys():
+        self.output[outf]={}
+      if 'converged' not in open(outf,'r').read().split():
         problem=True
-   #   self.output[f].append(self.read_outputfile(f))
-      self.output[f]['energy'] = self.read_outputfile(f)
+   #   self.output[outf].append(self.read_outputfile(outf))
+      self.output[outf]['chkfile']=chkf
+      self.output[outf] = self.read_chkfile(chkf)
     if not problem:
       self.completed=True
     else: 
