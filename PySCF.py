@@ -2,6 +2,7 @@ from __future__ import print_function
 import os
 import shutil as sh
 from pymatgen.io.cif import CifParser
+from pyscf import lib
 
 
 ####################################################
@@ -139,7 +140,7 @@ class PySCFWriter:
     f.write('\n'.join(outlines))
 
     self.completed=True
-    return [fname],[fname+".o"]
+    return [fname],[fname+".o"],[chkfile]
      
 
 ####################################################
@@ -363,7 +364,7 @@ class PySCFPBCWriter:
     f.write('\n'.join(outlines))
 
     self.completed=True
-    return [fname],[fname+".o"]
+    return [fname],[fname+".o"],[chkfile]
     
     
 ####################################################
@@ -373,6 +374,7 @@ class PySCFReader:
     self.completed=False
 
   def read_outputfile(self,outfile):
+    ''' Read energy from outputfile (obsolete).'''
     ret={}
     with open(outfile, 'r') as of: 
       lines = of.readlines() 
@@ -384,17 +386,27 @@ class PySCFReader:
       if 'CASSCF energy' in line and 'print' not in line:
         ret['CASSCF_Energy'] =float(line.split()[3])
     return ret
+
+  #------------------------------------------------
+  def read_chkfile(self,chkfile):
+    ''' Read all data from the chkfile.'''
+    ret={}
+    #ret['mol']=lib.chkfile.load_mol(chkfile)
+    for key in ('scf','mcscf'):
+      ret[key]=lib.chkfile.load(chkfile,key)
+    return ret
           
   #------------------------------------------------
-  def collect(self,outfiles):
+  def collect(self,outfiles,chkfiles):
     problem=False
-    for f in outfiles: 
-      if f not in self.output.keys():
-        self.output[f]={}
-      if 'converged' not in open(f,'r').read().split():
+    for outf,chkf in zip(outfiles,chkfiles): 
+      if outf not in self.output.keys():
+        self.output[outf]={}
+      if 'converged' not in open(outf,'r').read().split():
         problem=True
-   #   self.output[f].append(self.read_outputfile(f))
-      self.output[f]['energy'] = self.read_outputfile(f)
+   #   self.output[outf].append(self.read_outputfile(outf))
+      self.output[outf] = self.read_chkfile(chkf)
+      self.output[outf]['chkfile']=chkf
     if not problem:
       self.completed=True
     else: 
@@ -415,11 +427,17 @@ def dm_from_rhf_minao():
 def dm_from_uhf_minao():
   return ["init_dm=pyscf.scf.uhf.init_guess_by_minao(mol)"]
 
-def dm_set_spins(atomspins,double_occ={}):
+def dm_set_spins(atomspins,double_occ={},startdm=None):
+  ''' startdm should be the location of a chkfile if not None. '''
+  if startdm is None:
+    dmstarter='scf.uhf.init_guess_by_minao(mol)'
+  else:
+    dmstarter="m.from_chk('%s')"%startdm
+
   return [
     "atomspins=%r"%atomspins,
     "double_occ=%r"%double_occ,
-    "init_dm=scf.uhf.init_guess_by_minao(mol)",
+    "init_dm=%s"%dmstarter,
     "print(init_dm[0].diagonal())",
     "for atmid, (shl0,shl1,ao0,ao1) in enumerate(mol.offset_nr_by_atom()):",
     "  opp=int((atomspins[atmid]+1)/2)",

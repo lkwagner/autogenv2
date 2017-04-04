@@ -201,7 +201,7 @@ class PySCFManager:
   #------------------------------------------------
   def nextstep(self):
     if not self.writer.completed:
-      self.infiles,self.outfiles=self.writer.pyscf_input(self.driverfn)
+      self.infiles,self.outfiles,self.chkfiles=self.writer.pyscf_input(self.driverfn)
     
     while True:
       status=resolve_status(self.runner,self.reader,self.outfiles)
@@ -212,7 +212,7 @@ class PySCFManager:
         self.runner.run(self.infiles,self.outfiles)
       elif status=="ready_for_analysis":
         #This is where we (eventually) do error correction and resubmits
-        self.reader.collect(self.outfiles)
+        self.reader.collect(self.outfiles,self.chkfiles)
         break
       elif status=='done':
         break

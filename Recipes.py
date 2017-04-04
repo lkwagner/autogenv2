@@ -308,6 +308,17 @@ class PySCFQWalk(Recipe):
     self.jobid=jobid
     self.picklefn="%s.pickle"%jobid
 
+    # Flexible qwalk runners.
+    if type(qwalkrunner)==dict:
+      qwalkrunners=copy.deepcopy(qwalkrunner)
+    else: # old behavior maintained.
+      qwalkrunners={
+          'variance':copy.deepcopy(qwalkrunner),
+          'energy':copy.deepcopy(qwalkrunner),
+          'dmc':copy.deepcopy(qwalkrunner),
+          'postprocess':copy.deepcopy(qwalkrunner)
+        }
+
     assert post_opts=={} or dmc_opts['savetrace'],"""
       You need to save the trace (dmc_opts['savetrace']=True) to use postprocess options."""
 
@@ -318,22 +329,22 @@ class PySCFQWalk(Recipe):
                                     ),
       mgmt.QWalkRunManager(
                            VarianceWriter(variance_opts),
-                           copy.deepcopy(qwalkrunner),
+                           qwalkrunners['variance'],
                            VarianceReader()
                           ),
       mgmt.QWalkRunManager(
                            LinearWriter(energy_opts),
-                           copy.deepcopy(qwalkrunner),
+                           qwalkrunners['energy'],
                            LinearReader()
                            ),
       mgmt.QWalkRunManager(
                            DMCWriter(dmc_opts),
-                           copy.deepcopy(qwalkrunner),
+                           qwalkrunners['dmc'],
                            DMCReader()
                           ),
       mgmt.QWalkRunManager(
                            PostprocessWriter(post_opts),
-                           copy.deepcopy(qwalkrunner),
+                           qwalkrunners['postprocess'],
                            PostprocessReader()
                           )
       ]
@@ -426,7 +437,10 @@ class PySCFQWalk(Recipe):
     if self.managers[pyscf].status()=='ok':
       pyout={} 
       for f, out in self.managers[pyscf].reader.output.items(): 
-        pyout[f]=out['energy']  
+        if out['mcscf'] is not None:
+          pyout[f]=out['mcscf']['e_tot']  
+        else:
+          pyout[f]=out['scf']['e_tot']  
       ret['pyscf_energy']=pyout
 
     # Collect from VMC variance optimization.
