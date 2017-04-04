@@ -2,6 +2,7 @@ from __future__ import print_function
 import os
 import shutil as sh
 from pymatgen.io.cif import CifParser
+from pyscf import lib
 
 
 ####################################################
@@ -385,12 +386,13 @@ class PySCFReader:
         ret['CASSCF_Energy'] =float(line.split()[3])
     return ret
 
+  #------------------------------------------------
   def read_chkfile(self,chkfile):
     ''' Read all data from the chkfile.'''
     ret={}
-    ret['mol']=chkfile.load_mol(chkfile)
+    #ret['mol']=lib.chkfile.load_mol(chkfile)
     for key in ('scf','mcscf'):
-      ret[key]=chkfile.load(chkfile,key)
+      ret[key]=lib.chkfile.load(chkfile,key)
     return ret
           
   #------------------------------------------------
@@ -402,8 +404,8 @@ class PySCFReader:
       if 'converged' not in open(outf,'r').read().split():
         problem=True
    #   self.output[outf].append(self.read_outputfile(outf))
-      self.output[outf]['chkfile']=chkf
       self.output[outf] = self.read_chkfile(chkf)
+      self.output[outf]['chkfile']=chkf
     if not problem:
       self.completed=True
     else: 
