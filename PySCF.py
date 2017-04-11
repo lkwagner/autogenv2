@@ -206,7 +206,6 @@ class PySCFPBCWriter:
     self.charge=0
     self.completed=False
     self.dft="pbe,pbe" #Any valid input for PySCF. This gets put into the 'xc' variable
-    self.diis=True
     self.diis_start_cycle=1
     self.ecp="bfd"
     self.level_shift=0.0
@@ -233,8 +232,10 @@ class PySCFPBCWriter:
     self.set_options(options)
   #-----------------------------------------------
 
-  def from_cif(self,cifstring,primitive=True):
-    struct=CifParser.from_string(cifstring).get_structures(primitive=primitive)[0].as_dict()
+  def from_cif(self,cifstring,primitive=True,supercell=[[1,0,0],[0,1,0],[0,0,1]]):
+    struct=CifParser.from_string(cifstring).get_structures(primitive=primitive)[0]
+    struct.make_supercell(supercell)
+    struct=struct.as_dict()
     self.latticevec=" "
     for a in struct['lattice']['matrix']:
       for b in a:
@@ -342,7 +343,6 @@ class PySCFPBCWriter:
         "m.direct_scf_tol=%g"%self.direct_scf_tol,
         "m.chkfile='%s'"%chkfile,
         "m.conv_tol=%g"%self.conv_tol,
-        "m.diis=%r"%self.diis,
         "m.diis_start_cycle=%d"%self.diis_start_cycle
       ] 
       
@@ -442,7 +442,7 @@ def dm_from_uhf_minao():
 def dm_set_spins(atomspins,double_occ={},startdm=None):
   ''' startdm should be the location of a chkfile if not None. '''
   if startdm is None:
-    dmstarter='scf.uhf.init_guess_by_minao(mol)'
+    dmstarter='pyscf.scf.uhf.init_guess_by_minao(mol)'
   else:
     dmstarter="m.from_chk('%s')"%startdm
 
@@ -452,16 +452,17 @@ def dm_set_spins(atomspins,double_occ={},startdm=None):
     "init_dm=%s"%dmstarter,
     "print(init_dm[0].diagonal())",
     "for atmid, (shl0,shl1,ao0,ao1) in enumerate(mol.offset_nr_by_atom()):",
-    "  opp=int((atomspins[atmid]+1)/2)",
-    "  s=(opp+1)%2",
-    "  sym=mol.atom_pure_symbol(atmid)",
-    "  print(sym,atmid,s,opp)",
-    "  docc=[]",
-    "  if sym in double_occ:",
-    "    docc=double_occ[sym]",
-    "  for ii,i in enumerate(range(ao0,ao1)):",
-    "    if ii not in docc:",
-    "      init_dm[opp][i,i]=0.0",
+    "  if atmid < len(atomspins) and atomspins[atmid]!=0:",
+    "    opp=int((atomspins[atmid]+1)/2)",
+    "    s=(opp+1)%2",
+    "    sym=mol.atom_pure_symbol(atmid)",
+    "    print(sym,atmid,s,opp)",
+    "    docc=[]",
+    "    if sym in double_occ:",
+    "      docc=double_occ[sym]",
+    "    for ii,i in enumerate(range(ao0,ao1)):",
+    "      if ii not in docc:",
+    "        init_dm[opp][i,i]=0.0",
   ]
 
 def dm_from_chkfile(chkfile):
