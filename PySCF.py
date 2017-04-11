@@ -444,7 +444,7 @@ def dm_set_spins(atomspins,double_occ={},startdm=None):
   if startdm is None:
     dmstarter='pyscf.scf.uhf.init_guess_by_minao(mol)'
   else:
-    dmstarter="m.from_chk('%s')"%startdm
+    dmstarter=startdm
 
   return [
     "atomspins=%r"%atomspins,
