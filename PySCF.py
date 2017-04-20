@@ -325,7 +325,7 @@ class PySCFPBCWriter:
     outlines+=['}']
     # The cell/molecule
     outlines+=[
-        "mol=gto.M(verbose=7,",
+        "mol=gto.M(verbose=4,",
         "gs="+str(self.gs)+",",
         "atom='''"+self.xyz+"''',",
         "a='''"+str(self.latticevec) +"''',",
