@@ -160,7 +160,7 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
 
   T_charge = sum(charges) + mol.charge
   T_spin = mol.spin
-  assert (T_charge+Tspin)%2==1,"""
+  assert (T_charge+T_spin)%2==1,"""
     Charge and spin should both be even or both be odd."""
   spin_up =(T_charge + T_spin)//2
   spin_down = (T_charge - T_spin)//2
