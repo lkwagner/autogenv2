@@ -52,6 +52,10 @@ class PySCFWriter:
         raise AssertionError
       selfdict[k]=d[k]
 
+    # If charge and spin should have same parity.
+    assert selfdict['charge']%2==selfdict['spin']%2,"""
+      Spin and charge should both be even or both be odd."""
+
     # If postHF got set, new options are required input.
     if self.postHF==True:
       for key in ['ncore','nelec','ncas','tol','method']:
