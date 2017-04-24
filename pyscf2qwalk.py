@@ -158,10 +158,12 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
     c = list(map(str, coords[i]))
     coords_string.append(' '.join(c))
 
-  T_charge = sum(charges)
+  T_charge = sum(charges) + mol.charge
   T_spin = mol.spin
-  spin_up =(T_charge + T_spin)/2
-  spin_down = (T_charge - T_spin)/2
+  assert (T_charge+Tspin)%2==1,"""
+    Charge and spin should both be even or both be odd."""
+  spin_up =(T_charge + T_spin)//2
+  spin_down = (T_charge - T_spin)//2
 
   if isinstance(mol,pbc.gto.Cell):
     f.write('SYSTEM { PERIODIC \n')
