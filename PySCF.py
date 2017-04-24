@@ -54,7 +54,8 @@ class PySCFWriter:
 
     # If charge and spin should have same parity.
     assert selfdict['charge']%2==selfdict['spin']%2,"""
-      Spin and charge should both be even or both be odd."""
+      Spin and charge should both be even or both be odd.
+      Charge=%d, spin=%d."""%(selfdict['charge'],selfdict['spin'])
 
     # If postHF got set, new options are required input.
     if self.postHF==True:

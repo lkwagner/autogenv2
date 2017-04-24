@@ -158,10 +158,13 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
     c = list(map(str, coords[i]))
     coords_string.append(' '.join(c))
 
-  T_charge = sum(charges) + mol.charge
+  T_charge = sum(charges) + (-mol.charge)
   T_spin = mol.spin
-  assert (T_charge+T_spin)%2==1,"""
-    Charge and spin should both be even or both be odd."""
+
+  assert (T_charge+T_spin)%2==0,"""
+    Charge and spin should both be even or both be odd.
+    mol.spin=%d, mol.charge=%d."""%(mol.spin,mol.charge)
+
   spin_up =(T_charge + T_spin)//2
   spin_down = (T_charge - T_spin)//2
 
