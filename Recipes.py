@@ -291,7 +291,7 @@ class LocalCrystalQWalk(Recipe):
     
     
 #######################################################
-from PySCF import PySCFWriter,PySCFReader
+from PySCF import PySCFWriter,PySCFPBCWriter,PySCFReader
 from PySCFRunner import PySCFRunnerPBS
 
 class PySCFQWalk(Recipe):
@@ -319,14 +319,25 @@ class PySCFQWalk(Recipe):
           'postprocess':copy.deepcopy(qwalkrunner)
         }
 
+    assert ('xyz' in pyscf_opts.keys())^('cif' in pyscf_opts.keys()),"""
+      Exactly one of 'xyz' and 'cif' must be set. """
+
     assert post_opts=={} or dmc_opts['savetrace'],"""
       You need to save the trace (dmc_opts['savetrace']=True) to use postprocess options."""
 
-    self.managers=[mgmt.PySCFManager(
-                                     PySCFWriter(pyscf_opts),
-                                     copy.deepcopy(pyscfrunner),
-                                     PySCFReader()
-                                    ),
+    if 'xyz' in pyscf_opts.keys():
+      self.managers=[mgmt.PySCFManager(
+                                       PySCFWriter(pyscf_opts),
+                                       copy.deepcopy(pyscfrunner),
+                                       PySCFReader()
+                                      )]
+    else:
+      self.managers=[mgmt.PySCFManager(
+                                       PySCFPBCWriter(pyscf_opts),
+                                       copy.deepcopy(pyscfrunner),
+                                       PySCFReader()
+                                      )]
+    self.managers+=[
       mgmt.QWalkRunManager(
                            VarianceWriter(variance_opts),
                            qwalkrunners['variance'],
@@ -435,7 +446,7 @@ class PySCFQWalk(Recipe):
     
     # Collect from PySCF.
     if self.managers[pyscf].status()=='ok':
-      pyout={'energy':[],'density_matrix':[]} 
+      pyout={'energy':[],'density_matrix':[],'file':[]} 
       for f, out in self.managers[pyscf].reader.output.items(): 
         if out['mcscf'] is not None:
           pyout['file'].append(f)
