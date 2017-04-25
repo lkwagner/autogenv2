@@ -21,14 +21,16 @@ def print_orb(mol,m,f,k=0):
     
 def print_orb_coeff(mol,coeff,f,k=0):
   aos_atom=mol.offset_nr_by_atom()
-  kpt=[0.,0.,0.]
+  # Not used, remove?.
+  #kpt=[0.,0.,0.]
   if isinstance(mol,pbc.gto.Cell):
     print(coeff.shape)
     if len(coeff.shape)==4:
       coeff=coeff[:,k,:,:]
     else:
       coeff=coeff[k]
-    kpt=m.kpts[k,:]
+    # This is a bug (m not defined) and isn't used anywhere.
+    #kpt=m.kpts[k,:]
   
   
   if len(coeff.shape)==3:
