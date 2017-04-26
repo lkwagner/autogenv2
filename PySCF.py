@@ -52,6 +52,11 @@ class PySCFWriter:
         raise AssertionError
       selfdict[k]=d[k]
 
+    # If charge and spin should have same parity.
+    assert selfdict['charge']%2==selfdict['spin']%2,"""
+      Spin and charge should both be even or both be odd.
+      Charge=%d, spin=%d."""%(selfdict['charge'],selfdict['spin'])
+
     # If postHF got set, new options are required input.
     if self.postHF==True:
       for key in ['ncore','nelec','ncas','tol','method']:
@@ -187,11 +192,11 @@ def generate_pbc_basis(xml_name,symbol,min_exp=0.2,naug=2,alpha=3,
   for angular in angular_uncontracted:
     for i in range(0,naug):
       exp=min_exp*alpha**i
-      print(symbol,angular)
+      #print(symbol,angular)
       basis_sec=symbol+ " " + angular + "\n"
       basis_sec+='{} {}\n'.format(exp,1.0)
       allbasis.append(basis_sec)
-  print(" ".join(allbasis))
+  #print(" ".join(allbasis))
   return " ".join(allbasis)
   
 
@@ -204,6 +209,7 @@ class PySCFPBCWriter:
   def __init__(self,options={}):
     self.basis='bfd_vtz'
     self.charge=0
+    self.cif=''
     self.completed=False
     self.dft="pbe,pbe" #Any valid input for PySCF. This gets put into the 'xc' variable
     self.diis_start_cycle=1
@@ -241,7 +247,7 @@ class PySCFPBCWriter:
       for b in a:
         self.latticevec+= str(b)+ " "
 
-    print(struct['sites'])
+    #print(struct['sites'])
     self.xyz=""
     elements=set()
     for s in struct['sites']:
@@ -252,7 +258,7 @@ class PySCFPBCWriter:
 
     for e in elements:
       self.special_basis[e]=generate_pbc_basis(self.bfd_library,e,**self.basis_parameters)
-    print(self.xyz)
+    #print(self.xyz)
     
     
   #-----------------------------------------------
@@ -266,6 +272,10 @@ class PySCFPBCWriter:
         print("Error:",k,"not a keyword for PySCFWriter")
         raise AssertionError
       selfdict[k]=d[k]
+
+    # Must be done after bdf_library is set.
+    if 'cif' in d.keys():
+      self.from_cif(d['cif'])
   #-----------------------------------------------
 
   def is_consistent(self,other):

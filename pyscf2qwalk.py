@@ -17,26 +17,18 @@ def find_label(sph_label):
 #----------------------------------------------
 def print_orb(mol,m,f,k=0):
   coeff=m.mo_coeff
+  print_orb_coeff(mol,coeff,f,k)
+    
+#----------------------------------------------
+
+def print_orb_coeff(mol,coeff,f,k=0):
+  aos_atom=mol.offset_nr_by_atom()
   if isinstance(mol,pbc.gto.Cell):
     print(coeff.shape)
     if len(coeff.shape)==4:
       coeff=coeff[:,k,:,:]
     else:
       coeff=coeff[k]
-    print_orb_coeff(mol,coeff,f,k,m.kpts[k,:])
-  else:
-    print_orb_coeff(mol,coeff,f,k)
-    
-def print_orb_coeff(mol,coeff,f,k=0,kpt=[0.,0.,0.]):
-  aos_atom=mol.offset_nr_by_atom()
-  #if isinstance(mol,pbc.gto.Cell):
-  #  print(coeff.shape)
-  #  if len(coeff.shape)==4:
-  #    coeff=coeff[:,k,:,:]
-  #  else:
-  #    coeff=coeff[k]
-    #kpt=m.kpts[k,:]
-  
   
   if len(coeff.shape)==3:
     assert coeff.shape[0]==2
@@ -165,10 +157,15 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
     c = list(map(str, coords[i]))
     coords_string.append(' '.join(c))
 
-  T_charge = sum(charges)
+  T_charge = sum(charges) + (-mol.charge)
   T_spin = mol.spin
-  spin_up =(T_charge + T_spin)/2
-  spin_down = (T_charge - T_spin)/2
+
+  assert (T_charge+T_spin)%2==0,"""
+    Charge and spin should both be even or both be odd.
+    mol.spin=%d, mol.charge=%d."""%(mol.spin,mol.charge)
+
+  spin_up =(T_charge + T_spin)//2
+  spin_down = (T_charge - T_spin)//2
 
   if isinstance(mol,pbc.gto.Cell):
     f.write('SYSTEM { PERIODIC \n')
