@@ -18,8 +18,14 @@ def resolve_status(runner,reader,outfiles):
     if not os.path.exists(outfile):
       return 'not_started'
 
-  #We are in an error state or we haven't collected 
-  #the results. 
+  
+  #We are in an error state 
+  for outf in outfiles:
+    lines = open(outf, 'r').read().split()
+    if ('HF_done' in  lines) and ('All_done' not in lines):
+      return  "retry"
+
+  #we haven't collected the results. 
   return "ready_for_analysis"
   
 
@@ -216,6 +222,11 @@ class PySCFManager:
         break
       elif status=='done':
         break
+      #If we need to restart the run
+      elif status=='retry':
+        self.writer.update_input(self.driverfn)
+        self.runner.run(self.infiles, self.outfiles)
+        break
       else:
         return
       
@@ -227,8 +238,10 @@ class PySCFManager:
 
   #----------------------------------------
   def status(self):
-    if self.reader.completed:
+    current_status = resolve_status(self.runner,self.reader,self.outfiles)
+    if current_status == 'done':
       return 'ok'
+    elif current_status == 'retry':
+      return 'retry'
     else:
-      return 'not_finished'
-    
+      return 'not_finished' 
