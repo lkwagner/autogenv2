@@ -13,7 +13,6 @@ class PySCFWriter:
     self.charge=0
     self.completed=False
     self.dft="" #Any valid input for PySCF. This gets put into the 'xc' variable
-    self.diis=True
     self.diis_start_cycle=1
     self.ecp="bfd"
     self.level_shift=0.0
@@ -119,7 +118,6 @@ class PySCFWriter:
         "m.direct_scf_tol=%g"%self.direct_scf_tol,
         "m.chkfile='%s'"%chkfile,
         "m.conv_tol=%g"%self.conv_tol,
-        "m.diis=%r"%self.diis,
         "m.diis_start_cycle=%d"%self.diis_start_cycle
       ] + self.dm_generator
 
