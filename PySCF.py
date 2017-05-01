@@ -338,9 +338,10 @@ class PySCFPBCWriter:
         "atom='''"+self.xyz+"''',",
         "a='''"+str(self.latticevec) +"''',",
         "basis=basis,",
+        "spin=%i,"%self.spin,
         "ecp='%s')"%self.ecp,
-        "mol.charge=%i"%self.charge,
-        "mol.spin=%i"%self.spin]
+        "mol.charge=%i"%self.charge
+        ]
     #Set up k-points
     outlines+=['kpts=mol.make_kpts('+str(self.kpts) + ')']
     
