@@ -383,20 +383,6 @@ class PySCFReader:
     self.output={}
     self.completed=False
 
-  def read_outputfile(self,outfile):
-    ''' Read energy from outputfile (obsolete).'''
-    ret={}
-    with open(outfile, 'r') as of: 
-      lines = of.readlines() 
-    for line in lines:
-      if 'E(HF)' in line and 'print' not in line:
-        ret['HF_Energy'] = float(line.split('=')[1]) 
-      if 'CASCI energy' in line and 'print' not in line: 
-        ret['CASCI_Energy'] =float(line.split()[3]) 
-      if 'CASSCF energy' in line and 'print' not in line:
-        ret['CASSCF_Energy'] =float(line.split()[3])
-    return ret
-
   #------------------------------------------------
   def read_chkfile(self,chkfile):
     ''' Read all data from the chkfile.'''
@@ -423,7 +409,6 @@ class PySCFReader:
         self.output[outf]={}
       if 'converged' not in open(outf,'r').read().split():
         problem=True
-   #   self.output[outf].append(self.read_outputfile(outf))
       self.output[outf] = self.read_chkfile(chkf)
       self.output[outf]['chkfile']=chkf
     if not problem:
