@@ -8,7 +8,7 @@ def resolve_status(runner,reader,outfiles):
   #Check if the job is in the queue
   # or running. If so, we just return that.
   currstat=runner.check_status()
-  print("Current status:",currstat)
+  print("Current %s status:"%runner.__class__.__name__,currstat)
   if currstat=='running':
     return currstat
   
