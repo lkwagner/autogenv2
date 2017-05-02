@@ -409,7 +409,8 @@ class PySCFReader:
         self.output[outf]={}
       if 'converged' not in open(outf,'r').read().split():
         problem=True
-      self.output[outf] = self.read_chkfile(chkf)
+      else: # Only read in properties if self-consistent.
+        self.output[outf] = self.read_chkfile(chkf)
       self.output[outf]['chkfile']=chkf
     if not problem:
       self.completed=True
