@@ -7,10 +7,11 @@ import json
 ###########################################################
 def find_label(sph_label):
   data = sph_label.split( )
-  if(data[2][1]!='g'):
-    return data[2][1:]
+  label = data[2].lstrip('0123456789')
+  if(label[0]!='g'):
+    return label
   elif(len(data)==3):
-    return 'gm'+data[2][3]
+    return 'gm'+label[2]
   else:
     return 'gp'+data[3] 
 
