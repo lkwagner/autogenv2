@@ -1,6 +1,6 @@
 import os
 import numpy as np
-def resolve_status(runner,reader,outfiles):
+def resolve_status(runner,reader,outfiles, method='not_defined'):
   #Check if the reader is done
   if reader.completed:
     return 'done'
@@ -17,6 +17,11 @@ def resolve_status(runner,reader,outfiles):
   for outfile in outfiles:
     if not os.path.exists(outfile):
       return 'not_started'
+
+  #check if we need to restart 
+  if(method == 'pyscf'): 
+    if  reader.restart(outfiles): 
+      return 'retry' 
 
   #We are in an error state or we haven't collected 
   #the results. 
@@ -191,6 +196,7 @@ class PySCFManager:
     self.reader=reader
     self.driverfn='pyscf_driver.py'
     self.infiles=[]
+    self.restart_infiles=[] 
     self.outfiles=[]
   #------------------------------------------------
     
@@ -201,10 +207,10 @@ class PySCFManager:
   #------------------------------------------------
   def nextstep(self):
     if not self.writer.completed:
-      self.infiles,self.outfiles,self.chkfiles=self.writer.pyscf_input(self.driverfn)
+      self.infiles,self.restart_infiles,self.outfiles,self.chkfiles=self.writer.pyscf_input(self.driverfn)
     
     while True:
-      status=resolve_status(self.runner,self.reader,self.outfiles)
+      status=resolve_status(self.runner,self.reader,self.outfiles, 'pyscf')
       print("PySCF status",status)
       if status=="running":
         return
@@ -215,6 +221,10 @@ class PySCFManager:
         self.reader.collect(self.outfiles,self.chkfiles)
         break
       elif status=='done':
+        break
+      #If we need to restart the run
+      elif status=='retry':
+        self.runner.run(self.restart_infiles, self.outfiles)
         break
       else:
         return
@@ -227,8 +237,10 @@ class PySCFManager:
 
   #----------------------------------------
   def status(self):
-    if self.reader.completed:
+    current_status = resolve_status(self.runner,self.reader,self.outfiles, 'pyscf')
+    if current_status == 'done':
       return 'ok'
+    elif current_status == 'retry':
+      return 'retry'
     else:
       return 'not_finished'
-    

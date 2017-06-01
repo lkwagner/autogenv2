@@ -315,8 +315,8 @@ def print_slater(mol, mf, orbfile, basisfile, f,k=0):
 
 ############################################################
 def binary_to_occ(S, ncore):
-  occup = [ i+1 for i in range(ncore)]
-  occup += [ i+ncore+1  for i, c in enumerate(reversed(S)) 
+  occup = [ int(i+1) for i in range(ncore)]
+  occup += [ int(i+ncore+1)  for i, c in enumerate(reversed(S)) 
           if c=='1']
   max_orb = max(occup) 
   #return  (' '.join([str(a) for a  in occup]), max_orb)

@@ -83,6 +83,8 @@ class PySCFWriter:
   #-----------------------------------------------
   def pyscf_input(self,fname):
     f=open(fname,'w')
+    restart_fname = 'restart_'+fname
+    re_f = open(restart_fname, 'w')
     chkfile=fname+".chkfile"
     add_paths=[]
 
@@ -102,7 +104,7 @@ class PySCFWriter:
         "import sys",
       ] + add_paths + [
         "import pyscf",
-        "from pyscf import gto,scf,mcscf",
+        "from pyscf import gto,scf,mcscf,fci,lib",
         "from pyscf.scf import ROHF, UHF",
         "from pyscf.dft.rks import RKS",
         "from pyscf.dft.uks import UKS",
@@ -128,7 +130,8 @@ class PySCFWriter:
       outlines+=['m.xc="%s"'%self.dft]
 
     outlines+=["print('E(HF) =',m.kernel(init_dm))"]
-    
+    outlines+=['print ("HF_done")']        
+
     if self.postHF :
       outlines += ["mc=mcscf.%s(m, ncas=%i, nelecas=(%i, %i),ncore= %i)"%( 
                    self.cas['method'], self.cas['ncas'], self.cas['nelec'][0], 
@@ -136,18 +139,28 @@ class PySCFWriter:
                    "mc.direct_scf_tol=%f"%self.direct_scf_tol,
 
                    "mc.kernel()",
+                   'print ("PostHF_done")',
 
                    "print_qwalk(mol, mc, method= 'mcscf', tol = %g , basename = '%s')"%(
                     self.cas['tol'], self.basename)]
     else:
       outlines +=[ "print_qwalk(mol,m)"]
+    outlines += ['print ("All_done")']
+
+    restart_outlines=[] 
+    for line in  outlines: 
+      if 'mc.kernel()' in line:
+        restart_outlines += ["mc.__dict__.update(lib.chkfile.load('%s', 'mcscf'))\n"%chkfile]
+      restart_outlines += [line]  
+    
     f.write('\n'.join(outlines))
+    re_f.write('\n'.join(restart_outlines))
 
     self.completed=True
-    return [fname],[fname+".o"],[chkfile]
+    return [fname],[restart_fname], [fname+".o"],[chkfile]
      
 
-####################################################
+##n#################################################
 
 
 from xml.etree.ElementTree import ElementTree
@@ -402,21 +415,31 @@ class PySCFReader:
     return ret
           
   #------------------------------------------------
+  def restart(self, outfiles):
+    for outf in  outfiles:
+      lines = open(outf,'r').read().split()
+      if ('HF_done' in lines) and  ('All_done' not in lines):
+        return True
+    return False
+
+  #------------------------------------------------
+     
   def collect(self,outfiles,chkfiles):
     problem=False
-    for outf,chkf in zip(outfiles,chkfiles): 
+    for outf,chkf in zip(outfiles,chkfiles):
       if outf not in self.output.keys():
         self.output[outf]={}
-      if 'converged' not in open(outf,'r').read().split():
-        problem=True
+      lines = open(outf,'r').read().split()
+      if 'All_done' not in lines:
+         problem= True
       else: # Only read in properties if self-consistent.
         self.output[outf] = self.read_chkfile(chkf)
       self.output[outf]['chkfile']=chkf
     if not problem:
       self.completed=True
-    else: 
+    else:
       print('Problem detected in PySCF run.')
-      
+ 
   #------------------------------------------------
   def write_summary(self):
     print("#### Variance optimization")
