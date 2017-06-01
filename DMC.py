@@ -74,7 +74,8 @@ class DMCWriter:
         if self.tmoves:
           outlines+=['tmoves']
         if self.savetrace:
-          outlines+=['save_trace %s'%self.tracefiles[i]]
+          tracename = base + 't'+str(t) + ".dmc.trace"
+          outlines+=['save_trace %s'%tracename]
         for avg_opts in self.extra_observables:
           outlines+=avg.average_section(avg_opts)
         outlines+=[
