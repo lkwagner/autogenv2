@@ -79,6 +79,33 @@ class PySCFWriter:
             .format(key,self.__dict__[key],other.__dict__[key]))
         return False
     return True
+
+  #---------------------------------------------------
+  def update_input(self, fname):
+    # check if input file already updated
+    lines = open(fname, 'r').read().split()
+    for line in lines:
+      if "mc.__dict__.update(lib.chkfile.load"  in line:
+        return
+
+    # update pyscf input file for restart, load from chkfile 
+    chkfile=fname+".chkfile"
+    outlines=[]
+    with open(fname, 'r') as inf:
+      for line in inf:
+        if "print('E(HF) =',m.kernel(init_dm))" in line:
+          outlines += ["m.__dict__.update(lib.chkfile.load('%s', 'scf'))\n"%chkfile]
+          outlines += ["print('E(HF) =',m.kernel())\n"]
+        elif 'mc.kernel()' in line:
+          outlines += ["mc.__dict__.update(lib.chkfile.load('%s', 'mcscf'))\n"%chkfile]
+          outlines += ['mc.kernel()\n']
+        else:
+          outlines += [line]
+    with open('tmp_output', 'w') as outf:
+      outf.write(''.join(outlines))
+    sh.move('tmp_output', fname)
+    return
+
     
   #-----------------------------------------------
   def pyscf_input(self,fname):
@@ -102,7 +129,7 @@ class PySCFWriter:
         "import sys",
       ] + add_paths + [
         "import pyscf",
-        "from pyscf import gto,scf,mcscf",
+        "from pyscf import gto,scf,mcscf, fci,lib",
         "from pyscf.scf import ROHF, UHF",
         "from pyscf.dft.rks import RKS",
         "from pyscf.dft.uks import UKS",
@@ -128,7 +155,7 @@ class PySCFWriter:
       outlines+=['m.xc="%s"'%self.dft]
 
     outlines+=["print('E(HF) =',m.kernel(init_dm))"]
-    
+    outlines+=['print ("HF_done")']    
     if self.postHF :
       outlines += ["mc=mcscf.%s(m, ncas=%i, nelecas=(%i, %i),ncore= %i)"%( 
                    self.cas['method'], self.cas['ncas'], self.cas['nelec'][0], 
@@ -136,11 +163,14 @@ class PySCFWriter:
                    "mc.direct_scf_tol=%f"%self.direct_scf_tol,
 
                    "mc.kernel()",
+                   'print ("PostHF_done")',
 
                    "print_qwalk(mol, mc, method= 'mcscf', tol = %g , basename = '%s')"%(
                     self.cas['tol'], self.basename)]
     else:
       outlines +=[ "print_qwalk(mol,m)"]
+    outlines += ['print ("All_done")']
+
     f.write('\n'.join(outlines))
 
     self.completed=True

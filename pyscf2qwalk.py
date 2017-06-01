@@ -345,7 +345,8 @@ def print_cas_slater(mc,orbfile, basisfile,f, tol,fjson,root=None):
     #      + "\n#spin down orbitals \n" + beta_occ) 
     #occup.append(tmp) 
     occup.append((alpha_occ,beta_occ))
-    
+  
+  occup =[[[ int(i) for i in j] for j in k] for k in occup]  
   json.dump({'detwt':detwt,'occupation':occup},fjson ) 
 
 
