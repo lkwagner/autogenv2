@@ -7,10 +7,11 @@ import json
 ###########################################################
 def find_label(sph_label):
   data = sph_label.split( )
-  if(data[2][1]!='g'):
-    return data[2][1:]
+  label = data[2].lstrip('0123456789')
+  if(label[0]!='g'):
+    return label
   elif(len(data)==3):
-    return 'gm'+data[2][3]
+    return 'gm'+label[2]
   else:
     return 'gp'+data[3] 
 
@@ -19,17 +20,16 @@ def print_orb(mol,m,f,k=0):
   coeff=m.mo_coeff
   print_orb_coeff(mol,coeff,f,k)
     
+#----------------------------------------------
+
 def print_orb_coeff(mol,coeff,f,k=0):
   aos_atom=mol.offset_nr_by_atom()
-  kpt=[0.,0.,0.]
   if isinstance(mol,pbc.gto.Cell):
     print(coeff.shape)
     if len(coeff.shape)==4:
       coeff=coeff[:,k,:,:]
     else:
       coeff=coeff[k]
-    kpt=m.kpts[k,:]
-  
   
   if len(coeff.shape)==3:
     assert coeff.shape[0]==2
@@ -315,8 +315,8 @@ def print_slater(mol, mf, orbfile, basisfile, f,k=0):
 
 ############################################################
 def binary_to_occ(S, ncore):
-  occup = [ i+1 for i in range(ncore)]
-  occup += [ i+ncore+1  for i, c in enumerate(reversed(S)) 
+  occup = [ int(i+1) for i in range(ncore)]
+  occup += [ int(i+ncore+1)  for i, c in enumerate(reversed(S)) 
           if c=='1']
   max_orb = max(occup) 
   #return  (' '.join([str(a) for a  in occup]), max_orb)

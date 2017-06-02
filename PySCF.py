@@ -13,7 +13,6 @@ class PySCFWriter:
     self.charge=0
     self.completed=False
     self.dft="" #Any valid input for PySCF. This gets put into the 'xc' variable
-    self.diis=True
     self.diis_start_cycle=1
     self.ecp="bfd"
     self.level_shift=0.0
@@ -84,6 +83,8 @@ class PySCFWriter:
   #-----------------------------------------------
   def pyscf_input(self,fname):
     f=open(fname,'w')
+    restart_fname = 'restart_'+fname
+    re_f = open(restart_fname, 'w')
     chkfile=fname+".chkfile"
     add_paths=[]
 
@@ -103,7 +104,7 @@ class PySCFWriter:
         "import sys",
       ] + add_paths + [
         "import pyscf",
-        "from pyscf import gto,scf,mcscf",
+        "from pyscf import gto,scf,mcscf,fci,lib",
         "from pyscf.scf import ROHF, UHF",
         "from pyscf.dft.rks import RKS",
         "from pyscf.dft.uks import UKS",
@@ -119,7 +120,6 @@ class PySCFWriter:
         "m.direct_scf_tol=%g"%self.direct_scf_tol,
         "m.chkfile='%s'"%chkfile,
         "m.conv_tol=%g"%self.conv_tol,
-        "m.diis=%r"%self.diis,
         "m.diis_start_cycle=%d"%self.diis_start_cycle
       ] + self.dm_generator
 
@@ -130,7 +130,8 @@ class PySCFWriter:
       outlines+=['m.xc="%s"'%self.dft]
 
     outlines+=["print('E(HF) =',m.kernel(init_dm))"]
-    
+    outlines+=['print ("HF_done")']        
+
     if self.postHF :
       outlines += ["mc=mcscf.%s(m, ncas=%i, nelecas=(%i, %i),ncore= %i)"%( 
                    self.cas['method'], self.cas['ncas'], self.cas['nelec'][0], 
@@ -138,18 +139,28 @@ class PySCFWriter:
                    "mc.direct_scf_tol=%f"%self.direct_scf_tol,
 
                    "mc.kernel()",
+                   'print ("PostHF_done")',
 
                    "print_qwalk(mol, mc, method= 'mcscf', tol = %g , basename = '%s')"%(
                     self.cas['tol'], self.basename)]
     else:
       outlines +=[ "print_qwalk(mol,m)"]
+    outlines += ['print ("All_done")']
+
+    restart_outlines=[] 
+    for line in  outlines: 
+      if 'mc.kernel()' in line:
+        restart_outlines += ["mc.__dict__.update(lib.chkfile.load('%s', 'mcscf'))\n"%chkfile]
+      restart_outlines += [line]  
+    
     f.write('\n'.join(outlines))
+    re_f.write('\n'.join(restart_outlines))
 
     self.completed=True
-    return [fname],[fname+".o"],[chkfile]
+    return [fname],[restart_fname], [fname+".o"],[chkfile]
      
 
-####################################################
+##n#################################################
 
 
 from xml.etree.ElementTree import ElementTree
@@ -192,11 +203,11 @@ def generate_pbc_basis(xml_name,symbol,min_exp=0.2,naug=2,alpha=3,
   for angular in angular_uncontracted:
     for i in range(0,naug):
       exp=min_exp*alpha**i
-      print(symbol,angular)
+      #print(symbol,angular)
       basis_sec=symbol+ " " + angular + "\n"
       basis_sec+='{} {}\n'.format(exp,1.0)
       allbasis.append(basis_sec)
-  print(" ".join(allbasis))
+  #print(" ".join(allbasis))
   return " ".join(allbasis)
   
 
@@ -209,6 +220,7 @@ class PySCFPBCWriter:
   def __init__(self,options={}):
     self.basis='bfd_vtz'
     self.charge=0
+    self.cif=''
     self.completed=False
     self.dft="pbe,pbe" #Any valid input for PySCF. This gets put into the 'xc' variable
     self.diis_start_cycle=1
@@ -246,7 +258,7 @@ class PySCFPBCWriter:
       for b in a:
         self.latticevec+= str(b)+ " "
 
-    print(struct['sites'])
+    #print(struct['sites'])
     self.xyz=""
     elements=set()
     for s in struct['sites']:
@@ -257,7 +269,7 @@ class PySCFPBCWriter:
 
     for e in elements:
       self.special_basis[e]=generate_pbc_basis(self.bfd_library,e,**self.basis_parameters)
-    print(self.xyz)
+    #print(self.xyz)
     
     
   #-----------------------------------------------
@@ -271,6 +283,10 @@ class PySCFPBCWriter:
         print("Error:",k,"not a keyword for PySCFWriter")
         raise AssertionError
       selfdict[k]=d[k]
+
+    # Must be done after bdf_library is set.
+    if 'cif' in d.keys():
+      self.from_cif(d['cif'])
   #-----------------------------------------------
 
   def is_consistent(self,other):
@@ -335,9 +351,10 @@ class PySCFPBCWriter:
         "atom='''"+self.xyz+"''',",
         "a='''"+str(self.latticevec) +"''',",
         "basis=basis,",
+        "spin=%i,"%self.spin,
         "ecp='%s')"%self.ecp,
-        "mol.charge=%i"%self.charge,
-        "mol.spin=%i"%self.spin]
+        "mol.charge=%i"%self.charge
+        ]
     #Set up k-points
     outlines+=['kpts=mol.make_kpts('+str(self.kpts) + ')']
     
@@ -379,20 +396,6 @@ class PySCFReader:
     self.output={}
     self.completed=False
 
-  def read_outputfile(self,outfile):
-    ''' Read energy from outputfile (obsolete).'''
-    ret={}
-    with open(outfile, 'r') as of: 
-      lines = of.readlines() 
-    for line in lines:
-      if 'E(HF)' in line and 'print' not in line:
-        ret['HF_Energy'] = float(line.split('=')[1]) 
-      if 'CASCI energy' in line and 'print' not in line: 
-        ret['CASCI_Energy'] =float(line.split()[3]) 
-      if 'CASSCF energy' in line and 'print' not in line:
-        ret['CASSCF_Energy'] =float(line.split()[3])
-    return ret
-
   #------------------------------------------------
   def read_chkfile(self,chkfile):
     ''' Read all data from the chkfile.'''
@@ -412,21 +415,31 @@ class PySCFReader:
     return ret
           
   #------------------------------------------------
+  def restart(self, outfiles):
+    for outf in  outfiles:
+      lines = open(outf,'r').read().split()
+      if ('HF_done' in lines) and  ('All_done' not in lines):
+        return True
+    return False
+
+  #------------------------------------------------
+     
   def collect(self,outfiles,chkfiles):
     problem=False
-    for outf,chkf in zip(outfiles,chkfiles): 
+    for outf,chkf in zip(outfiles,chkfiles):
       if outf not in self.output.keys():
         self.output[outf]={}
-      if 'converged' not in open(outf,'r').read().split():
-        problem=True
-   #   self.output[outf].append(self.read_outputfile(outf))
-      self.output[outf] = self.read_chkfile(chkf)
+      lines = open(outf,'r').read().split()
+      if 'All_done' not in lines:
+         problem= True
+      else: # Only read in properties if self-consistent.
+        self.output[outf] = self.read_chkfile(chkf)
       self.output[outf]['chkfile']=chkf
     if not problem:
       self.completed=True
-    else: 
+    else:
       print('Problem detected in PySCF run.')
-      
+ 
   #------------------------------------------------
   def write_summary(self):
     print("#### Variance optimization")
