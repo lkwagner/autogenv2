@@ -438,12 +438,15 @@ class PySCFReader:
 
 # You should be also able to use the DM read into autogenv2, but I haven't
 # thought about how precisely this should work.
+####################################################
 def dm_from_rhf_minao():
   return ["init_dm=pyscf.scf.rhf.init_guess_by_minao(mol)"]
       
+####################################################
 def dm_from_uhf_minao():
   return ["init_dm=pyscf.scf.uhf.init_guess_by_minao(mol)"]
 
+####################################################
 def dm_set_spins(atomspins,double_occ={},startdm=None):
   ''' startdm should be the location of a chkfile if not None. '''
   if startdm is None:
@@ -470,6 +473,7 @@ def dm_set_spins(atomspins,double_occ={},startdm=None):
     "        init_dm[opp][i,i]=0.0",
   ]
 
+####################################################
 def dm_from_chkfile(chkfile):
   """ Read a dm from a chkfile produced by a PySCF calculation. 
 

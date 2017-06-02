@@ -37,61 +37,9 @@ class LocalPySCFRunner(LocalSubmitter):
 
 class PySCFRunnerPBS:
   _name_='PySCFRunnerPBS'
-  def __init__(self,queue='batch',
-                    walltime='12:00:00',
-                    np=1,
-                    nn=1,
-                    jobname=os.getcwd().split('/')[-1]+'_pyscf',
-                    prefix="",#for example, load modules
-                    postfix=""#for example, remove tmp files.
-                    ):
-    self.np=np
-    if nn!=1: raise NotImplementedError
-    self.nn=nn
-    self.jobname=jobname
-    self.queue=queue
-    self.walltime=walltime
-    self.prefix=prefix
-    self.postfix=postfix
-    self.queueid=None
-
-  #-------------------------------------
-  def check_status(self):
-    return submitter.check_PBS_status(self.queueid)
-  #-------------------------------------
-
-  def run(self,inpfns,outfns):
-    #just running in serial for now
-    exe="python3"
-    
-    for pyscf_driver,pyscf_out in zip(inpfns,outfns):
-      jobout=pyscf_driver+".jobout"
-      qsublines=[
-           "#PBS -q %s"%self.queue,
-           "#PBS -l nodes=%i:ppn=%i"%(self.nn,self.np),
-           "#PBS -l walltime=%s"%self.walltime,
-           "#PBS -j oe",
-           "#PBS -N %s"%self.jobname,
-           "#PBS -o %s"%jobout,
-           self.prefix,
-           "export OMP_NUM_THREADS=%i"%(self.np),
-           "cd ${PBS_O_WORKDIR}",
-           "export PYTHONPATH=%s"%(':'.join(sys.path)),
-           "%s %s > %s \n"%(exe,pyscf_driver,pyscf_out),
-           self.postfix
-         ]
-      qsubfile=pyscf_driver+".qsub"
-      with open(qsubfile,'w') as f:
-        f.write('\n'.join(qsublines))
-      result = sub.check_output("qsub %s"%(qsubfile),shell=True)
-      self.queueid = result.decode().split()[0]
-      print("Submitted as %s"%self.queueid)
-
-class PySCFRunnerTaub:
-  _name_='PySCFRunnerPBS'
   def __init__(self,queue='secondary',
                     walltime='12:00:00',
-                    np=None,
+                    np='allprocs',
                     nn=1,
                     jobname=os.getcwd().split('/')[-1]+'_pyscf',
                     prefix="",#for example, load modules
@@ -121,7 +69,7 @@ class PySCFRunnerTaub:
       qsublines=[
            "#PBS -q %s"%self.queue,
          ]
-      if self.np is None:
+      if self.np == 'allprocs' :
         qsublines+=[
              "#PBS -l nodes=%i,flags=allprocs"%self.nn,
            ]
