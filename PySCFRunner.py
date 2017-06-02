@@ -37,7 +37,7 @@ class LocalPySCFRunner(LocalSubmitter):
 
 class PySCFRunnerPBS:
   _name_='PySCFRunnerPBS'
-  def __init__(self,queue='secondary',
+  def __init__(self,queue='batch',
                     walltime='12:00:00',
                     np='allprocs',
                     nn=1,
