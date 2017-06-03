@@ -89,7 +89,6 @@ def print_orb_coeff(mol,coeff,f,k=0):
   aosym=[]
   for i in gto.mole.spheric_labels(mol):
     aosym.append(find_label(i))
-  print(aosym)
 
   for a in coeff.T:
     for ib,b in enumerate(a):
@@ -104,7 +103,6 @@ def print_orb_coeff(mol,coeff,f,k=0):
 
   f.write("\n")
   f.close() 
-  print("count",count)
   return 
 
 ###########################################################
@@ -196,7 +194,7 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
     for i in range(len(coords)):
       if symbols[i] not in written_out:
         written_out.append(symbols[i])
-        ecp =  gto.basis.load_ecp(mol.ecp,symbols[i])        
+        ecp = mol._ecp[symbols[i]] # gto.basis.load_ecp(mol.ecp,symbols[i])        
         print(mol.ecp, symbols[i])
         coeff =ecp[1]
         numofpot =  len(coeff)  
@@ -485,7 +483,7 @@ def print_qwalk_mol(mol, mf, method='scf', tol=0.01, basename='qw'):
   return 
 ###########################################################
 
-def print_qwalk_pbc(cell,mf,method,tol,basename):
+def print_qwalk_pbc(cell,mf,method='scf',tol=0.01,basename='qw'):
   basisfile=basename+".basis"
   print_basis(cell,open(basisfile,'w'))
   print_jastrow(cell,basename)
@@ -511,3 +509,28 @@ def print_qwalk(mol,mf,method='scf',tol=0.01,basename='qw'):
     print_qwalk_mol(mol,mf,method,tol,basename)
   
        
+if __name__=='__main__':
+  import sys
+  from pyscf import lib
+  import h5py
+  assert len(sys.argv)==2,"""
+  Usage: python pyscf2qwalk.py chkfile."""
+
+  chkfile=sys.argv[1]
+  # The Mole object is saved as a string
+  try:
+    mol=pbc.gto.cell.loads(lib.chkfile.load(chkfile,'mol'))
+  except:
+    mol=pyscf.gto.loads(lib.chkfile.load(chkfile,'mol'))
+
+  print(mol.__dict__)
+
+  class FakeMF:
+    def __init__(self,chkfile):
+      self.__dict__=lib.chkfile.load(chkfile,'scf')
+
+  mf=FakeMF(chkfile)  
+  files=print_qwalk_pbc(mol,mf,basename='deletethis')
+  print("New files generated:")
+  print(files)
+
