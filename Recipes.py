@@ -58,12 +58,14 @@ class Recipe:
   def update_options(self,other):
     ''' Copy over keys from other Recipe that do not change accuracy of results.'''
     result=True
+    print("Outer update_options")
     if len(other.managers)!=len(self.managers):
       print('You have added or removed tasks for this job.')
       result=False
 
-    for rec_manager,plan_manager in zip(other.managers,self.managers):
-      plan_manager.update_options(rec_manager)
+    for self_manager,other_manager in zip(self.managers,other.managers):
+      print("this loop")
+      self_manager.update_options(other_manager)
     return result
 
   #---------------------------------------

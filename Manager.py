@@ -161,11 +161,10 @@ class QWalkRunManager:
   def update_options(self,other):
     ''' Safe copy options from other to self. '''
 
-    # Runners are always safe to update.
     worker_tools.update_attributes(old=self.runner,new=other.runner,
+        safe_keys=['queue','walltime','np','nn','jobname','prefix','postfix'],
         skip_keys=['queueid'])
 
-    # Only options that do not affect accuracy are update-safe.
     worker_tools.update_attributes(old=self.writer,new=other.writer,
         skip_keys=[ 'completed','sysfiles','slaterfiles','jastfiles',
           'basenames','wffiles','tracefiles'])
@@ -229,10 +228,10 @@ class PySCFManager:
   def update_options(self,other):
     ''' Safe copy options from other to self. '''
 
-    # Runners are always safe to update.
-    self.runner=deepcopy(other.runner)
+    worker_tools.update_attributes(old=self.runner,new=other.runner,
+        safe_keys=['queue','walltime','np','nn','jobname','prefix','postfix'],
+        skip_keys=['queueid'])
 
-    # Only options that no not affect accuracy are update-safe.
     worker_tools.update_attributes(old=self.writer,new=other.writer,
         skip_keys=['completed','chkfile','dm_generator'])
     

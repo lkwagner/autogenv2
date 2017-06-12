@@ -84,11 +84,14 @@ class VarianceReader:
           
   #------------------------------------------------
   def collect(self,outfiles):
+    self.completed=True
     for f in outfiles:
       if f not in self.output.keys():
         self.output[f]=[]
-      self.output[f].append(self.read_outputfile(f))
-    self.completed=True
+      results=self.read_outputfile(f)
+      self.output[f].append(results)
+      # Minimal error checking.
+      self.completed=(self.completed and len(results)>1)
       
   #------------------------------------------------
   def write_summary(self):
