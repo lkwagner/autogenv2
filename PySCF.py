@@ -215,7 +215,6 @@ def generate_pbc_basis(xml_name,symbol,min_exp=0.2,naug=2,alpha=3,
            
   
 ####################################################
-
 class PySCFPBCWriter:
   def __init__(self,options={}):
     self.basis='bfd_vtz'
@@ -287,25 +286,18 @@ class PySCFPBCWriter:
     # Must be done after bdf_library is set.
     if 'cif' in d.keys():
       self.from_cif(d['cif'])
-  #-----------------------------------------------
 
+
+  #-----------------------------------------------
+  # Obsolete with update options?
   def is_consistent(self,other):
-    # dm_generator currently gets printed differently because of the dictionaries.
-    skipkeys = ['completed','chkfile','dm_generator']
-    for otherkey in other.__dict__.keys():
-      if otherkey not in self.__dict__.keys():
-        print('other is missing a key.')
-        return False
-    for selfkey in self.__dict__.keys():
-      if selfkey not in other.__dict__.keys():
-        print('self is missing a key.')
-        return False
-    for key in self.__dict__.keys():
-      if self.__dict__[key]!=other.__dict__[key] and key not in skipkeys:
-        print("Different keys [{}] = \n{}\n or \n {}"\
-            .format(key,self.__dict__[key],other.__dict__[key]))
-        return False
-    return True
+    issame,diff=self._check_keys(other,
+        skipkeys = ['completed','chkfile','dm_generator'])
+    if not issame:
+      print("Inconsistency: {} from one doesn't match {} from other."\
+          .format(diff['self'],diff['other']))
+    return issame
+
   #-----------------------------------------------
       
   def pyscf_input(self,fname):

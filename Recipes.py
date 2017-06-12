@@ -36,8 +36,11 @@ class Recipe:
     self.jobid=jobid
     self.managers=managers
     self.picklefn="%s.pickle"%jobid
-#---------------------------------------
+
+  #---------------------------------------
+  # May be obsolete with update_options
   def is_consistent(self,other):
+    ''' Is the other Recipe consistent in accuracy with this Recipe? '''
     result=True
     if len(other.managers)!=len(self.managers):
       print('You have added or removed tasks for this job.')
@@ -50,20 +53,33 @@ class Recipe:
         print('You have modified a job.')
         result=False
     return result
-#---------------------------------------
 
+  #---------------------------------------
+  def update_options(self,other):
+    ''' Copy over keys from other Recipe that do not change accuracy of results.'''
+    result=True
+    if len(other.managers)!=len(self.managers):
+      print('You have added or removed tasks for this job.')
+      result=False
+
+    for rec_manager,plan_manager in zip(other.managers,self.managers):
+      plan_manager.update_options(rec_manager)
+    return result
+
+  #---------------------------------------
   def nextstep(self):
     for manager in self.managers:
       manager.nextstep()
       if manager.status()!='ok':
         break
-#---------------------------------------
+
+  #---------------------------------------
   def write_summary(self):
     for manager in self.managers:
       if manager.status()=='ok':
         manager.write_summary()
     
-#---------------------------------------
+  #---------------------------------------
   def generate_report(self):
     print("generate_report not implemented for this Recipe")
     return {'id':self.jobid}

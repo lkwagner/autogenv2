@@ -1,5 +1,7 @@
 import os
 import numpy as np
+from copy import deepcopy
+import worker_tools
 def resolve_status(runner,reader,outfiles, method='not_defined'):
   #Check if the reader is done
   if reader.completed:
@@ -84,9 +86,9 @@ class CrystalManager:
     if self.creader.completed and self.preader.completed:
       self.completed=True
   #----------------------------------------
-  def is_consistent(self,other):
+  def update_options(self,other):
     # This documents what needs to be checked.
-    return self.writer.is_consistent(other.writer)
+    raise NotImplementedError
 
   #----------------------------------------
   def to_json(self):
@@ -114,6 +116,11 @@ class QWalkfromCrystalManager:
     self.runner=convert_runner
     self.reader=convert_checker
     
+  #------------------------------------------------
+  def update_options(self,other):
+    raise NotImplementedError
+
+  #------------------------------------------------
   def is_consistent(self,other):
     return self.runner.is_consistent(other.runner)
   
@@ -144,9 +151,24 @@ class QWalkRunManager:
     self.reader=reader
     self.infiles=[]
     self.outfiles=[]
+
+  #------------------------------------------------
   def is_consistent(self,other):
     # This documents what needs to be checked.
     return self.writer.is_consistent(other.writer)
+
+  #------------------------------------------------
+  def update_options(self,other):
+    ''' Safe copy options from other to self. '''
+
+    # Runners are always safe to update.
+    worker_tools.update_attributes(old=self.runner,new=other.runner,
+        skip_keys=['queueid'])
+
+    # Only options that do not affect accuracy are update-safe.
+    worker_tools.update_attributes(old=self.writer,new=other.writer,
+        skip_keys=[ 'completed','sysfiles','slaterfiles','jastfiles',
+          'basenames','wffiles','tracefiles'])
     
   #------------------------------------------------
   def nextstep(self):
@@ -177,7 +199,6 @@ class QWalkRunManager:
   #------------------------------------------------
   def generate_report(self):
     return {}
-    
 
   #----------------------------------------
   def status(self):
@@ -199,10 +220,22 @@ class PySCFManager:
     self.restart_infiles=[] 
     self.outfiles=[]
   #------------------------------------------------
-    
+  # Obsolete with update_options?
   def is_consistent(self,other):
     # This documents what needs to be checked.
     return self.writer.is_consistent(other.writer)
+
+  #------------------------------------------------
+  def update_options(self,other):
+    ''' Safe copy options from other to self. '''
+
+    # Runners are always safe to update.
+    self.runner=deepcopy(other.runner)
+
+    # Only options that no not affect accuracy are update-safe.
+    worker_tools.update_attributes(old=self.writer,new=other.writer,
+        skip_keys=['completed','chkfile','dm_generator'])
+    
     
   #------------------------------------------------
   def nextstep(self):

@@ -31,11 +31,10 @@ class JobEnsemble:
       if os.path.exists(job.picklefn):
         with open(job.picklefn,'rb') as inpf:
           rec=pkl.load(inpf)
-        if not job.is_consistent(rec):
-          if not reset:
-            raise NotImplementedError("Recipe not consistent.")
-          else:
-            rec=deepcopy(job)
+        if not reset:
+          rec.update_options(job)
+        else:
+          rec=deepcopy(job)
         #TODO: Here we should update the options of the job
         #in case the plan changed in a consistent way.
         #For example, maybe it should say 
