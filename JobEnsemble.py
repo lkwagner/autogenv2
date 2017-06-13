@@ -35,10 +35,6 @@ class JobEnsemble:
           rec.update_options(job)
         else:
           rec=deepcopy(job)
-        #TODO: Here we should update the options of the job
-        #in case the plan changed in a consistent way.
-        #For example, maybe it should say 
-        #rec.update_options(job)
 
       else: # Nothing done yet. Record starts as plan.
         rec=deepcopy(job)

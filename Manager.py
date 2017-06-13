@@ -69,6 +69,7 @@ def update_attributes(old,new,skip_keys=[],safe_keys=[]):
         old.__dict__[key]=new.__dict__[key]
       else:
         raise AssertionError("Unsafe update; new setting affects accuracy.")
+  return not issame
 
 #######################################################################
 class CrystalManager:
@@ -268,13 +269,15 @@ class PySCFManager:
   def update_options(self,other):
     ''' Safe copy options from other to self. '''
 
-    update_attributes(old=self.runner,new=other.runner,
+    updated=update_attributes(old=self.runner,new=other.runner,
         safe_keys=['queue','walltime','np','nn','jobname','prefix','postfix'],
         skip_keys=['queueid'])
 
-    update_attributes(old=self.writer,new=other.writer,
+    updated=update_attributes(old=self.writer,new=other.writer,
+        safe_keys=['max_cycle'],
         skip_keys=['completed','chkfile','dm_generator'])
-    
+    if updated:
+      self.writer.completed=False
     
   #------------------------------------------------
   def nextstep(self):

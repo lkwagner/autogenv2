@@ -338,7 +338,7 @@ class PySCFQWalk(Recipe):
     assert ('xyz' in pyscf_opts.keys())^('cif' in pyscf_opts.keys()),"""
       Exactly one of 'xyz' and 'cif' must be set. """
 
-    assert post_opts=={} or dmc_opts['savetrace'],"""
+    assert post_opts=={} or ('savetrace' in dmc_opts.keys() and dmc_opts['savetrace']),"""
       You need to save the trace (dmc_opts['savetrace']=True) to use postprocess options."""
 
     if 'xyz' in pyscf_opts.keys():

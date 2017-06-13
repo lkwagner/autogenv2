@@ -105,7 +105,7 @@ class PySCFWriter:
       ] + add_paths + [
         "import pyscf",
         "from pyscf import gto,scf,mcscf,fci,lib",
-        "from pyscf.scf import ROHF, UHF",
+        "from pyscf.scf import RHF, ROHF, UHF",
         "from pyscf.dft.rks import RKS",
         "from pyscf.dft.uks import UKS",
         "from pyscf2qwalk import print_qwalk",
