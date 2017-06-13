@@ -149,10 +149,12 @@ class PySCFWriter:
 
     restart_outlines=[] 
     for line in  outlines: 
-      if 'mc.kernel()' in line:
+      if 'm.kernel(' in line:
+        restart_outlines += ["m.__dict__.update(lib.chkfile.load('%s', 'scf'))\n"%chkfile]
+      if 'mc.kernel(' in line:
         restart_outlines += ["mc.__dict__.update(lib.chkfile.load('%s', 'mcscf'))\n"%chkfile]
       restart_outlines += [line]  
-    
+
     f.write('\n'.join(outlines))
     re_f.write('\n'.join(restart_outlines))
 
@@ -381,7 +383,9 @@ class PySCFPBCWriter:
 
     restart_outlines=[] 
     for line in  outlines: 
-      if 'mc.kernel()' in line:
+      if 'm.kernel(' in line:
+        restart_outlines += ["m.__dict__.update(pbc.lib.chkfile.load('%s', 'scf'))\n"%chkfile]
+      if 'mc.kernel(' in line:
         restart_outlines += ["mc.__dict__.update(pbc.lib.chkfile.load('%s', 'mcscf'))\n"%chkfile]
       restart_outlines += [line]  
 
