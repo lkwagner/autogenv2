@@ -149,8 +149,6 @@ class PySCFWriter:
 
     restart_outlines=[] 
     for line in  outlines: 
-      if 'm.kernel(' in line:
-        restart_outlines += ["m.__dict__.update(lib.chkfile.load('%s', 'scf'))\n"%chkfile]
       if 'mc.kernel(' in line:
         restart_outlines += ["mc.__dict__.update(lib.chkfile.load('%s', 'mcscf'))\n"%chkfile]
       restart_outlines += [line]  
@@ -383,8 +381,6 @@ class PySCFPBCWriter:
 
     restart_outlines=[] 
     for line in  outlines: 
-      if 'm.kernel(' in line:
-        restart_outlines += ["m.__dict__.update(pbc.lib.chkfile.load('%s', 'scf'))\n"%chkfile]
       if 'mc.kernel(' in line:
         restart_outlines += ["mc.__dict__.update(pbc.lib.chkfile.load('%s', 'mcscf'))\n"%chkfile]
       restart_outlines += [line]  
@@ -424,7 +420,7 @@ class PySCFReader:
   def check_restart(self, outfiles):
     for outf in  outfiles:
       lines = open(outf,'r').read().split('\n')
-      if 'SCF not converged.' in lines:
+      if ('HF_done' in lines) and  ('All_done' not in lines):
         return True
     return False
 
