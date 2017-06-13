@@ -1,7 +1,8 @@
 import os
 import numpy as np
 from copy import deepcopy
-import worker_tools
+
+######################################################################
 def resolve_status(runner,reader,outfiles, method='not_defined'):
   #Check if the reader is done
   if reader.completed:
@@ -28,7 +29,46 @@ def resolve_status(runner,reader,outfiles, method='not_defined'):
   #We are in an error state or we haven't collected 
   #the results. 
   return "ready_for_analysis"
-  
+
+######################################################################
+def diff_keys(old,new,skip_keys=[]):
+  ''' Check if two objects have different keys, and what those keys are. '''
+  issame=True
+  diff={'old':[],'new':[]}
+
+  for newkey in new.__dict__.keys():
+    if newkey not in old.__dict__.keys():
+      issame=False
+      diff['new'].append(newkey)
+  for oldkey in old.__dict__.keys():
+    if oldkey not in new.__dict__.keys():
+      issame=False
+      diff['old'].append(oldkey)
+  for key in old.__dict__.keys():
+    if (key not in diff['new']) and (key not in diff['old']) and \
+        (old.__dict__[key]!=new.__dict__[key]) and (key not in skip_keys):
+      issame=False
+      diff['old'].append(key)
+      diff['new'].append(key)
+  return issame,diff
+
+######################################################################
+def update_attributes(old,new,skip_keys=[],safe_keys=[]):
+  ''' Replace attributes that do not affect accuracy. 
+  Raise an AssertionError if there's a problematic discrepancy. 
+  By default, all keys are not safe, so this mainly checks consistency.
+  skip_keys are not checked or replaced.'''
+
+  issame,diff=diff_keys(old,new,skip_keys)
+  if not issame:
+    print("Key update: {} from one doesn't match {} from new."\
+        .format(diff['old'],diff['new']))
+    for key in diff['new']:
+      if key in safe_keys:
+        print("Keeping {} from the latter.".format(diff['new']))
+        old.__dict__[key]=new.__dict__[key]
+      else:
+        raise AssertionError("Unsafe update; new setting affects accuracy.")
 
 #######################################################################
 class CrystalManager:
@@ -161,11 +201,11 @@ class QWalkRunManager:
   def update_options(self,other):
     ''' Safe copy options from other to self. '''
 
-    worker_tools.update_attributes(old=self.runner,new=other.runner,
+    update_attributes(old=self.runner,new=other.runner,
         safe_keys=['queue','walltime','np','nn','jobname','prefix','postfix'],
         skip_keys=['queueid'])
 
-    worker_tools.update_attributes(old=self.writer,new=other.writer,
+    update_attributes(old=self.writer,new=other.writer,
         skip_keys=[ 'completed','sysfiles','slaterfiles','jastfiles',
           'basenames','wffiles','tracefiles'])
     
@@ -228,11 +268,11 @@ class PySCFManager:
   def update_options(self,other):
     ''' Safe copy options from other to self. '''
 
-    worker_tools.update_attributes(old=self.runner,new=other.runner,
+    update_attributes(old=self.runner,new=other.runner,
         safe_keys=['queue','walltime','np','nn','jobname','prefix','postfix'],
         skip_keys=['queueid'])
 
-    worker_tools.update_attributes(old=self.writer,new=other.writer,
+    update_attributes(old=self.writer,new=other.writer,
         skip_keys=['completed','chkfile','dm_generator'])
     
     
