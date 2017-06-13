@@ -23,7 +23,7 @@ def resolve_status(runner,reader,outfiles, method='not_defined'):
 
   #check if we need to restart 
   if(method == 'pyscf'): 
-    if  reader.restart(outfiles): 
+    if reader.check_restart(outfiles): 
       return 'retry' 
 
   #We are in an error state or we haven't collected 

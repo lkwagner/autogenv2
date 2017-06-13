@@ -302,6 +302,8 @@ class PySCFPBCWriter:
       
   def pyscf_input(self,fname):
     f=open(fname,'w')
+    restart_fname = 'restart_'+fname
+    re_f = open(restart_fname, 'w')
     chkfile=fname+".chkfile"
     add_paths=[]
 
@@ -376,10 +378,18 @@ class PySCFPBCWriter:
     outlines+=["print('E(HF) =',m.kernel(dm_kpts))"]
     
     outlines +=[ "print_qwalk(mol,m)"]
+
+    restart_outlines=[] 
+    for line in  outlines: 
+      if 'mc.kernel()' in line:
+        restart_outlines += ["mc.__dict__.update(pbc.lib.chkfile.load('%s', 'mcscf'))\n"%chkfile]
+      restart_outlines += [line]  
+
     f.write('\n'.join(outlines))
+    re_f.write('\n'.join(restart_outlines))
 
     self.completed=True
-    return [fname],[fname+".o"],[chkfile]
+    return [fname],[restart_fname],[fname+".o"],[chkfile]
     
     
 ####################################################
@@ -407,10 +417,10 @@ class PySCFReader:
     return ret
           
   #------------------------------------------------
-  def restart(self, outfiles):
+  def check_restart(self, outfiles):
     for outf in  outfiles:
-      lines = open(outf,'r').read().split()
-      if ('HF_done' in lines) and  ('All_done' not in lines):
+      lines = open(outf,'r').read().split('\n')
+      if 'SCF not converged.' in lines:
         return True
     return False
 
