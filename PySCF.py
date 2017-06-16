@@ -378,6 +378,7 @@ class PySCFPBCWriter:
     outlines+=["print('E(HF) =',m.kernel(dm_kpts))"]
     
     outlines +=[ "print_qwalk(mol,m)"]
+    outlines += ['print ("All_done")']
 
     restart_outlines=[] 
     for line in  outlines: 
