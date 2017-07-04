@@ -188,52 +188,50 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
 
   f.write('}\n')
 
-    # write pseudopotential 
   if mol.ecp != {}:
     written_out=[]
     for i in range(len(coords)):
       if symbols[i] not in written_out:
         written_out.append(symbols[i])
-        ecp = mol._ecp[symbols[i]] # gto.basis.load_ecp(mol.ecp,symbols[i])        
-        print(mol.ecp, symbols[i])
+        ecp = mol._ecp[symbols[i]] 
         coeff =ecp[1]
         numofpot =  len(coeff)  
         aip=6
         if numofpot > 2:
           aip=12
+        if numofpot > 4:
+          aip=18
         f.write('''PSEUDO { \n %s \nAIP %i \nBASIS 
         { \n%s \nRGAUSSIAN \nOLDQMC {\n  ''' 
                 %(symbols[i],aip, symbols[i]))
-#        coeff =ecp[1]
-#        numofpot =  len(coeff)  
         data=[]     
         N=[]        
-        for i in range(1, len(coeff)):
-          num= coeff[i][0]  
+        els=[]
+        for c in coeff:
+          els.append(c[0])
+        if -1 in els:
+          iteration=range(1,len(coeff))+[0]
+        else:
+          iteration=range(0,len(coeff))
+
+        for i in iteration:
           eff =coeff[i][1]  
           count=0           
           for j, val in enumerate(eff):
-            if(len(eff[j])>0) :     
-              count+=1                      
-              data.append([j]+eff[j])       
+            count+=len(val)
+            for v in val:
+              data.append([j]+v)
           N.append(str(count))
+        
+        if -1 not in els: #add a local channel if none given
+          data.append([2,1.0,0.0])
+          numofpot+=1
+          N.append("1")
 
-        num= coeff[0][0] 
-        eff =coeff[0][1]
-        count=0     
-        for j, val in enumerate(eff):
-          if(len(eff[j])>0) :
-            count+=1                
-            data.append([j]+eff[j]) 
-        N.append(str(count))
-
-        C=0.0       
-        f.write("%f  %d\n" %(C, numofpot))
+        f.write("0.0  %d\n" %(numofpot))
         f.write(' '.join(N)+ '\n') 
         for val in data:
-          f.write(str(val[0]) +' ')
-          S= list(map(str, val[1]))
-          f.write(' '.join(S) + '\n')
+          f.write(' '.join(map(str,val)) + '\n')
 
         f.write(" } \n } \n } \n")
   f.close() 
@@ -512,6 +510,7 @@ def print_qwalk(mol,mf,method='scf',tol=0.01,basename='qw'):
 if __name__=='__main__':
   import sys
   from pyscf import lib
+  import pyscf
   import h5py
   assert len(sys.argv)==2,"""
   Usage: python pyscf2qwalk.py chkfile."""
@@ -530,7 +529,7 @@ if __name__=='__main__':
       self.__dict__=lib.chkfile.load(chkfile,'scf')
 
   mf=FakeMF(chkfile)  
-  files=print_qwalk_pbc(mol,mf,basename='deletethis')
+  files=print_qwalk(mol,mf,basename='deletethis')
   print("New files generated:")
   print(files)
 
