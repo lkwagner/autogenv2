@@ -513,23 +513,23 @@ if __name__=='__main__':
   import pyscf
   import h5py
   assert len(sys.argv)==2,"""
-  Usage: python pyscf2qwalk.py chkfile."""
+  Usage: python pyscf2qwalk.py chkfile <basename>"""
 
   chkfile=sys.argv[1]
+  basename='qw'
+  if len(sys.argv>2):
+    basename=sys.argv[2]
+
   # The Mole object is saved as a string
   try:
     mol=pbc.gto.cell.loads(lib.chkfile.load(chkfile,'mol'))
   except:
     mol=pyscf.gto.loads(lib.chkfile.load(chkfile,'mol'))
 
-  print(mol.__dict__)
-
   class FakeMF:
     def __init__(self,chkfile):
       self.__dict__=lib.chkfile.load(chkfile,'scf')
 
   mf=FakeMF(chkfile)  
-  files=print_qwalk(mol,mf,basename='deletethis')
-  print("New files generated:")
-  print(files)
+  print_qwalk(mol,mf,basename=basename)
 
