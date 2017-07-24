@@ -210,7 +210,7 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
         for c in coeff:
           els.append(c[0])
         if -1 in els:
-          iteration=range(1,len(coeff))+[0]
+          iteration=list(range(1,len(coeff)))+[0]
         else:
           iteration=range(0,len(coeff))
 
@@ -512,12 +512,12 @@ if __name__=='__main__':
   from pyscf import lib
   import pyscf
   import h5py
-  assert len(sys.argv)==2,"""
+  assert len(sys.argv)>=2,"""
   Usage: python pyscf2qwalk.py chkfile <basename>"""
 
   chkfile=sys.argv[1]
   basename='qw'
-  if len(sys.argv>2):
+  if len(sys.argv)>2:
     basename=sys.argv[2]
 
   # The Mole object is saved as a string
