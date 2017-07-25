@@ -238,16 +238,17 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
   return 
 ###########################################################
 
-def print_slater(mol, mf, orbfile, basisfile, f,k=0):
-  occ=mf.mo_occ 
+def print_slater(mol, mf, orbfile, basisfile, f,k=0,occ=None):
+  if occ==None:
+    occ=mf.mo_occ 
   corb = mf.mo_coeff.flatten()[0]
   
   if isinstance(mol,pbc.gto.Cell):
     if len(occ.shape)==3:
-      occ=mf.mo_occ[:,k,:]
+      occ=occ[:,k,:]
       corb=mf.mo_coeff[0,k,0,0]
     else:
-      occ=mf.mo_occ[k,:]
+      occ=occ[k,:]
       corb=mf.mo_coeff[k,0,0]
       
   s=len(occ.shape) 
