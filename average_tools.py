@@ -14,6 +14,12 @@ def average_section(opts):
         "    }",
         "  }"
       ]
+  elif opts['name'].lower()=='tbdm':
+    outlines=[
+        "  average { tbdm_basis",
+        "    include %s"%opts['basis'],
+        "  }"
+      ]
   elif opts['name'].lower()=='region_fluctuation':
     outlines=[
         "  average { region_fluctuation maxn %i } "%opts['maxn']
@@ -28,7 +34,8 @@ def average_section(opts):
 def check_opts(opts):
   ''' Make sure options are set completely.'''
   check={'average_derivative_dm': ['basis'],
-         'region_fluctuation':['maxn']
+         'region_fluctuation':['maxn'],
+         'tbdm':['basis']
          }
   for key in check[opts['name']]:
     assert key in opts.keys(),"""
