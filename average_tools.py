@@ -17,7 +17,7 @@ def average_section(opts):
   elif opts['name'].lower()=='tbdm':
     outlines=[
         "  average { tbdm_basis",
-        "    include %s"%opts['basis'],
+          opts['basis'],
         "  }"
       ]
   elif opts['name'].lower()=='region_fluctuation':

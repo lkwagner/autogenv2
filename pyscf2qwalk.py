@@ -324,7 +324,7 @@ def print_slater(mol, mf, orbfile, basisfile, f,k=0,occ=None):
   NMO %d 
   ORBFILE %s
   INCLUDE %s
-  CENTERS { USEATOMS }
+  CENTERS { USEGLOBAL }
   }
 
   DETWT { 1.0 }
