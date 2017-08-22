@@ -217,7 +217,7 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
   if mol.ecp != {}:
     written_out=[]
     for i in range(len(coords)):
-      if symbols[i] not in written_out:
+      if symbols[i] not in written_out and symbols[i] in mol._ecp.keys():
         written_out.append(symbols[i])
         ecp = mol._ecp[symbols[i]] 
         coeff =ecp[1]
