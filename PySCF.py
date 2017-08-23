@@ -90,7 +90,7 @@ class PySCFWriter:
 
     # Figure out correct default initial guess (if not set).
     if self.dm_generator is None:
-      if self.method in ['RKS','RHF','ROHF']:
+      if self.method in ['RKS','RHF','ROKS','ROHF']:
         self.dm_generator=dm_from_rhf_minao()
       elif self.method in ['UKS','UHF']:
         self.dm_generator=dm_from_uhf_minao()
@@ -107,6 +107,7 @@ class PySCFWriter:
         "from pyscf import gto,scf,mcscf,fci,lib",
         "from pyscf.scf import RHF, ROHF, UHF",
         "from pyscf.dft.rks import RKS",
+        "from pyscf.dft.roks import ROKS",
         "from pyscf.dft.uks import UKS",
         "from pyscf2qwalk import print_qwalk",
         "mol=gto.Mole(verbose=4)",
