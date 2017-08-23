@@ -20,6 +20,15 @@ def print_orb(mol,m,f,k=0):
   coeff=m.mo_coeff
   print_orb_coeff(mol,coeff,f,k)
     
+
+def mocoeff_project(coeff):
+  if not np.iscomplexobj(coeff):
+    return coeff
+  avgimag=np.mean(np.abs(coeff.imag))
+  print(avgimag)
+  if avgimag < 1e-8:
+    return coeff.real
+  return coeff
 #----------------------------------------------
 
 def print_orb_coeff(mol,coeff,f,k=0):
@@ -34,7 +43,7 @@ def print_orb_coeff(mol,coeff,f,k=0):
     assert coeff.shape[0]==2
     coeff=np.vstack((coeff[0].T,coeff[1].T))
     coeff=coeff.T
-
+  coeff=mocoeff_project(coeff)
 
   nmo=coeff.shape[1]
   count=0
@@ -140,6 +149,16 @@ def print_basis(mol, f):
 
 
 ###########################################################
+def find_maximal_distance(cell):
+  a=cell.lattice_vectors()
+  c01=np.cross(a[0],a[1])
+  c12=np.cross(a[1],a[2])
+  c02=np.cross(a[0],a[2])
+  h0=abs(np.dot(a[0],c12)/np.sqrt(np.dot(c12,c12)))
+  h1=abs(np.dot(a[1],c02)/np.sqrt(np.dot(c02,c02)))
+  h2=abs(np.dot(a[2],c01)/np.sqrt(np.dot(c01,c01)))
+  return np.min([h0,h1,h2])/2.00001
+###########################################################
 
 def print_sys(mol, f,kpoint=[0.,0.,0.]):
   coords = mol.atom_coords()
@@ -166,7 +185,14 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
 
   if isinstance(mol,pbc.gto.Cell):
     f.write('SYSTEM { PERIODIC \n')
-    f.write('cutoff_divider 0.1\n')
+    maxdist=find_maximal_distance(mol)
+    ex=[]
+    for i in range(mol.nbas):
+      ex.extend(mol.bas_exp(i))
+    ex=np.min(ex)
+    cutoff_length=np.sqrt(-np.log(1e-8)/ex)
+    
+    f.write('cutoff_divider %g\n'%(maxdist*2.0/cutoff_length))
     f.write('LATTICEVEC {')
     a=mol.lattice_vectors()
     for i in a:
@@ -189,7 +215,7 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
   if mol.ecp != {}:
     written_out=[]
     for i in range(len(coords)):
-      if symbols[i] not in written_out:
+      if symbols[i] not in written_out and symbols[i] in mol._ecp.keys():
         written_out.append(symbols[i])
         ecp = mol._ecp[symbols[i]] 
         coeff =ecp[1]
@@ -240,24 +266,25 @@ def print_slater(mol, mf, orbfile, basisfile, f,k=0,occ=None):
   if occ==None:
     occ=mf.mo_occ 
   corb = mf.mo_coeff.flatten()[0]
-  
   if isinstance(mol,pbc.gto.Cell):
     if len(occ.shape)==3:
       occ=occ[:,k,:]
-      corb=mf.mo_coeff[0,k,0,0]
+      corb=mf.mo_coeff[0,k,:,:]
     else:
       occ=occ[k,:]
-      corb=mf.mo_coeff[k,0,0]
+      corb=mf.mo_coeff[k,:,:]
       
+  corb=mocoeff_project(corb)
+  
   s=len(occ.shape) 
   tag='RHF'
   if(s==2): 
     tag='UHF'
   
-  if (isinstance(corb, np.float64)):
-    orb_type = 'ORBITALS'
-  else:
+  if np.iscomplexobj(corb):
     orb_type = 'CORBITALS'
+  else:
+    orb_type = 'ORBITALS'
 
   te=np.sum(occ)
   ts=mol.spin
@@ -283,7 +310,7 @@ def print_slater(mol, mf, orbfile, basisfile, f,k=0,occ=None):
         c-=1 
       if(c>0):
         ds_orb.append(i+1)
-  max_orb = max(max(ds_orb), max(us_orb))  
+  max_orb = np.max(us_orb +ds_orb)
   up_orb=' '.join(list(map(str, us_orb)))
   down_orb= ' '.join(list(map(str, ds_orb)))
 
@@ -294,7 +321,7 @@ def print_slater(mol, mf, orbfile, basisfile, f,k=0,occ=None):
   NMO %d 
   ORBFILE %s
   INCLUDE %s
-  CENTERS { USEATOMS }
+  CENTERS { USEGLOBAL }
   }
 
   DETWT { 1.0 }
@@ -378,7 +405,10 @@ def print_cas_slater(mc,orbfile, basisfile,f, tol,fjson,root=None):
 
 ###########################################################
 def find_basis_cutoff(mol):
-  return 7.5 
+  try: 
+    return find_maximal_distance(mol)
+  except:
+    return 7.5 
 
 def find_atom_types(mol):
   atom_types=[]
@@ -419,7 +449,7 @@ def print_jastrow(mol,basename='qw'):
       "  }",
       "}",
       "group {",
-      "  optimize_basis",
+      "  optimizebasis",
       ]
   for atom_type in atom_types:
     outlines += [
