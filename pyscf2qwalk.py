@@ -25,7 +25,6 @@ def print_orb(mol,m,f,k=0):
 def print_orb_coeff(mol,coeff,f,k=0):
   aos_atom=mol.offset_nr_by_atom()
   if isinstance(mol,pbc.gto.Cell):
-    print(coeff.shape)
     if len(coeff.shape)==4:
       coeff=coeff[:,k,:,:]
     else:
@@ -48,7 +47,6 @@ def print_orb_coeff(mol,coeff,f,k=0):
 
   count=0
   f.write("COEFFICIENTS\n")
-  print(coeff.shape)
 
   snorm=1./math.sqrt(4.*math.pi)
   pnorm=math.sqrt(3.)*snorm
@@ -255,7 +253,6 @@ def print_slater(mol, mf, orbfile, basisfile, f,k=0,occ=None):
   tag='RHF'
   if(s==2): 
     tag='UHF'
-  print(occ,tag)
   
   if (isinstance(corb, np.float64)):
     orb_type = 'ORBITALS'
