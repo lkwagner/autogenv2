@@ -424,6 +424,8 @@ class PySCFReader:
       lines = open(outf,'r').read().split('\n')
       if ('HF_done' in lines) and  ('All_done' not in lines):
         return True
+      if 'SCF not converged.' in lines:
+        return True
     return False
 
   #------------------------------------------------
