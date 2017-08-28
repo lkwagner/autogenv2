@@ -263,7 +263,7 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
 ###########################################################
 
 def print_slater(mol, mf, orbfile, basisfile, f,k=0,occ=None):
-  if occ==None:
+  if occ is None:
     occ=mf.mo_occ 
   corb = mf.mo_coeff.flatten()[0]
   if isinstance(mol,pbc.gto.Cell):
@@ -419,7 +419,7 @@ def find_atom_types(mol):
 
   return list(set(atom_types))
 
-def print_jastrow(mol,basename='qw'):
+def print_jastrow(mol,basename='qw',optbasis=True):
   
   basis_cutoff = find_basis_cutoff(mol)
   atom_types = find_atom_types(mol)
@@ -427,7 +427,10 @@ def print_jastrow(mol,basename='qw'):
   outlines = [
       "jastrow2",
       "group {",
-      "  optimizebasis",
+      ]
+  if optbasis: 
+    outlines += ['  optimizebasis']
+  outlines += [
       "  eebasis {",
       "    ee",
       "    cutoff_cusp",
@@ -449,8 +452,9 @@ def print_jastrow(mol,basename='qw'):
       "  }",
       "}",
       "group {",
-      "  optimizebasis",
       ]
+  if optbasis: 
+    outlines += ['  optimizebasis']
   for atom_type in atom_types:
     outlines += [
       "  eibasis {",
