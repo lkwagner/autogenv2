@@ -19,7 +19,7 @@ class VarianceWriter:
     for k in d.keys():
       if not k in selfdict.keys():
         print("Error:",k,"not a keyword for VarianceWriter")
-        raise InputError
+        raise AssertionError
       selfdict[k]=d[k]
   #-----------------------------------------------
   def is_consistent(self,other):

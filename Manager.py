@@ -222,7 +222,12 @@ class QWalkRunManager:
         return
       elif status=="not_started":
         stdoutfiles=[x+".stdout" for x in self.infiles]
-        self.runner.run(self.infiles,stdoutfiles)
+        exestr="~/bin/qwalk {}".format(*self.infiles)
+        # TODO this outfile handling is shitty.
+        exestr+=" > {}".format(self.infiles[0]+'.out')
+        self.runner.run(exestr)
+        print("%s status: submitted"%(self.writer.qmc_type))
+        return
       elif status=="ready_for_analysis":
         #This is where we (eventually) do error correction and resubmits
         self.reader.collect(self.outfiles)
