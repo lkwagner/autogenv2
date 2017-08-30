@@ -222,9 +222,10 @@ class QWalkRunManager:
         return
       elif status=="not_started":
         stdoutfiles=[x+".stdout" for x in self.infiles]
+        #TODO check if the ~ will work. Else use input variable.
         exestr="~/bin/qwalk {}".format(*self.infiles)
         # TODO this outfile handling is shitty.
-        exestr+=" > {}".format(self.infiles[0]+'.out')
+        exestr+=" &> {}".format(self.infiles[0]+'.out')
         self.runner.run(exestr)
         print("%s status: submitted"%(self.writer.qmc_type))
         return
