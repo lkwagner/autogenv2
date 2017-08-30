@@ -27,7 +27,7 @@ class PostprocessWriter:
     selfdict=self.__dict__
     for k in d.keys():
       if not k in selfdict.keys():
-        raise ValueError("Error:",k,"not a keyword for DMCWriter")
+        raise ValueError("Error:",k,"not a keyword for PostprocessWriter")
       selfdict[k]=d[k]
 
     # Check completeness of average generator options.
