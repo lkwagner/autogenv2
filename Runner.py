@@ -11,6 +11,8 @@ class RunnerPBS:
   def __init__(self,queue='batch',
                     walltime='12:00:00',
                     jobname='AGRunner',
+                    prefix=[],
+                    postfix=[],
                     np=1,nn=1
                     ):
     ''' Note: exelines are prefixed by appropriate mpirun commands.'''
@@ -19,6 +21,8 @@ class RunnerPBS:
     self.nn=nn
     self.queue=queue
     self.walltime=walltime
+    self.prefix=prefix
+    self.postfix=postfix
     self.queueid=[]
 
   #-------------------------------------
@@ -55,7 +59,7 @@ class RunnerPBS:
         "#PBS -N %s "%jobname,
         "#PBS -o %s "%jobout,
         "cd ${PBS_O_WORKDIR}",
-      ] + exelines
+      ] + self.prefix + exelines + self.postfix
     qsubfile=jobname+".qsub"
     with open(qsubfile,'w') as f:
       f.write('\n'.join(qsub))
