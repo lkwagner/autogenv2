@@ -31,7 +31,6 @@ class RunnerPBS:
 
   #-------------------------------------
   def run(self,exestr):
-    print("run") #DB
     self.exelines.append(exestr)
 
   #-------------------------------------
@@ -63,9 +62,12 @@ class RunnerPBS:
     qsubfile=jobname+".qsub"
     with open(qsubfile,'w') as f:
       f.write('\n'.join(qsub))
-    result = sub.check_output("qsub %s"%(qsubfile),shell=True)
-    self.queueid.append(result.decode().split()[0].split('.')[0])
-    print("Submitted as %s"%self.queueid)
+    try:
+      result = sub.check_output("qsub %s"%(qsubfile),shell=True)
+      self.queueid.append(result.decode().split()[0].split('.')[0])
+      print("Submitted as %s"%self.queueid)
+    except sub.CalledProcessError:
+      print("Error submitting job. Check queue settings.")
 
 ####################################################
 
@@ -131,6 +133,9 @@ class RunnerBW:
     qsubfile=jobname+".qsub"
     with open(qsubfile,'w') as f:
       f.write('\n'.join(qsub))
-    result = sub.check_output("qsub %s"%(qsubfile),shell=True)
-    self.queueid.append(result.decode().split()[0].split('.')[0])
-    print("Submitted as %s"%self.queueid)
+    try:
+      result = sub.check_output("qsub %s"%(qsubfile),shell=True)
+      self.queueid.append(result.decode().split()[0].split('.')[0])
+      print("Submitted as %s"%self.queueid)
+    except sub.CalledProcessError:
+      print("Error submitting job. Check queue settings.")
