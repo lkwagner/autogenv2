@@ -1,4 +1,5 @@
 from __future__ import print_function
+from mython import fix_duped_json
 import average_tools as avg
 ####################################################
 class PostprocessWriter:
@@ -104,9 +105,10 @@ class PostprocessReader:
           
   #------------------------------------------------
   def collect(self,outfiles):
-    print("DEBUG")
     for f in outfiles:
-      self.output[f]=self.read_outputfile(f)
+      # Hack to fix JSONS when there are multiple tbdm_basis runs.
+      fix_duped_json(f,newfn='fixed.json')
+      self.output[f]=self.read_outputfile('fixed.json')
     self.completed=True
       
   #------------------------------------------------
