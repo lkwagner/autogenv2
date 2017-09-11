@@ -84,6 +84,7 @@ class PySCFRunnerPBS:
            "#PBS -o %s"%jobout,
            self.prefix,
            "cd ${PBS_O_WORKDIR}",
+           "export OMP_NUM_THREADS=%d"%(self.nn*self.np),
            "export PYTHONPATH=%s"%(':'.join(sys.path)),
            "%s %s > %s \n"%(exe,pyscf_driver,pyscf_out),
            self.postfix

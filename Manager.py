@@ -126,10 +126,20 @@ class CrystalManager:
 
     if self.creader.completed and self.preader.completed:
       self.completed=True
-  #----------------------------------------
+
+  #------------------------------------------------
   def update_options(self,other):
-    # This documents what needs to be checked.
-    raise NotImplementedError
+    ''' Safe copy options from other to self. '''
+
+    updated=update_attributes(old=self.crunner,new=other.crunner,
+        safe_keys=['queue','walltime','np','nn','jobname','prefix','postfix'],
+        skip_keys=['queueid'])
+
+    updated=update_attributes(old=self.writer,new=other.writer,
+        safe_keys=['maxcycle','edifftol'],
+        skip_keys=['completed'])
+    if updated:
+      self.writer.completed=False
 
   #----------------------------------------
   def to_json(self):
@@ -159,7 +169,14 @@ class QWalkfromCrystalManager:
     
   #------------------------------------------------
   def update_options(self,other):
-    raise NotImplementedError
+    ''' Safe copy options from other to self. '''
+
+    updated=update_attributes(old=self.runner,new=other.runner,
+        safe_keys=['queue','walltime','np','nn','jobname','prefix','postfix'],
+        skip_keys=['queueid'])
+
+    if updated:
+      self.writer.completed=False
 
   #------------------------------------------------
   def is_consistent(self,other):
@@ -222,7 +239,6 @@ class QWalkRunManager:
         return
       elif status=="not_started":
         stdoutfiles=[x+".stdout" for x in self.infiles]
-        #TODO check if the ~ will work. Else use input variable.
         exestr="~/bin/qwalk {}".format(*self.infiles)
         # TODO this outfile handling is shitty.
         exestr+=" &> {}".format(self.infiles[0]+'.out')
