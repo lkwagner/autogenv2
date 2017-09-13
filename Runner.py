@@ -77,18 +77,27 @@ class RunnerBW:
                     walltime='48:00:00',
                     jobname='AGRunner',
                     prefix=[],
-                    postfix=[],
+                    postfix=None,
                     np=32,nn=1
                     ):
     ''' Note: exelines are prefixed by appropriate mpirun commands.'''
+
+    # Good prefix choices.
+    # These are needed for Crystal runs.
+        # module swap PrgEnv-cray PrgEnv-intel
+    # These are needed for QWalk runs.
+        #"module swap PrgEnv-cray PrgEnv-gnu",
+        #"module load acml",
+        #"module load cblas",
     self.exelines=[]
     self.np=np
     self.nn=nn
+    self.jobname=jobname
     self.queue=queue
     self.walltime=walltime
     self.queueid=[]
     self.prefix=prefix
-    self.postfix=postfix
+    self.postfix=[]
 
   #-------------------------------------
   def check_status(self):
@@ -106,7 +115,7 @@ class RunnerBW:
       jobname=self.jobname
 
     if len(self.exelines)==0:
-      print("RunnerPBS: warning, no jobs to run.")
+      print("RunnerBW: no jobs to run.")
       return
 
     # Prepend mpi specs.
@@ -126,9 +135,6 @@ class RunnerBW:
         "#PBS -N %s "%jobname,
         "#PBS -o %s "%jobout,
         "cd %s"%os.getcwd(),
-        "module swap PrgEnv-cray PrgEnv-gnu",
-        "module load acml",
-        "module load cblas",
       ] + self.prefix + exelines + self.postfix
     qsubfile=jobname+".qsub"
     with open(qsubfile,'w') as f:
@@ -139,3 +145,6 @@ class RunnerBW:
       print("Submitted as %s"%self.queueid)
     except sub.CalledProcessError:
       print("Error submitting job. Check queue settings.")
+
+    # Remove all exelines that were run: they don't need to be run again.
+    self.exelines=[]

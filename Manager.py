@@ -1,4 +1,5 @@
 import os
+import shutil as sh
 import numpy as np
 from copy import deepcopy
 
@@ -75,12 +76,11 @@ def update_attributes(old,new,skip_keys=[],safe_keys=[]):
 class CrystalManager:
   """ Internal class managing process of running a DFT job though Crystal.
   Has authority over file names associated with this task."""
-  def __init__(self,writer,crys_runner,crys_reader,prop_runner,prop_reader):
+  def __init__(self,writer,runner,crys_reader,prop_reader):
     self.writer=writer
     self.creader=crys_reader
-    self.crunner=crys_runner
     self.preader=prop_reader
-    self.prunner=prop_runner
+    self.runner=runner
     self.crysinpfn='crys.in'
     self.crysoutfn='crys.in.o'
     self.propinpfn='prop.in'
@@ -94,6 +94,8 @@ class CrystalManager:
 
     # Generate input files.
     if not self.writer.completed:
+      if self.writer.guess_fort is not None:
+        sh.copy(self.writer.guess_fort,'fort.20')
       with open(self.crysinpfn,'w') as f:
         self.writer.write_crys_input(self.crysinpfn)
       with open(self.propinpfn,'w') as f:
@@ -102,36 +104,36 @@ class CrystalManager:
 
     #Check on the CRYSTAL run
     while True:
-      status=resolve_status(self.crunner,self.creader,[self.crysoutfn])
+      status=resolve_status(self.runner,self.creader,[self.crysoutfn,self.propoutfn])
     
       print("Crystal status",status)
       if status=="running":
         return
       elif status=="not_started":
-        self.crunner.run(self.crysinpfn,self.crysoutfn)
+        print("called run")
+        print(self.runner.postfix)
+        print(id(self.runner.postfix))
+        self.runner.prefix.append("cp %s INPUT"%self.crysinpfn)
+        self.runner.run("Pcrystal &> %s"%self.crysoutfn)
+        self.runner.postfix.append("properties < %s &> %s"%(self.propinpfn,self.propoutfn))
+        return
       elif status=="ready_for_analysis":
         #This is where we (eventually) do error correction and resubmits
         self.creader.collect(self.crysoutfn)
+        self.preader.collect(self.propoutfn)
         break
       elif status=='done':
         break
       else:
         return
 
-
-    if not self.preader.completed:
-      self.prunner.run(self.propinpfn,self.propoutfn)
-      self.preader.collect(self.propoutfn)
-    print("Crystal properties done: ",self.preader.completed)
-
-    if self.creader.completed and self.preader.completed:
-      self.completed=True
+    self.completed=(self.creader.completed and self.preader.completed)
 
   #------------------------------------------------
   def update_options(self,other):
     ''' Safe copy options from other to self. '''
 
-    updated=update_attributes(old=self.crunner,new=other.crunner,
+    updated=update_attributes(old=self.runner,new=other.runner,
         safe_keys=['queue','walltime','np','nn','jobname','prefix','postfix'],
         skip_keys=['queueid'])
 
