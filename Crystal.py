@@ -431,6 +431,7 @@ class CrystalReader:
 #-------------------------------------------------      
   def collect(self,outfilename):
     """ Collect results from output."""
+    status='unknown'
     if os.path.isfile(outfilename):
       f = open(outfilename, 'r')
       lines = f.readlines()
@@ -438,9 +439,13 @@ class CrystalReader:
         if 'SCF ENDED - CONVERGENCE ON ENERGY' in line:
           self.out['total_energy']=float(line.split()[8])    
           print("SCF ended converging on %f"%self.out['total_energy'])
+          status='completed'
+          self.completed=True
         elif 'SCF ENDED - TOO MANY CYCLES' in line:
           last=float(line.split()[8])
           print("SCF ended at %f Ha without convergence"%last)
+          status='killed'
+          self.completed=False
 
         elif 'TOTAL ATOMIC SPINS' in line:
           moms = []
@@ -457,11 +462,14 @@ class CrystalReader:
             chgs += map(float,lines[li+shift].split())
             shift += 1
           self.out['atomic_charges']=chgs
-      print(self.out)
-      self.completed=True
+      # If the run didn't finish, then we won't find anything. 
+      # In that case, we'll want to run again and collect again.
+      status='killed'
+      self.completed=False
     else:
       # Just to be sure/clear...
       self.completed=False
+    return status
 
 
 #-------------------------------------------------      

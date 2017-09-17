@@ -22,11 +22,6 @@ def resolve_status(runner,reader,outfiles, method='not_defined'):
     if not os.path.exists(outfile):
       return 'not_started'
 
-  #check if we need to restart 
-  if(method == 'pyscf'): 
-    if reader.check_restart(outfiles): 
-      return 'retry' 
-
   #We are in an error state or we haven't collected 
   #the results. 
   return "ready_for_analysis"
@@ -81,16 +76,25 @@ class CrystalManager:
     self.creader=crys_reader
     self.preader=prop_reader
     self.runner=runner
+    self.scriptfile=None
     self.crysinpfn='crys.in'
     self.crysoutfn='crys.in.o'
+    self.cresinpfn='crys_restart.in'
+    self.cresoutfn='crys_restart.in.o'
     self.propinpfn='prop.in'
     self.propoutfn='prop.in.o'
+    self.location=os.getcwd()
+    self._runready=False
     self.completed=False
 
   #----------------------------------------
   def nextstep(self):
     """ Check write status, then if it's running. If not running check if
-    finished. If not finished, attempt to run. """ 
+    finished. If not finished, attempt to run. 
+    
+    Note: this will not submit any jobs to the queue, but updates the runner 
+    object with the ability to start the run. Call either submit() or use a bundler to 
+    actually start the run.""" 
 
     # Generate input files.
     if not self.writer.completed:
@@ -101,26 +105,27 @@ class CrystalManager:
       with open(self.propinpfn,'w') as f:
         self.writer.write_prop_input(self.propinpfn)
 
-
     #Check on the CRYSTAL run
     while True:
-      status=resolve_status(self.runner,self.creader,[self.crysoutfn,self.propoutfn])
+      status=resolve_status(self.runner,self.creader,[self.crysoutfn,self.propoutfn],method='crystal')
     
       print("Crystal status",status)
       if status=="running":
         return
       elif status=="not_started":
-        print("called run")
-        print(self.runner.postfix)
-        print(id(self.runner.postfix))
         self.runner.prefix.append("cp %s INPUT"%self.crysinpfn)
         self.runner.run("Pcrystal &> %s"%self.crysoutfn)
         self.runner.postfix.append("properties < %s &> %s"%(self.propinpfn,self.propoutfn))
         return
       elif status=="ready_for_analysis":
         #This is where we (eventually) do error correction and resubmits
-        self.creader.collect(self.crysoutfn)
+        status=self.creader.collect(self.crysoutfn)
         self.preader.collect(self.propoutfn)
+        if status=='killed':
+          self.writer.restart=True
+          self.writer.guess_fort='./fort.79'
+          self.writer.write_crys_input(self.cresinpfn)
+          self.runner.run("Pcrystal &> %s"%self.cresoutfn)
         break
       elif status=='done':
         break
@@ -128,6 +133,25 @@ class CrystalManager:
         return
 
     self.completed=(self.creader.completed and self.preader.completed)
+
+  #------------------------------------------------
+  def script(self,jobname=None):
+    ''' Script execution lines for a bundler to pick up and run.'''
+    if jobname is None: jobname=self.runner.jobname
+    self.scriptfile="%s.run"%jobname
+    self._runready=self.runner.script(self.scriptfile)
+
+  #------------------------------------------------
+  def submit(self,jobname=None):
+    ''' Submit the runner's job to the queue. '''
+    qsubfile=self.reader.submit(jobname)
+    return qsubfile
+
+  #------------------------------------------------
+  def update_queueid(self,qid):
+    ''' If a bundler handles the submission, it can update the queue info with this.'''
+    self.runner.queueid.append(qid)
+    self._runready=False # After running, we won't run again without more analysis.
 
   #------------------------------------------------
   def update_options(self,other):

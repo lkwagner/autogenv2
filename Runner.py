@@ -76,9 +76,9 @@ class RunnerBW:
   def __init__(self,queue='normal',
                     walltime='48:00:00',
                     jobname='AGRunner',
-                    prefix=[],
-                    postfix=None,
-                    np=32,nn=1
+                    np=32,nn=1,
+                    prefix=None,
+                    postfix=None
                     ):
     ''' Note: exelines are prefixed by appropriate mpirun commands.'''
 
@@ -95,9 +95,11 @@ class RunnerBW:
     self.jobname=jobname
     self.queue=queue
     self.walltime=walltime
+    if prefix is None: self.prefix=[]
+    else:              self.prefix=prefix
+    if postfix is None: self.postfix=[]
+    else:               self.postfix=postfix
     self.queueid=[]
-    self.prefix=prefix
-    self.postfix=[]
 
   #-------------------------------------
   def check_status(self):
@@ -107,6 +109,27 @@ class RunnerBW:
   def run(self,exestr):
     ''' Accumulate executable commands.'''
     self.exelines.append(exestr)
+
+  #-------------------------------------
+  def script(self,scriptfile):
+    ''' Dump accumulated commands into a script for another job to run.
+    Returns true if the runner had lines to actually execute.'''
+
+    if len(self.exelines)==0:
+      return False
+
+    # Prepend mpi specs.
+    exelines=[]
+    for line in self.exelines:
+      exelines.append('aprun -n {} {}'.format(
+        self.nn*self.np,line))
+
+    with open(scriptfile,'w') as outf:
+      outf.write('\n'.join(self.prefix + exelines + self.postfix))
+
+    # Remove exelines so the runner is ready for the next go.
+    self.exelines=[]
+    return True
 
   #-------------------------------------
   def submit(self,jobname=None):
@@ -146,5 +169,6 @@ class RunnerBW:
     except sub.CalledProcessError:
       print("Error submitting job. Check queue settings.")
 
-    # Remove all exelines that were run: they don't need to be run again.
+    # Remove exelines so the runner is ready for the next go.
     self.exelines=[]
+    return qsubfile
