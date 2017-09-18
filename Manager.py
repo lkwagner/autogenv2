@@ -72,10 +72,13 @@ class CrystalManager:
   """ Internal class managing process of running a DFT job though Crystal.
   Has authority over file names associated with this task."""
   def __init__(self,writer,runner,crys_reader,prop_reader):
+    ''' convert controls if QWalk input files are produced. '''
     self.writer=writer
     self.creader=crys_reader
     self.preader=prop_reader
     self.runner=runner
+
+    # Internal.
     self.scriptfile=None
     self.crysinpfn='crys.in'
     self.crysoutfn='crys.in.o'
@@ -106,8 +109,10 @@ class CrystalManager:
         self.writer.write_prop_input(self.propinpfn)
 
     #Check on the CRYSTAL run
+    # TODO while True is not doing anything anymore.
     while True:
       status=resolve_status(self.runner,self.creader,[self.crysoutfn,self.propoutfn],method='crystal')
+      print(status)
     
       print("Crystal status",status)
       if status=="running":
@@ -144,7 +149,7 @@ class CrystalManager:
   #------------------------------------------------
   def submit(self,jobname=None):
     ''' Submit the runner's job to the queue. '''
-    qsubfile=self.reader.submit(jobname)
+    qsubfile=self.runner.submit(jobname)
     return qsubfile
 
   #------------------------------------------------
@@ -298,15 +303,17 @@ class QWalkRunManager:
 
 #######################################################################
 
+
 class PySCFManager:
   def __init__(self,writer,runner,reader):
     self.writer=writer
     self.runner=runner
     self.reader=reader
     self.driverfn='pyscf_driver.py'
-    self.infiles=[]
-    self.restart_infiles=[] 
-    self.outfiles=[]
+    self.completed=False
+    self.infile=''
+    self.restart_infile=''
+    self.outfile=''
   #------------------------------------------------
   # Obsolete with update_options?
   def is_consistent(self,other):
@@ -330,27 +337,24 @@ class PySCFManager:
   #------------------------------------------------
   def nextstep(self):
     if not self.writer.completed:
-      self.infiles,self.restart_infiles,self.outfiles,self.chkfiles=self.writer.pyscf_input(self.driverfn)
+      self.infile,self.restart_infile,self.outfile,self.chkfile=self.writer.pyscf_input(self.driverfn)
     
-    while True:
-      status=resolve_status(self.runner,self.reader,self.outfiles, 'pyscf')
-      print("PySCF status",status)
-      if status=="running":
-        return
-      elif status=="not_started":
-        self.runner.run(self.infiles,self.outfiles)
-      elif status=="ready_for_analysis":
-        #This is where we (eventually) do error correction and resubmits
-        self.reader.collect(self.outfiles,self.chkfiles)
-        break
-      elif status=='done':
-        break
-      #If we need to restart the run
-      elif status=='retry':
-        self.runner.run(self.restart_infiles, self.outfiles)
-        break
-      else:
-        return
+    status=resolve_status(self.runner,self.reader,self.outfile, 'pyscf')
+    print("PySCF status",status)
+    if status=="running":
+      pass
+    elif status=="not_started":
+      self.runner.run("python %s &> %s"%(self.infile,self.outfile))
+    elif status=="ready_for_analysis":
+      #This is where we (eventually) do error correction and resubmits
+      self.reader.collect(self.outfile,self.chkfile)
+    elif status=='done':
+      pass
+    #If we need to restart the run
+    elif status=='retry':
+      self.runner.run(self.restart_infile, self.outfile)
+
+    self.completed=self.reader.completed
       
   #------------------------------------------------
 

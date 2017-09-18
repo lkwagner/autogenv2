@@ -158,11 +158,10 @@ class PySCFWriter:
     re_f.write('\n'.join(restart_outlines))
 
     self.completed=True
-    return [fname],[restart_fname], [fname+".o"],[chkfile]
+    return fname,restart_fname, fname+".o",chkfile
      
 
-##n#################################################
-
+####################################################
 
 from xml.etree.ElementTree import ElementTree
 
@@ -210,10 +209,6 @@ def generate_pbc_basis(xml_name,symbol,min_exp=0.2,naug=2,alpha=3,
       allbasis.append(basis_sec)
   #print(" ".join(allbasis))
   return " ".join(allbasis)
-  
-
-    
-           
   
 ####################################################
 class PySCFPBCWriter:
@@ -376,9 +371,9 @@ class PySCFPBCWriter:
     if self.dft!="":
       outlines+=['m.xc="%s"'%self.dft]
 
-    outlines+=["print('E(HF) =',m.kernel(dm_kpts))"]
+    outlines+=["print('E(HF) =',m.kernel(numpy.array(dm_kpts)))"]
     
-    outlines +=[ "print_qwalk(mol,m)"]
+    outlines +=[ "print_qwalk_pbc(mol,m)"]
     outlines += ['print ("All_done")']
 
     restart_outlines=[] 
@@ -391,7 +386,7 @@ class PySCFPBCWriter:
     re_f.write('\n'.join(restart_outlines))
 
     self.completed=True
-    return [fname],[restart_fname],[fname+".o"],[chkfile]
+    return fname,restart_fname,fname+".o",chkfile
     
     
 ####################################################

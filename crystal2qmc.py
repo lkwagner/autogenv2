@@ -160,11 +160,25 @@ def read_gred():
       pseudo[atom]['n_per_j'] = n_per_j[npjlen*psidx:npjlen*(psidx+1)]
       pseudo[atom]['exponents'] = exponents[start:end]
 
-  ## Density matrix information.
+  # Density matrix information.
   # This is impossible to figure out.  See `cryapi_inp.f`.
-  #atomic_charges = np.array(gred_words[cursor:cursor+natoms],dtype=float)
-  #cursor += natoms
-  #mvlaf = info[55] #???
+  # I think the order is overlap, Fock matrix, then DM in real space. 
+  # I'm not yet sure where the real space grid for the DM is defined.
+  atomic_charges = np.array(gred_words[cursor:cursor+natoms],dtype=float)
+  cursor += natoms
+  # A hacky way to get past all the symmetry stuff:
+  # Keep reading until you hit the floats.
+  nspin=info[63]+1
+  npgt=info[11]
+  nfgt=info[10]
+  print(npgt,nfgt)
+  for c in range(cursor,len(gred_words)):
+    if 'E' in gred_words[c]:
+      cursor=c
+      break
+  print(gred_words[cursor-1:cursor+2])
+
+
   ## Skip symmetry information.
   #cursor += mvlaf*4 + info[19]*info[1] + 
   #print("atomic_charges",atomic_charges)
@@ -464,7 +478,7 @@ def write_orb(eigsys,basis,ions,kpt,base="qwalk",kfmt='coord'):
       print_cnt += 1
       if print_cnt % 5 == 0: outf.write("\n")
   outf.close()
-  return None
+  return outf.name
 
 ###############################################################################
 # TODO Generalize to no pseudopotential.
@@ -549,7 +563,7 @@ def write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,base="qwalk",kfmt='coord'):
     outlines += ["    }","  }","}"]
   with open(kbase+".sys",'w') as outf:
     outf.write("\n".join(outlines))
-  return None
+  return outf.name
 
 ###############################################################################
 def write_jast2(lat_parm,ions,base="qwalk"):
@@ -616,7 +630,7 @@ def write_jast2(lat_parm,ions,base="qwalk"):
     ]
   with open(base+".jast2",'w') as outf:
     outf.write("\n".join(outlines))
-  return None
+  return outf.name
 
 ###############################################################################
 def write_basis(basis,ions,base="qwalk"):
@@ -679,11 +693,50 @@ def write_basis(basis,ions,base="qwalk"):
   outlines += ["  }","}"]
   with open(base+".basis",'w') as outf:
     outf.write("\n".join(outlines))
-  return None
+  return outf.name
 
 ###############################################################################
 def write_moanalysis():
   return None
+
+###############################################################################
+def write_files(lat_parm, ions, basis, pseudo, eigsys, 
+    base='qwalk', kfmt='coord', kset='complex'):
+  ''' Write out all the QWalk system and wave function definition files. 
+  Input parameters defined in convert_crystal, and mostly come from the above.
+  
+  Other details on the input parameters are in the convert_crystal docstring.'''
+
+  # Useful quantities.
+  basis['ntot'] = int(round(sum(basis['charges'])))
+  basis['nmo']  = sum(basis['nao_shell']) # = nao
+  eigsys['nup'] = int(round(0.5 * (basis['ntot'] + eigsys['totspin'])))
+  eigsys['ndn'] = int(round(0.5 * (basis['ntot'] - eigsys['totspin'])))
+
+  if (np.array(eigsys['kpt_coords']) >= 10).any():
+    print("Cannot use coord kpoint format when SHRINK > 10.")
+    print("Falling back on int format (old style).")
+    kfmt = 'int'
+ 
+  outfiles={
+      'orb':[],
+      'sys':[],
+      'basis':[],
+      'jast2':[],
+      'slater':[]
+    }
+
+
+  for kpt in eigsys['kpt_coords']:
+    if eigsys['ikpt_iscmpx'][kpt] and kset=='real': continue
+    outfiles['slater'].append(write_slater(basis,eigsys,kpt,base,kfmt))
+    normalize_eigvec(eigsys,basis,kpt)
+    outfiles['orb'].append(write_orb(eigsys,basis,ions,kpt,base,kfmt))
+    outfiles['sys'].append(write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,base,kfmt))
+    outfiles['basis'].append(write_basis(basis,ions,base))
+    outfiles['jast2'].append(write_jast2(lat_parm,ions,base))
+
+  return outfiles
 
 ###############################################################################
 # Begin actual execution.
@@ -704,34 +757,26 @@ def convert_crystal(
   info, lat_parm, ions, basis, pseudo = read_gred()
   eigsys = read_kred(info,basis)
 
+  # Unfortunately this part needs to be hacked for now. 
+  # Need the total spin of the system, and as far as I can tell,
+  # this isn't provided in the GRED and KRED.
   if eigsys['nspin'] > 1:
     eigsys['totspin'] = read_outputfile(propoutfn)
   else:
     eigsys['totspin'] = 0
 
-  # Useful quantities.
-  basis['ntot'] = int(round(sum(basis['charges'])))
-  basis['nmo']  = sum(basis['nao_shell']) # = nao
-  eigsys['nup'] = int(round(0.5 * (basis['ntot'] + eigsys['totspin'])))
-  eigsys['ndn'] = int(round(0.5 * (basis['ntot'] - eigsys['totspin'])))
+  outfiles=write_files(lat_parm, ions, basis, pseudo, eigsys, 
+      base, kfmt, kset)
 
-  if (np.array(eigsys['kpt_coords']) >= 10).any():
-    print("Cannot use coord kpoint format when SHRINK > 10.")
-    print("Falling back on int format (old style).")
-    kfmt = 'int'
- 
-  for kpt in eigsys['kpt_coords']:
-    if eigsys['ikpt_iscmpx'][kpt] and kset=='real': continue
-    write_slater(basis,eigsys,kpt,base,kfmt)
-    normalize_eigvec(eigsys,basis,kpt)
-    write_orb(eigsys,basis,ions,kpt,base,kfmt)
-    write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,base,kfmt)
-    write_basis(basis,ions,base)
-    write_jast2(lat_parm,ions,base)
+  # I think this behavior was only useful for autogenv1
+  # If you want the data, just use the read_* functions directly.
+  #return eigsys['kpt_weights'] # Useful for autogen.
+  return outfiles
 
-  return eigsys['kpt_weights'] # Useful for autogen.
 
+###############################################################################
 if __name__ == "__main__":
+  # TODO clean up with proper arguement parsing.
   if len(sys.argv) > 1:
     base = sys.argv[1]
   else: 

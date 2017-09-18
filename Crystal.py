@@ -431,7 +431,10 @@ class CrystalReader:
 #-------------------------------------------------      
   def collect(self,outfilename):
     """ Collect results from output."""
-    status='unknown'
+    # If the run didn't finish, then we won't find anything. 
+    # In that case, we'll want to run again and collect again.
+    status='killed'
+    self.completed=False
     if os.path.isfile(outfilename):
       f = open(outfilename, 'r')
       lines = f.readlines()
@@ -462,10 +465,6 @@ class CrystalReader:
             chgs += map(float,lines[li+shift].split())
             shift += 1
           self.out['atomic_charges']=chgs
-      # If the run didn't finish, then we won't find anything. 
-      # In that case, we'll want to run again and collect again.
-      status='killed'
-      self.completed=False
     else:
       # Just to be sure/clear...
       self.completed=False
