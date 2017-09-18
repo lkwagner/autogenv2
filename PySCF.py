@@ -109,7 +109,7 @@ class PySCFWriter:
         "from pyscf.dft.rks import RKS",
         "from pyscf.dft.roks import ROKS",
         "from pyscf.dft.uks import UKS",
-        "from pyscf2qwalk import print_qwalk",
+        "from pyscf2qwalk import print_qwalk,print_qwalk_pbc",
         "mol=gto.Mole(verbose=4)",
         "mol.build(atom='''"+self.xyz+"''',",
         "basis='%s',"%self.basis,
@@ -414,28 +414,26 @@ class PySCFReader:
     return ret
           
   #------------------------------------------------
-  def check_restart(self, outfiles):
-    for outf in  outfiles:
-      lines = open(outf,'r').read().split('\n')
-      if ('HF_done' in lines) and  ('All_done' not in lines):
-        return True
-      if 'SCF not converged.' in lines:
-        return True
+  def check_restart(self, outfile):
+    lines = open(outfile,'r').read().split('\n')
+    if ('HF_done' in lines) and  ('All_done' not in lines):
+      return True
+    if 'SCF not converged.' in lines:
+      return True
     return False
 
   #------------------------------------------------
      
-  def collect(self,outfiles,chkfiles):
+  def collect(self,outfile,chkfile):
     problem=False
-    for outf,chkf in zip(outfiles,chkfiles):
-      if outf not in self.output.keys():
-        self.output[outf]={}
-      lines = open(outf,'r').read().split()
-      if 'All_done' not in lines:
-         problem= True
-      else: # Only read in properties if self-consistent.
-        self.output[outf] = self.read_chkfile(chkf)
-      self.output[outf]['chkfile']=chkf
+    if outfile not in self.output.keys():
+      self.output[outfile]={}
+    lines = open(outfile,'r').read().split()
+    if 'All_done' not in lines:
+       problem= True
+    else: # Only read in properties if self-consistent.
+      self.output[outfile] = self.read_chkfile(chkfile)
+    self.output[outfile]['chkfile']=chkfile
     if not problem:
       self.completed=True
     else:
