@@ -341,7 +341,7 @@ class PySCFManager:
     if not self.writer.completed:
       self.infile,self.restart_infile,self.outfile,self.chkfile=self.writer.pyscf_input(self.driverfn)
     
-    status=resolve_status(self.runner,self.reader,self.outfile, 'pyscf')
+    status=resolve_status(self.runner,self.reader,[self.outfile], 'pyscf')
     print("PySCF status",status)
     if status=="running":
       pass
@@ -366,7 +366,7 @@ class PySCFManager:
 
   #----------------------------------------
   def status(self):
-    current_status = resolve_status(self.runner,self.reader,self.outfiles, 'pyscf')
+    current_status = resolve_status(self.runner,self.reader,[self.outfile], 'pyscf')
     if current_status == 'done':
       return 'ok'
     elif current_status == 'retry':

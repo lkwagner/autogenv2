@@ -96,9 +96,10 @@ class PySCFRunnerPBS:
   #-------------------------------------
 
   def submit(self,jobname=None):
-    #just running in serial for now
+    if len(self.exelines)==0: 
+      print("Nothing to run.")
+      return
     if jobname is None: jobname=self.jobname
-    exe="python3"
     
     jobout=jobname+".jobout"
     qsublines=[
