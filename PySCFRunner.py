@@ -6,6 +6,7 @@ import subprocess as sub
 import shutil
 import submitter
 from submitter import LocalSubmitter
+from Bundler import Bundler
 
 class LocalPySCFRunner(LocalSubmitter):
   def __init__(self, BIN=''):
@@ -80,11 +81,8 @@ class PySCFRunnerPBS:
     if len(self.exelines)==0:
       return False
 
-    # Prepend mpi specs.
-    exelines=[]
-    for line in self.exelines:
-      exelines.append('mpirun -n {} {}'.format(
-        self.nn*self.np,line))
+    # Prepend mp specs.
+    exelines=["export OMP_NUM_THREADS=%d"%(self.nn*self.np)]+self.exelines
 
     with open(scriptfile,'w') as outf:
       outf.write('\n'.join(self.prefix + exelines + self.postfix))
@@ -131,3 +129,45 @@ class PySCFRunnerPBS:
 
     # Clear out the lines to set up for the next job.
     self.exelines=[]
+
+####################################################
+
+class PySCFBundlerPBS(Bundler):
+  ''' Class for handling the bundling of several jobs of approximately the same 
+  length, but possibly in different locations. 
+  
+  Has to be specialized for PySCF because of using OMP.''' 
+
+  def _submit_bundle(self,mgrs,jobname=None,nn=None):
+    if nn is None:      nn=sum([mgr.runner.nn for mgr in mgrs])
+    if jobname is None: jobname=self.jobname
+
+    qsublines=[
+        "#PBS -q %s"%self.queue,
+        "#PBS -l nodes=%i:ppn=%i"%(self.npb,self.ppn),
+        "#PBS -l walltime=%s"%self.walltime,
+        "#PBS -j oe ",
+        "#PBS -N %s "%jobname,
+        "#PBS -o %s.out "%jobname,
+      ]
+    for mgr in mgrs:
+      # This might be better without an error-out.
+      assert mgr._runready, "One of the Managers is not prepped for run."
+      qsublines+=[
+          "cd %s"%mgr.location,
+          "bash %s &"%mgr.scriptfile
+        ]
+    qsublines+=["wait"]
+
+    qsubfile=jobname+".qsub"
+    with open(qsubfile,'w') as f:
+      f.write('\n'.join(qsublines))
+    try:
+      result=sub.check_output("qsub %s"%(qsubfile),shell=True)
+      queueid=result.decode().split()[0].split('.')[0]
+      print("Submitted as %s"%queueid)
+    except sub.CalledProcessError:
+      print("Error submitting job. Check queue settings.")
+
+    for mgr in mgrs:
+      mgr.update_queueid(queueid)

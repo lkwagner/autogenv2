@@ -355,6 +355,26 @@ class PySCFManager:
       self.runner.run(self.restart_infile, self.outfile)
 
     self.completed=self.reader.completed
+
+  #------------------------------------------------
+  def script(self,jobname=None):
+    ''' Script execution lines for a bundler to pick up and run.'''
+    if jobname is None: jobname=self.runner.jobname
+    self.scriptfile="%s.run"%jobname
+    self._runready=self.runner.script(self.scriptfile)
+
+  #------------------------------------------------
+  def submit(self,jobname=None):
+    ''' Submit the runner's job to the queue. '''
+    qsubfile=self.runner.submit(jobname)
+    return qsubfile
+
+  #------------------------------------------------
+  def update_queueid(self,qid):
+    ''' If a bundler handles the submission, it can update the queue info with this.'''
+    self.runner.queueid.append(qid)
+    self._runready=False # After running, we won't run again without more analysis.
+
       
   #------------------------------------------------
 
