@@ -86,7 +86,7 @@ class CrystalManager:
     self.cresoutfn='crys_restart.in.o'
     self.propinpfn='prop.in'
     self.propoutfn='prop.in.o'
-    self.location=os.getcwd()
+    self.location='unset'
     self._runready=False
     self.completed=False
 
@@ -107,6 +107,7 @@ class CrystalManager:
         self.writer.write_crys_input(self.crysinpfn)
       with open(self.propinpfn,'w') as f:
         self.writer.write_prop_input(self.propinpfn)
+      self.location=os.getcwd()
 
     #Check on the CRYSTAL run
     # TODO while True is not doing anything anymore.
@@ -145,6 +146,7 @@ class CrystalManager:
     if jobname is None: jobname=self.runner.jobname
     self.scriptfile="%s.run"%jobname
     self._runready=self.runner.script(self.scriptfile)
+    self.location=os.getcwd()
 
   #------------------------------------------------
   def submit(self,jobname=None):

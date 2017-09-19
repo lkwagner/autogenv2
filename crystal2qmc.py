@@ -160,23 +160,23 @@ def read_gred():
       pseudo[atom]['n_per_j'] = n_per_j[npjlen*psidx:npjlen*(psidx+1)]
       pseudo[atom]['exponents'] = exponents[start:end]
 
-  # Density matrix information.
-  # This is impossible to figure out.  See `cryapi_inp.f`.
-  # I think the order is overlap, Fock matrix, then DM in real space. 
-  # I'm not yet sure where the real space grid for the DM is defined.
-  atomic_charges = np.array(gred_words[cursor:cursor+natoms],dtype=float)
-  cursor += natoms
-  # A hacky way to get past all the symmetry stuff:
-  # Keep reading until you hit the floats.
-  nspin=info[63]+1
-  npgt=info[11]
-  nfgt=info[10]
-  print(npgt,nfgt)
-  for c in range(cursor,len(gred_words)):
-    if 'E' in gred_words[c]:
-      cursor=c
-      break
-  print(gred_words[cursor-1:cursor+2])
+  ## Density matrix information.
+  ## This is impossible to figure out.  See `cryapi_inp.f`.
+  ## I think the order is overlap, Fock matrix, then DM in real space. 
+  ## I'm not yet sure where the real space grid for the DM is defined.
+  #atomic_charges = np.array(gred_words[cursor:cursor+natoms],dtype=float)
+  #cursor += natoms
+  ## A hacky way to get past all the symmetry stuff:
+  ## Keep reading until you hit the floats.
+  #nspin=info[63]+1
+  #npgt=info[11]
+  #nfgt=info[10]
+  #print(npgt,nfgt)
+  #for c in range(cursor,len(gred_words)):
+  #  if 'E' in gred_words[c]:
+  #    cursor=c
+  #    break
+  #print(gred_words[cursor-1:cursor+2])
 
 
   ## Skip symmetry information.
