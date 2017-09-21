@@ -82,11 +82,12 @@ class CrystalManager:
     self.scriptfile=None
     self.crysinpfn='crys.in'
     self.crysoutfn='crys.in.o'
-    self.cresinpfn='crys_restart.in'
-    self.cresoutfn='crys_restart.in.o'
+    #self.cresinpfn='crys_restart.in'
+    #self.cresoutfn='crys_restart.in.o'
     self.propinpfn='prop.in'
     self.propoutfn='prop.in.o'
     self.location='unset'
+    self.restarts=0
     self._runready=False
     self.completed=False
 
@@ -119,7 +120,7 @@ class CrystalManager:
       if status=="running":
         return
       elif status=="not_started":
-        self.runner.prefix.append("cp %s INPUT"%self.crysinpfn)
+        sh.copy(crysinpfn,'INPUT')
         self.runner.run("Pcrystal &> %s"%self.crysoutfn)
         self.runner.postfix.append("properties < %s &> %s"%(self.propinpfn,self.propoutfn))
         return
@@ -129,9 +130,15 @@ class CrystalManager:
         self.preader.collect(self.propoutfn)
         if status=='killed':
           self.writer.restart=True
+          sh.copy(self.crysinpfn,"%d.%s"%(self.restarts,self.crysinpfn))
+          sh.copy(self.crysoutfn,"%d.%s"%(self.restarts,self.crysoutfn))
+          sh.copy('fort.79',"%d.fort.79"%(self.restarts))
           self.writer.guess_fort='./fort.79'
-          self.writer.write_crys_input(self.cresinpfn)
-          self.runner.run("Pcrystal &> %s"%self.cresoutfn)
+          sh.copy(self.writer.guess_fort,'fort.20')
+          self.writer.write_crys_input(self.crysinpfn)
+          sh.copy(self.crysinpfn,'INPUT')
+          self.runner.run("Pcrystal &> %s"%self.crysoutfn)
+          self.restarts+=1
         break
       elif status=='done':
         break
@@ -346,7 +353,7 @@ class PySCFManager:
     if status=="running":
       pass
     elif status=="not_started":
-      self.runner.run("python %s &> %s"%(self.infile,self.outfile))
+      self.runner.run("/usr/local/bin/python %s &> %s"%(self.infile,self.outfile))
     elif status=="ready_for_analysis":
       #This is where we (eventually) do error correction and resubmits
       self.reader.collect(self.outfile,self.chkfile)
@@ -363,7 +370,7 @@ class PySCFManager:
     ''' Script execution lines for a bundler to pick up and run.'''
     if jobname is None: jobname=self.runner.jobname
     self.scriptfile="%s.run"%jobname
-    self._runready=self.runner.script(self.scriptfile)
+    self._runready=self.runner.script(self.scriptfile,self.driverfn)
 
   #------------------------------------------------
   def submit(self,jobname=None):
