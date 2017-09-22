@@ -296,11 +296,10 @@ class PySCFPBCWriter:
 
   #-----------------------------------------------
       
-  def pyscf_input(self,fname):
+  def pyscf_input(self,fname,chkfile):
     f=open(fname,'w')
     restart_fname = 'restart_'+fname
     re_f = open(restart_fname, 'w')
-    chkfile=fname+".chkfile"
     add_paths=[]
 
     # Figure out correct default initial guess (if not set).
@@ -376,18 +375,9 @@ class PySCFPBCWriter:
     outlines +=[ "print_qwalk_pbc(mol,m)"]
     outlines += ['print ("All_done")']
 
-    restart_outlines=[] 
-    for line in  outlines: 
-      if 'mc.kernel(' in line:
-        restart_outlines += ["mc.__dict__.update(pbc.lib.chkfile.load('%s', 'mcscf'))\n"%chkfile]
-      restart_outlines += [line]  
-
     f.write('\n'.join(outlines))
-    re_f.write('\n'.join(restart_outlines))
 
     self.completed=True
-    return fname,restart_fname,fname+".o",chkfile
-    
     
 ####################################################
 class PySCFReader:

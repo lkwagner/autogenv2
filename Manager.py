@@ -319,9 +319,11 @@ class PySCFManager:
     self.runner=runner
     self.reader=reader
     self.driverfn='pyscf_driver.py'
+    self.outfile=self.driverfn+'.o'
+    self.chkfile=self.driverfn+'.chkfile'
     self.completed=False
     self.infile=''
-    self.restart_infile=''
+    self.restarts=0
     self.outfile=''
   #------------------------------------------------
   # Obsolete with update_options?
@@ -346,7 +348,7 @@ class PySCFManager:
   #------------------------------------------------
   def nextstep(self):
     if not self.writer.completed:
-      self.infile,self.restart_infile,self.outfile,self.chkfile=self.writer.pyscf_input(self.driverfn)
+      self.writer.pyscf_input(self.driverfn)
     
     status=resolve_status(self.runner,self.reader,[self.outfile], 'pyscf')
     print("PySCF status",status)
@@ -361,7 +363,17 @@ class PySCFManager:
       pass
     #If we need to restart the run
     elif status=='retry':
-      self.runner.run(self.restart_infile, self.outfile)
+      #self.runner.run(self.restart_infile, self.outfile)
+      self.writer.restart=True
+      sh.copy(self.crysinpfn,"%d.%s"%(self.restarts,self.crysinpfn))
+      sh.copy(self.crysoutfn,"%d.%s"%(self.restarts,self.crysoutfn))
+      sh.copy('fort.79',"%d.fort.79"%(self.restarts))
+      self.writer.guess_fort='./fort.79'
+      sh.copy(self.writer.guess_fort,'fort.20')
+      self.writer.write_crys_input(self.crysinpfn)
+      sh.copy(self.crysinpfn,'INPUT')
+      self.runner.run("Pcrystal &> %s"%self.crysoutfn)
+      self.restarts+=1
 
     self.completed=self.reader.completed
 
