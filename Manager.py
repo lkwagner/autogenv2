@@ -1,4 +1,5 @@
 import os
+import PySCF
 import shutil as sh
 import numpy as np
 from copy import deepcopy
@@ -247,6 +248,9 @@ class QWalkRunManager:
     self.writer=writer
     self.runner=runner
     self.reader=reader
+
+    self.scriptfile=None
+    self._runready=False
     self.infiles=[]
     self.outfiles=[]
 
@@ -293,7 +297,22 @@ class QWalkRunManager:
         break
       else:
         return
+
+  #------------------------------------------------
+  def script(self,jobname=None):
+    ''' Script execution lines for a bundler to pick up and run.'''
+    if jobname is None: jobname=self.runner.jobname
+    #if jobname is None: jobname="QWManager"
+    self.scriptfile="%s.run"%jobname
+    self._runready=self.runner.script(self.scriptfile)
+    self.location=os.getcwd()
       
+  #------------------------------------------------
+  def update_queueid(self,qid):
+    ''' If a bundler handles the submission, it can update the queue info with this.'''
+    self.runner.queueid.append(qid)
+    self._runready=False # After running, we won't run again without more analysis.
+
   #------------------------------------------------
   def write_summary(self):
     self.reader.write_summary()
@@ -322,9 +341,7 @@ class PySCFManager:
     self.outfile=self.driverfn+'.o'
     self.chkfile=self.driverfn+'.chkfile'
     self.completed=False
-    self.infile=''
     self.restarts=0
-    self.outfile=''
   #------------------------------------------------
   # Obsolete with update_options?
   def is_consistent(self,other):
@@ -348,32 +365,25 @@ class PySCFManager:
   #------------------------------------------------
   def nextstep(self):
     if not self.writer.completed:
-      self.writer.pyscf_input(self.driverfn)
+      self.writer.pyscf_input(self.driverfn,self.chkfile)
     
     status=resolve_status(self.runner,self.reader,[self.outfile], 'pyscf')
     print("PySCF status",status)
     if status=="running":
       pass
     elif status=="not_started":
-      self.runner.run("/usr/local/bin/python %s &> %s"%(self.infile,self.outfile))
+      self.runner.run("/usr/local/bin/python %s &> %s"%(self.driverfn,self.outfile))
     elif status=="ready_for_analysis":
       #This is where we (eventually) do error correction and resubmits
-      self.reader.collect(self.outfile,self.chkfile)
-    elif status=='done':
-      pass
-    #If we need to restart the run
-    elif status=='retry':
-      #self.runner.run(self.restart_infile, self.outfile)
-      self.writer.restart=True
-      sh.copy(self.crysinpfn,"%d.%s"%(self.restarts,self.crysinpfn))
-      sh.copy(self.crysoutfn,"%d.%s"%(self.restarts,self.crysoutfn))
-      sh.copy('fort.79',"%d.fort.79"%(self.restarts))
-      self.writer.guess_fort='./fort.79'
-      sh.copy(self.writer.guess_fort,'fort.20')
-      self.writer.write_crys_input(self.crysinpfn)
-      sh.copy(self.crysinpfn,'INPUT')
-      self.runner.run("Pcrystal &> %s"%self.crysoutfn)
-      self.restarts+=1
+      status=self.reader.collect(self.outfile,self.chkfile)
+      if status=='killed':
+        sh.copy(self.driverfn,"%d.%s"%(self.restarts,self.driverfn))
+        sh.copy(self.outfile,"%d.%s"%(self.restarts,self.outfile))
+        sh.copy(self.chkfile,"%d.%s"%(self.restarts,self.chkfile))
+        self.writer.dm_generator=PySCF.dm_from_chkfile("%d.%s"%(self.restarts,self.chkfile))
+        self.writer.pyscf_input(self.driverfn,self.chkfile)
+        self.runner.run("/usr/local/bin/python %s &> %s"%(self.driverfn,self.outfile))
+        self.restarts+=1
 
     self.completed=self.reader.completed
 

@@ -312,7 +312,7 @@ class PySCFPBCWriter:
         print("Warning: default guess not set for method=%s.\n Trying UHF."%self.method)
         self.dm_generator=dm_from_uhf_minao()
 
-    print(self.dm_generator)
+    #print(self.dm_generator)
     for i in self.pyscf_path:
       add_paths.append("sys.path.append('"+i+"')")
     outlines=[
@@ -403,31 +403,61 @@ class PySCFReader:
       ret[key]=lib.chkfile.load(chkfile,key)
     return ret
           
+  ##------------------------------------------------
+  # This restart check only works for MCSCF. I don't need that.
+  #def check_restart(self, outfile):
+  #  lines = open(outfile,'r').read().split('\n')
+  #  if ('HF_done' in lines) and  ('All_done' not in lines):
+  #    return True
+  #  if 'SCF not converged.' in lines:
+  #    return True
+  #  return False
+
   #------------------------------------------------
-  def check_restart(self, outfile):
-    lines = open(outfile,'r').read().split('\n')
-    if ('HF_done' in lines) and  ('All_done' not in lines):
-      return True
-    if 'SCF not converged.' in lines:
-      return True
-    return False
+  def check_restart(self,outfile):
+    ''' Check if a restart is needed to complete. '''
+    # Note: this only checks the restart an SCF run.
+    restart=True
+    for line in open(outfile,'r'):
+      if "converged SCF energy" in line: restart=False
+    return restart
 
   #------------------------------------------------
      
   def collect(self,outfile,chkfile):
-    problem=False
     if outfile not in self.output.keys():
       self.output[outfile]={}
+
+    converged=False
     lines = open(outfile,'r').read().split()
-    if 'All_done' not in lines:
-       problem= True
-    else: # Only read in properties if self-consistent.
-      self.output[outfile] = self.read_chkfile(chkfile)
-    self.output[outfile]['chkfile']=chkfile
-    if not problem:
+    for line in reversed(lines):
+      if "converged SCF energy" in line: 
+        converged=True
+        self.output[outfile] = self.read_chkfile(chkfile)
+        self.output[outfile]['chkfile']=chkfile
+        break
+    if converged:
       self.completed=True
+      return 'done'
     else:
-      print('Problem detected in PySCF run.')
+      return 'killed'
+
+  #def collect(self,outfile,chkfile):
+  #  problem=False
+  #  if outfile not in self.output.keys():
+  #    self.output[outfile]={}
+  #  lines = open(outfile,'r').read().split()
+  #  for line in reversed(lines):
+  #    if "converged SCF energy" in line: 
+  #  if 'All_done' not in lines:
+  #     problem= True
+  #  else: # Only read in properties if self-consistent.
+  #    self.output[outfile] = self.read_chkfile(chkfile)
+  #  self.output[outfile]['chkfile']=chkfile
+  #  if not problem:
+  #    self.completed=True
+  #  else:
+  #    print('Problem detected in PySCF run.')
  
   #------------------------------------------------
   def write_summary(self):
