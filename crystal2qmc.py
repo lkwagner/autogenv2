@@ -573,7 +573,6 @@ def write_jast2(lat_parm,ions,base="qwalk"):
   outlines = [
       "jastrow2",
       "group {",
-      "  optimizebasis",
       "  eebasis {",
       "    ee",
       "    cutoff_cusp",
@@ -595,7 +594,6 @@ def write_jast2(lat_parm,ions,base="qwalk"):
       "  }",
       "}",
       "group {",
-      "  optimize_basis",
     ]
   for atom_type in atom_types:
     outlines += [
