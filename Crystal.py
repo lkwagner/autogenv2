@@ -45,6 +45,7 @@ class CrystalWriter:
     self.edifftol=8
     self.levshift=[]
     self.broyden=[0.01,60,15]
+    self.anderson=False
     self.smear=0.0001
 
     # Use the new crystal2qmc script. This should change soon!
@@ -146,6 +147,9 @@ class CrystalWriter:
       outlines+=["LEVSHIFT"," ".join(map(str,self.levshift))]
     else:
       outlines+=["BROYDEN"," ".join(map(str,self.broyden))]
+
+    if self.anderson and len(self.broyden)==0:
+      outlines+=["ANDERSON"]
 
     if self.restart or self.guess_fort is not None:
       outlines+=["GUESSP"]
