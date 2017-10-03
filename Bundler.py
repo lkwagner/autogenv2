@@ -35,7 +35,7 @@ class Bundler:
 
     qsublines=[
         "#PBS -q %s"%self.queue,
-        "#PBS -l nodes=%i:ppn=%i:xe"%(self.nn,self.ppn),
+        "#PBS -l nodes=%i:ppn=%i:xe"%(nn,self.ppn),
         "#PBS -l walltime=%s"%self.walltime,
         "#PBS -j oe ",
         "#PBS -A bahu",
