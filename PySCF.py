@@ -81,11 +81,10 @@ class PySCFWriter:
     return True
     
   #-----------------------------------------------
-  def pyscf_input(self,fname):
+  def pyscf_input(self,fname,chkfile):
     f=open(fname,'w')
     restart_fname = 'restart_'+fname
     re_f = open(restart_fname, 'w')
-    chkfile=fname+".chkfile"
     add_paths=[]
 
     # Figure out correct default initial guess (if not set).
@@ -158,7 +157,7 @@ class PySCFWriter:
     re_f.write('\n'.join(restart_outlines))
 
     self.completed=True
-    return fname,restart_fname, fname+".o",chkfile
+    #return fname,restart_fname, fname+".o",chkfile
      
 
 ####################################################
@@ -429,7 +428,7 @@ class PySCFReader:
       self.output[outfile]={}
 
     converged=False
-    lines = open(outfile,'r').read().split()
+    lines = open(outfile,'r').read().split('\n')
     for line in reversed(lines):
       if "converged SCF energy" in line: 
         converged=True
