@@ -5,10 +5,11 @@ class LinearWriter:
     self.qmc_type='Linear optimization'
     self.sysfiles=['qw_000.sys']
     self.wffiles=[]
-    self.basenames=['qw_000']
+    #self.basenames=['qw_000']
     self.completed=False
-    self.total_nstep=2048
+    self.total_nstep=2048*4 # 2048 gets stuck pretty often.
     self.total_fit=2048
+    self.qmc_abr='energy'
     self.set_options(options)
   #-----------------------------------------------
     
@@ -41,14 +42,14 @@ class LinearWriter:
     return True
     
   #-----------------------------------------------
-  def qwalk_input(self):
-    nfiles=len(self.sysfiles)
-    for i in range(nfiles):
-      sys=self.sysfiles[i]
-      wf=self.wffiles[i]
-      base=self.basenames[i]
+  def qwalk_input(self,infiles):
+    nfiles=len(infiles)
+    assert nfiles==len(self.sysfiles), "Check sysfiles"
+    assert nfiles==len(self.wffiles), "Check wffiles"
+
+    for inp,sys,wf in zip(infiles,self.sysfiles,self.wffiles):
       
-      with open(base+'.energy','w') as f:
+      with open(inp,'w') as f:
         f.write("method { linear \n")
         f.write("total_nstep %i \n"%self.total_nstep)
         f.write("total_fit %i \n"%self.total_fit)
@@ -56,10 +57,7 @@ class LinearWriter:
         f.write("include "+sys+"\n")
         f.write("trialfunc { include %s\n"%wf)
         f.write("}\n")
-    infiles=[x+".energy" for x in self.basenames]
-    outfiles=[x+".o" for x in infiles]        
     self.completed=True
-    return infiles,outfiles
 
      
 ####################################################
@@ -81,6 +79,7 @@ class LinearReader:
           
   #------------------------------------------------
   def collect(self,outfiles):
+    # TODO need to check for local minima.
     self.completed=True
     for f in outfiles:
       if f not in self.output.keys():

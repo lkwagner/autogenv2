@@ -1,4 +1,5 @@
 from __future__ import print_function
+import os
 import average_tools as avg
 ####################################################
 class DMCWriter:
@@ -6,12 +7,13 @@ class DMCWriter:
     self.qmc_type='DMC'
     self.sysfiles=['qw_000.sys']
     self.wffiles=[]
-    self.basenames=['qw_000']
+    #self.basenames=['qw_000']
     self.completed=False
     self.timesteps=[0.01]
     self.nblock=20
     self.tmoves=True
     self.savetrace=False
+    self.qmc_abr='dmc'
     self.tracefiles=[]
     # For Docs:
     # nmo: (int) number of orbitals needed from orbital file.
@@ -57,38 +59,33 @@ class DMCWriter:
     
 
   #-----------------------------------------------
-  def qwalk_input(self):
-    nfiles=len(self.sysfiles)
-    infiles=[]
-    for i in range(nfiles):
-      sys=self.sysfiles[i]
+  def qwalk_input(self,infiles):
+    nfiles=len(infiles)
+    assert nfiles==len(self.sysfiles), "Check sysfiles"
+    assert nfiles==len(self.wffiles), "Check wffiles"
 
-      base=self.basenames[i]
+    for inp,sys,wf in zip(infiles,self.sysfiles,self.wffiles):
       
       for t in self.timesteps:
-        fname=base+'t'+str(t)+".dmc"
-        infiles.append(fname)
         outlines=[
             "method { dmc timestep %g nblock %i"%(t,self.nblock)
           ]
         if self.tmoves:
           outlines+=['tmoves']
         if self.savetrace:
-          tracename = base + 't'+str(t) + ".dmc.trace"
+          tracename = "%s.trace"%inp
           outlines+=['save_trace %s'%tracename]
         for avg_opts in self.extra_observables:
           outlines+=avg.average_section(avg_opts)
         outlines+=[
             "}",
             "include %s"%sys,
-            "trialfunc { include %s }"%self.wffiles[i]
+            "trialfunc { include %s }"%wf
           ]
 
-        with open(fname,'w') as f:
+        with open(inp,'w') as f:
           f.write('\n'.join(outlines))
-    outfiles=[x+".log" for x in infiles]        
     self.completed=True
-    return infiles,outfiles
 
      
 ####################################################
@@ -101,13 +98,17 @@ class DMCReader:
     self.gosling="gosling"
 
   def read_outputfile(self,outfile):
-    return json.loads(sub.check_output([self.gosling,"-json",outfile]).decode())
+    return json.loads(sub.check_output([self.gosling,"-json",outfile.replace('.o','.log')]).decode())
           
   #------------------------------------------------
   def collect(self,outfiles):
-    for f in outfiles:
-      self.output[f]=self.read_outputfile(f)
+    # TODO Return info about which files need to be run.
     self.completed=True
+    for f in outfiles:
+      if os.path.exists(f):
+        self.output[f]=self.read_outputfile(f)
+      else:
+        self.completed=False
       
   #------------------------------------------------
   def write_summary(self):

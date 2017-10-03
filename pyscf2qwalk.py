@@ -307,12 +307,13 @@ def print_slater(mol, mf, orbfile, basisfile, f,k=0,occ=None):
     for i, c in enumerate(occ):
       if(c>0):
         us_orb.append(i+1)
-        c-=1 
+        c-=1
       if(c>0):
         ds_orb.append(i+1)
   max_orb = np.max(us_orb +ds_orb)
   up_orb=' '.join(list(map(str, us_orb)))
   down_orb= ' '.join(list(map(str, ds_orb)))
+  print(up_orb,down_orb)
 
   f.write('''SLATER
   %s  { 

@@ -6,10 +6,11 @@ class VarianceWriter:
     self.sysfiles=['qw_000.sys']
     self.slaterfiles=['qw_000.slater']
     self.jastfiles=['qw.jast2']
-    self.basenames=['qw_000']
+    #self.basenames=['qw_000']
     self.iterations=10
     self.macro_iterations=3
     self.completed=False
+    self.qmc_abr='variance'
     self.set_options(options)
     
   #-----------------------------------------------
@@ -26,7 +27,7 @@ class VarianceWriter:
     #In principle we should check for the files, but 
     #they are often determined *after* the plan has been 
     #written so it's not currently practical to check them.
-    skipkeys = ['completed','sysfiles','slaterfiles','jastfiles','basenames']
+    skipkeys = ['completed','sysfiles','slaterfiles','jastfiles']
     for otherkey in other.__dict__.keys():
       if otherkey not in self.__dict__.keys():
         print('other is missing a key.')
@@ -43,17 +44,14 @@ class VarianceWriter:
     return True
     
   #-----------------------------------------------
-  def qwalk_input(self):
-    nfiles=len(self.sysfiles)
-    assert nfiles==len(self.slaterfiles)
-    assert nfiles==len(self.jastfiles)
-    for i in range(nfiles):
-      sys=self.sysfiles[i]
-      slater=self.slaterfiles[i]
-      jast=self.jastfiles[i]
-      base=self.basenames[i]
-      
-      with open(base+'.variance','w') as f:
+  def qwalk_input(self,infiles):
+    nfiles=len(infiles)
+    assert nfiles==len(self.sysfiles), "Check sysfiles"
+    assert nfiles==len(self.slaterfiles), "Check slaterfiles"
+    assert nfiles==len(self.jastfiles), "Check jastfiles"
+
+    for inp,sys,slater,jast in zip(infiles,self.sysfiles,self.slaterfiles,self.jastfiles):
+      with open(inp,'w') as f:
         for j in range(self.macro_iterations):
           f.write("method { optimize iterations %i }\n"%self.iterations)
         f.write("include "+sys+"\n")
@@ -61,10 +59,7 @@ class VarianceWriter:
         f.write("wf1 { include "+slater + "}\n")
         f.write("wf2 { include " + jast + "}\n")
         f.write("}\n")
-    infiles=[x+".variance" for x in self.basenames]
-    outfiles=[x+".o" for x in infiles]        
     self.completed=True
-    return infiles,outfiles
 
      
 ####################################################
@@ -76,7 +71,7 @@ class VarianceReader:
   def read_outputfile(self,outfile):
     ret={}
     ret['sigma']=[]
-    with open(outfile) as f:
+    with open(outfile,'r') as f:
       for line in f:
         if 'dispersion' in line:
           ret['sigma'].append(float(line.split()[4]))
@@ -91,8 +86,8 @@ class VarianceReader:
       results=self.read_outputfile(f)
       self.output[f].append(results)
       # Minimal error checking.
-      self.completed=(self.completed and len(results)>1)
-      
+      self.completed=(self.completed and len(results)>0)
+
   #------------------------------------------------
   def write_summary(self):
     print("#### Variance optimization")

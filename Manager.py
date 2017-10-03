@@ -72,7 +72,7 @@ def update_attributes(old,new,skip_keys=[],safe_keys=[]):
 class CrystalManager:
   """ Internal class managing process of running a DFT job though Crystal.
   Has authority over file names associated with this task."""
-  def __init__(self,writer,runner,crys_reader,prop_reader):
+  def __init__(self,writer,runner,crys_reader,prop_reader,trylev=False):
     ''' convert controls if QWalk input files are produced. '''
     self.writer=writer
     self.creader=crys_reader
@@ -91,6 +91,12 @@ class CrystalManager:
     self.restarts=0
     self._runready=False
     self.completed=False
+
+    # Smart error detection.
+    self.trylev=trylev
+    self.savebroy=[]
+    self.lev=False
+
 
   #----------------------------------------
   def nextstep(self):
@@ -113,38 +119,51 @@ class CrystalManager:
 
     #Check on the CRYSTAL run
     # TODO while True is not doing anything anymore.
-    while True:
-      status=resolve_status(self.runner,self.creader,[self.crysoutfn,self.propoutfn],method='crystal')
-      print(status)
-    
-      print("Crystal status",status)
-      if status=="running":
-        return
-      elif status=="not_started":
-        sh.copy(crysinpfn,'INPUT')
+    status=resolve_status(self.runner,self.creader,[self.crysoutfn],method='crystal')
+    print(status)
+  
+    print("Crystal status",status)
+    if status=="not_started":
+      sh.copy(self.crysinpfn,'INPUT')
+      self.runner.run("Pcrystal &> %s"%self.crysoutfn)
+      self.runner.postfix.append("properties < %s &> %s"%(self.propinpfn,self.propoutfn))
+    elif status=="ready_for_analysis":
+      #This is where we (eventually) do error correction and resubmits
+      status=self.creader.collect(self.crysoutfn)
+      self.preader.collect(self.propoutfn)
+      if status=='killed':
+        self.writer.restart=True
+        if self.trylev:
+          print("Trying LEVSHIFT.")
+          self.writer.levshift=[10,1] # No mercy.
+          self.savebroy=deepcopy(self.writer.broyden)
+          self.writer.broyden=[]
+          self.lev=True
+        sh.copy(self.crysinpfn,"%d.%s"%(self.restarts,self.crysinpfn))
+        sh.copy(self.crysoutfn,"%d.%s"%(self.restarts,self.crysoutfn))
+        sh.copy('fort.79',"%d.fort.79"%(self.restarts))
+        self.writer.guess_fort='./fort.79'
+        sh.copy(self.writer.guess_fort,'fort.20')
+        self.writer.write_crys_input(self.crysinpfn)
+        sh.copy(self.crysinpfn,'INPUT')
         self.runner.run("Pcrystal &> %s"%self.crysoutfn)
-        self.runner.postfix.append("properties < %s &> %s"%(self.propinpfn,self.propoutfn))
-        return
-      elif status=="ready_for_analysis":
-        #This is where we (eventually) do error correction and resubmits
-        status=self.creader.collect(self.crysoutfn)
-        self.preader.collect(self.propoutfn)
-        if status=='killed':
-          self.writer.restart=True
-          sh.copy(self.crysinpfn,"%d.%s"%(self.restarts,self.crysinpfn))
-          sh.copy(self.crysoutfn,"%d.%s"%(self.restarts,self.crysoutfn))
-          sh.copy('fort.79',"%d.fort.79"%(self.restarts))
-          self.writer.guess_fort='./fort.79'
-          sh.copy(self.writer.guess_fort,'fort.20')
-          self.writer.write_crys_input(self.crysinpfn)
-          sh.copy(self.crysinpfn,'INPUT')
-          self.runner.run("Pcrystal &> %s"%self.crysoutfn)
-          self.restarts+=1
-        break
-      elif status=='done':
-        break
-      else:
-        return
+        self.restarts+=1
+    elif status=='done' and self.lev:
+      # We used levshift to converge. Now let's restart to be sure.
+      print("Recovering from LEVSHIFTer.")
+      self.writer.restart=True
+      self.writer.levshift=[]
+      self.creader.completed=False
+      self.lev=False
+      sh.copy(self.crysinpfn,"%d.%s"%(self.restarts,self.crysinpfn))
+      sh.copy(self.crysoutfn,"%d.%s"%(self.restarts,self.crysoutfn))
+      sh.copy('fort.79',"%d.fort.79"%(self.restarts))
+      self.writer.guess_fort='./fort.79'
+      sh.copy(self.writer.guess_fort,'fort.20')
+      self.writer.write_crys_input(self.crysinpfn)
+      sh.copy(self.crysinpfn,'INPUT')
+      self.runner.run("Pcrystal &> %s"%self.crysoutfn)
+      self.restarts+=1
 
     self.completed=(self.creader.completed and self.preader.completed)
 
@@ -244,15 +263,16 @@ class QWalkfromCrystalManager:
 #######################################################################
 
 class QWalkRunManager:
-  def __init__(self,writer,runner,reader):
+  def __init__(self,writer,runner,reader,infiles):
+    ''' 'infiles' defines how many QMC runs to run at once, and what their name will be.'''
     self.writer=writer
     self.runner=runner
     self.reader=reader
 
     self.scriptfile=None
     self._runready=False
-    self.infiles=[]
-    self.outfiles=[]
+    self.infiles=infiles
+    self.outfiles=["%s.o"%f for f in infiles]
 
   #------------------------------------------------
   def is_consistent(self,other):
@@ -268,35 +288,28 @@ class QWalkRunManager:
         skip_keys=['queueid'])
 
     update_attributes(old=self.writer,new=other.writer,
-        skip_keys=[ 'completed','sysfiles','slaterfiles','jastfiles',
-          'basenames','wffiles','tracefiles'])
+        skip_keys=[ 'completed','sysfiles','slaterfiles',
+          'jastfiles','wffiles','tracefiles'])
     
   #------------------------------------------------
   def nextstep(self):
     if not self.writer.completed:
-      self.infiles,self.outfiles=self.writer.qwalk_input()
+      self.writer.qwalk_input(self.infiles)
     
-    while True:
-      status=resolve_status(self.runner,self.reader,self.outfiles)
-      print("%s status: %s"%(self.writer.qmc_type,status))
-      if status=="running":
-        return
-      elif status=="not_started":
-        stdoutfiles=[x+".stdout" for x in self.infiles]
-        exestr="~/bin/qwalk {}".format(*self.infiles)
-        # TODO this outfile handling is shitty.
-        exestr+=" &> {}".format(self.infiles[0]+'.out')
-        self.runner.run(exestr)
-        print("%s status: submitted"%(self.writer.qmc_type))
-        return
-      elif status=="ready_for_analysis":
-        #This is where we (eventually) do error correction and resubmits
-        self.reader.collect(self.outfiles)
-        break
-      elif status=='done':
-        break
-      else:
-        return
+    status=resolve_status(self.runner,self.reader,self.outfiles)
+    print("%s status: %s"%(self.writer.qmc_type,status))
+    if status=="not_started":
+      exestr="~/bin/qwalk %s"%' '.join(self.infiles)
+      exestr+=" &> %s.out"%self.writer.qmc_abr
+      self.runner.run(exestr)
+      print("%s status: submitted"%(self.writer.qmc_type))
+    elif status=="ready_for_analysis":
+      #This is where we (eventually) do error correction and resubmits
+      self.reader.collect(self.outfiles)
+      self.completed=True
+    else:
+      "Should be 'done'"
+      self.completed=True
 
   #------------------------------------------------
   def script(self,jobname=None):
