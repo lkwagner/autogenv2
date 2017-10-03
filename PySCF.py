@@ -213,7 +213,7 @@ def generate_pbc_basis(xml_name,symbol,min_exp=0.2,naug=2,alpha=3,
 ####################################################
 class PySCFPBCWriter:
   def __init__(self,options={}):
-    self.basis='bfd_vtz'
+    #self.basis='bfd_vtz' # I think this gets ignored.
     self.charge=0
     self.cif=''
     self.completed=False
