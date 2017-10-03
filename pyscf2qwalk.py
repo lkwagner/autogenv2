@@ -17,7 +17,7 @@ def find_label(sph_label):
 
 #----------------------------------------------
 def print_orb(mol,m,f,k=0):
-  coeff=m.mo_coeff
+  coeff=np.array(m.mo_coeff)
   print_orb_coeff(mol,coeff,f,k)
     
 
@@ -265,14 +265,14 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
 def print_slater(mol, mf, orbfile, basisfile, f,k=0,occ=None):
   if occ is None:
     occ=mf.mo_occ 
-  corb = mf.mo_coeff.flatten()[0]
+  corb = np.array(mf.mo_coeff).flatten()[0]
   if isinstance(mol,pbc.gto.Cell):
     if len(occ.shape)==3:
       occ=occ[:,k,:]
-      corb=mf.mo_coeff[0,k,:,:]
+      corb=np.array(mf.mo_coeff)[0,k,:,:]
     else:
       occ=occ[k,:]
-      corb=mf.mo_coeff[k,:,:]
+      corb=np.array(mf.mo_coeff)[k,:,:]
       
   corb=mocoeff_project(corb)
   

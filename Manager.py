@@ -385,7 +385,7 @@ class PySCFManager:
     if status=="running":
       pass
     elif status=="not_started":
-      self.runner.run("/usr/local/bin/python %s &> %s"%(self.driverfn,self.outfile))
+      self.runner.run("/usr/bin/python %s &> %s"%(self.driverfn,self.outfile))
     elif status=="ready_for_analysis":
       #This is where we (eventually) do error correction and resubmits
       status=self.reader.collect(self.outfile,self.chkfile)
@@ -395,7 +395,7 @@ class PySCFManager:
         sh.copy(self.chkfile,"%d.%s"%(self.restarts,self.chkfile))
         self.writer.dm_generator=PySCF.dm_from_chkfile("%d.%s"%(self.restarts,self.chkfile))
         self.writer.pyscf_input(self.driverfn,self.chkfile)
-        self.runner.run("/usr/local/bin/python %s &> %s"%(self.driverfn,self.outfile))
+        self.runner.run("/usr/bin/python %s &> %s"%(self.driverfn,self.outfile))
         self.restarts+=1
 
     self.completed=self.reader.completed
