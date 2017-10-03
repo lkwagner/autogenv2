@@ -17,7 +17,7 @@ def find_label(sph_label):
 
 #----------------------------------------------
 def print_orb(mol,m,f,k=0):
-  coeff=m.mo_coeff
+  coeff=np.array(m.mo_coeff)
   print_orb_coeff(mol,coeff,f,k)
     
 
