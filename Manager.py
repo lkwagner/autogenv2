@@ -418,13 +418,11 @@ class PySCFManager:
     ''' If a bundler handles the submission, it can update the queue info with this.'''
     self.runner.queueid.append(qid)
     self._runready=False # After running, we won't run again without more analysis.
-
       
   #------------------------------------------------
 
   def write_summary(self):
     self.reader.write_summary()
-    
 
   #----------------------------------------
   def status(self):

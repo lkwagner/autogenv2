@@ -14,6 +14,7 @@ class CrystalWriter:
   def __init__(self,options):
     #Geometry input.
     self.struct=None
+    self.struct_input=None # Manual structure input.
 
     #Electron model
     self.spin_polarized=True    
@@ -84,7 +85,6 @@ class CrystalWriter:
   #-----------------------------------------------
   def crystal_input(self):
 
-    assert self.struct is not None,'Need to set "struct" first.'
     geomlines=self.geom()
     basislines=self.basis_section()
 
@@ -227,14 +227,32 @@ class CrystalWriter:
 ########################################################
   def geom(self):
     """Generate the geometry section for CRYSTAL"""
-    assert self.boundary in ['0d','3d'],"Invalid or not implemented boundary."
-    if self.boundary=="3d":
-      return self.geom3d()
-    elif self.boundary=='0d': 
-      return self.geom0d()
+    if self.struct is not None:
+      assert self.boundary in ['0d','3d'],"Invalid or not implemented boundary."
+      if self.boundary=="3d":
+        return self.geom3d()
+      elif self.boundary=='0d': 
+        return self.geom0d()
+      else:
+        print("Weird value of self.boundary",self.boundary)
+        quit() # This shouldn't happen.
+    elif self.struct_input is not None:
+      geomlines=[
+          'CRYSTAL',
+          '0 0 0',
+          str(self.struct_input['symmetry']),
+          ' '.join(struct_input['parameters']),
+          str(len(self.struct_input['coords']))
+        ]
+      for coord in self.struct_input['coords']:
+        geomlines+=[' '.join(coord)]
+      geomlines+=['SUPERCELL']
+      for row in self.supercell:
+        geomlines+=[' '.join(map(str,row))]
+      return geomlines
     else:
-      print("Weird value of self.boundary",self.boundary)
-      quit() # This shouldn't happen.
+      raise AssertionError("No geometry input found; set struct or struct_input.")
+
 
 ########################################################
 
