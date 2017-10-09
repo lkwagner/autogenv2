@@ -41,7 +41,7 @@ class Bundler:
         "#PBS -A bahu",
         "#PBS -N %s "%jobname,
         "#PBS -o %s.out "%jobname,
-      ]
+      ] + self.prefix
     for mgr in mgrs:
       # This might be better without an error-out.
       assert mgr._runready, "One of the Managers is not prepped for run."
@@ -49,7 +49,7 @@ class Bundler:
           "cd %s"%mgr.location,
           "bash %s &"%mgr.scriptfile
         ]
-    qsublines+=["wait"]
+    qsublines+=["wait"]+self.postfix
 
     qsubfile=jobname+".qsub"
     with open(qsubfile,'w') as f:
