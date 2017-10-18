@@ -15,6 +15,8 @@ class CrystalWriter:
     #Geometry input.
     self.struct=None
     self.struct_input=None # Manual structure input.
+    self.supercell=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]  
+    self.boundary='3d'
 
     #Electron model
     self.spin_polarized=True    
@@ -64,8 +66,6 @@ class CrystalWriter:
     self.primitive=primitive
     self.cif=cifstr
     self.struct=CifParser.from_string(self.cif).get_structures(primitive=self.primitive)[0].as_dict()
-    self.supercell= [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]  
-    self.boundary="3d"
   #-----------------------------------------------
 
   def set_struct_fromxyz(self,xyzstr):
@@ -256,12 +256,12 @@ class CrystalWriter:
           'CRYSTAL',
           '0 0 0',
           str(self.struct_input['symmetry']),
-          ' '.join(struct_input['parameters']),
+          ' '.join(map(str,self.struct_input['parameters'])),
           str(len(self.struct_input['coords']))
         ]
       for coord in self.struct_input['coords']:
         geomlines+=[' '.join(coord)]
-      geomlines+=['SUPERCELL']
+      geomlines+=['SUPERCON']
       for row in self.supercell:
         geomlines+=[' '.join(map(str,row))]
       return geomlines
@@ -283,7 +283,7 @@ class CrystalWriter:
       nm=str(Element(nm).Z+200)
       geomlines+=[nm+" %g %g %g"%(v['abc'][0],v['abc'][1],v['abc'][2])]
 
-    geomlines+=["SUPERCEL"]
+    geomlines+=["SUPERCON"]
     for row in self.supercell:
       geomlines+=[' '.join(map(str,row))]
 
