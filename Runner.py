@@ -17,7 +17,7 @@ class RunnerPBS:
                     ):
     ''' Note: exelines are prefixed by appropriate mpirun commands.'''
 
-    # Good prefix choices.
+    # Good prefix choices (Blue Waters).
     # These are needed for Crystal runs.
         # module swap PrgEnv-cray PrgEnv-intel
     # These are needed for QWalk runs.
@@ -56,7 +56,7 @@ class RunnerPBS:
     # Prepend mpi specs.
     exelines=[]
     for line in self.exelines:
-      exelines.append('aprun -n {} {}'.format(
+      exelines.append('mpirun -n {} {}'.format(
         self.nn*self.np,line))
 
     with open(scriptfile,'w') as outf:

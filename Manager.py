@@ -263,8 +263,27 @@ class QWalkfromCrystalManager:
 #######################################################################
 
 class QWalkRunManager:
-  def __init__(self,writer,runner,reader,infiles):
-    ''' 'infiles' defines how many QMC runs to run at once, and what their name will be.'''
+  ''' Manage files involved in a QWalk run. 
+
+  This object should work with all types of qwalk runs, only the writer and
+  runner changes. 
+
+  Attributes:
+    writer (Writer object): Object to write input files (see DMCWriter).
+    runner (Runner object): Object to handle job submission (see RunnerPBC).
+    reader (Reader object): Object to handle reading of QMC output (see DMCReader)
+
+  Args: 
+    writer (Writer object): Object to write input files (see DMCWriter).
+    runner (Runner object): Object to handle job submission (see RunnerPBC).
+    reader (Reader object): Object to handle reading of QMC output (see DMCReader)
+    infiles (list of str): List of input files as defined by conversion.
+      (TODO fix dependency)
+    separate (bool): Whether to run list with one qwalk command or one command
+      for each file.
+  '''
+
+  def __init__(self,writer,runner,reader,infiles,separate=False):
     self.writer=writer
     self.runner=runner
     self.reader=reader
@@ -273,6 +292,7 @@ class QWalkRunManager:
     self._runready=False
     self.infiles=infiles
     self.outfiles=["%s.o"%f for f in infiles]
+    self.separate=separate
 
   #------------------------------------------------
   def is_consistent(self,other):
@@ -281,7 +301,14 @@ class QWalkRunManager:
 
   #------------------------------------------------
   def update_options(self,other):
-    ''' Safe copy options from other to self. '''
+    ''' Safe copy options from other to self. 
+    
+    Args: 
+      other (QWRunManager): New object to copy attributes from.
+
+    Returns:
+      None.
+    '''
 
     update_attributes(old=self.runner,new=other.runner,
         safe_keys=['queue','walltime','np','nn','jobname','prefix','postfix'],
@@ -293,6 +320,7 @@ class QWalkRunManager:
     
   #------------------------------------------------
   def nextstep(self):
+    ''' Perform next step in calculation. '''
     if not self.writer.completed:
       self.writer.qwalk_input(self.infiles)
     
@@ -313,7 +341,11 @@ class QWalkRunManager:
 
   #------------------------------------------------
   def script(self,jobname=None):
-    ''' Script execution lines for a bundler to pick up and run.'''
+    ''' Script execution lines for a bundler to pick up and run.
+    
+    Args:
+      jobname (str): name for job in queue.
+    '''
     if jobname is None: jobname=self.runner.jobname
     #if jobname is None: jobname="QWManager"
     self.scriptfile="%s.run"%jobname
@@ -322,20 +354,30 @@ class QWalkRunManager:
       
   #------------------------------------------------
   def update_queueid(self,qid):
-    ''' If a bundler handles the submission, it can update the queue info with this.'''
+    ''' If a bundler handles the submission, it can update the queue info with this.
+    Args:
+      qid (str): new queue id from submitting a job. The Manager will check if this is running.
+    '''
     self.runner.queueid.append(qid)
     self._runready=False # After running, we won't run again without more analysis.
 
   #------------------------------------------------
   def write_summary(self):
+    ''' Write a summary of the job results.'''
     self.reader.write_summary()
 
   #------------------------------------------------
   def generate_report(self):
+    ''' Generate a useful report of the run inputs and results.'''
+    # TODO Not implemented.
     return {}
 
   #----------------------------------------
   def status(self):
+    ''' Check if this Manager has completed all it's tasks.
+    Returns:
+      str: 'ok' or 'not_finished'.
+    '''
     if self.reader.completed:
       return 'ok'
     else:
