@@ -7,6 +7,8 @@ class LinearWriter:
     self.wffiles=[]
     #self.basenames=['qw_000']
     self.completed=False
+    self.errtol=10
+    self.minblocks=0
     self.total_nstep=2048*4 # 2048 gets stuck pretty often.
     self.total_fit=2048
     self.qmc_abr='energy'
@@ -62,9 +64,11 @@ class LinearWriter:
      
 ####################################################
 class LinearReader:
-  def __init__(self):
+  def __init__(self,edifftol=0.1,minsteps=5):
     self.output={}
     self.completed=False
+    self.edifftol=edifftol
+    self.minsteps=minsteps
 
   def read_outputfile(self,outfile):
     ret={}
@@ -76,18 +80,50 @@ class LinearReader:
           ret['energy'].append(float(line.split()[4]))
           ret['energy_err'].append(float(line.split()[6]))
     return ret
+
+  #------------------------------------------------
+  def check_complete(self):
+    ''' Check if a variance optimize run is complete.
+    Returns:
+      bool: If self.results are within error tolerances.
+    '''
+    complete={}
+    for fname,results in self.output.items():
+      complete[fname]=True
+      if len(results['sigma']) < self.minsteps:
+        print("Linear optimize incomplete: number of steps (%f) less than minimum (%f)"%\
+            (len(results['sigma']),self.minsteps))
+        complete[fname]=False
+      if (results['sigma'][-1]-results['sigma'][-2]) > self.vardifftol:
+        print("Linear optimize incomplete: change in energy (%f) less than tolerance (%f)"%\
+            (len(results['sigma']),self.minsteps))
+        complete[fname]=False
+    return complete
           
   #------------------------------------------------
-  def collect(self,outfiles):
-    # TODO need to check for local minima.
+  def collect(self,outfiles,errtol=None,minblocks=None):
+    ''' Collect results for each output file and resolve if the run needs to be resumed. 
+
+    Args: 
+      outfiles (list): list of output file names to open and read.
+    Returns:
+      str: status of run = {'ok','restart'}
+    '''
+    # Gather output from files.
     self.completed=True
+    status='unknown'
     for f in outfiles:
-      if f not in self.output.keys():
-        self.output[f]=[]
-      results=self.read_outputfile(f)
-      self.output[f].append(results)
-      # minimal error checking.
-      self.completed=(self.completed and len(results)>1)
+      if os.path.exists(f):
+        self.output[f]=self.read_outputfile(f)
+
+    # Check files.
+    file_complete=self.check_complete()
+    self.completed=all([c for f,c in file_complete.items()])
+    if not self.completed:
+      status='restart'
+    else:
+      status='ok'
+    return status
       
   #------------------------------------------------
   def write_summary(self):

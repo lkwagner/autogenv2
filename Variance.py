@@ -1,4 +1,5 @@
 from __future__ import print_function
+import os
 ####################################################
 class VarianceWriter:
   def __init__(self,options={}):
@@ -6,6 +7,8 @@ class VarianceWriter:
     self.sysfiles=['qw_000.sys']
     self.slaterfiles=['qw_000.slater']
     self.jastfiles=['qw.jast2']
+    self.errtol=10
+    self.minblocks=0
     #self.basenames=['qw_000']
     self.iterations=10
     self.macro_iterations=3
@@ -64,10 +67,14 @@ class VarianceWriter:
      
 ####################################################
 class VarianceReader:
-  def __init__(self):
+  def __init__(self,vartol=10,vardifftol=0.1,minsteps=2):
     self.output={}
     self.completed=False
+    self.vartol=vartol
+    self.vardifftol=vardifftol
+    self.minsteps=minsteps
 
+  #------------------------------------------------
   def read_outputfile(self,outfile):
     ret={}
     ret['sigma']=[]
@@ -76,17 +83,54 @@ class VarianceReader:
         if 'dispersion' in line:
           ret['sigma'].append(float(line.split()[4]))
     return ret
+
+  #------------------------------------------------
+  def check_complete(self):
+    ''' Check if a variance optimize run is complete.
+    Returns:
+      bool: If self.results are within error tolerances.
+    '''
+    complete={}
+    for fname,results in self.output.items():
+      complete[fname]=True
+      if results['sigma'][-1] > self.vartol:
+        print("Variance optimize incomplete: variance ({}) does not meet tolerance ({})"\
+            .format(results['sigma'],self.vartol))
+        complete[fname]=False
+      if len(results['sigma']) < self.minsteps:
+        print("Variance optimize incomplete: number of steps (%f) less than minimum (%f)"%\
+            (len(results['sigma']),self.minsteps))
+        complete[fname]=False
+      if (results['sigma'][-1]-results['sigma'][-2]) > self.vardifftol:
+        print("Variance optimize incomplete: change in variance (%f) less than tolerance (%f)"%\
+            (results['sigma'],self.vardifftol))
+        complete[fname]=False
+    return complete
           
   #------------------------------------------------
-  def collect(self,outfiles):
+  def collect(self,outfiles,errtol=None,minblocks=None):
+    ''' Collect results for each output file and resolve if the run needs to be resumed. 
+
+    Args: 
+      outfiles (list): list of output file names to open and read.
+    Returns:
+      str: status of run = {'ok','restart'}
+    '''
+    # Gather output from files.
     self.completed=True
+    status='unknown'
     for f in outfiles:
-      if f not in self.output.keys():
-        self.output[f]=[]
-      results=self.read_outputfile(f)
-      self.output[f].append(results)
-      # Minimal error checking.
-      self.completed=(self.completed and len(results)>0)
+      if os.path.exists(f):
+        self.output[f]=self.read_outputfile(f)
+
+    # Check files.
+    file_complete=self.check_complete()
+    self.completed=all([c for f,c in file_complete.items()])
+    if not self.complete:
+      status='restart'
+    else:
+      status='ok'
+    return status
 
   #------------------------------------------------
   def write_summary(self):

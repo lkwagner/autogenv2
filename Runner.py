@@ -11,7 +11,7 @@ class RunnerPBS:
   def __init__(self,queue='batch',
                     walltime='48:00:00',
                     jobname='AGRunner',
-                    np=32,nn=1,
+                    np='allprocs',nn=1,
                     prefix=None,
                     postfix=None
                     ):
@@ -56,8 +56,10 @@ class RunnerPBS:
     # Prepend mpi specs.
     exelines=[]
     for line in self.exelines:
-      exelines.append('mpirun -n {} {}'.format(
-        self.nn*self.np,line))
+      if self.np=='allprocs':
+        exelines.append('mpirun {}'.format(line))
+      else:
+        exelines.append('mpirun -n {} {}'.format(self.nn*self.np,line))
 
     with open(scriptfile,'w') as outf:
       outf.write('\n'.join(self.prefix + exelines + self.postfix))
@@ -69,24 +71,29 @@ class RunnerPBS:
   #-------------------------------------
   def submit(self,jobname=None):
     ''' Submit series of commands.'''
+    print(self.exelines)
     if jobname is None:
       jobname=self.jobname
 
     if len(self.exelines)==0:
-      print("RunnerBW: no jobs to run.")
+      print("RunnerPBS: no jobs to run.")
       return
 
     # Prepend mpi specs.
     exelines=[]
     for line in self.exelines:
-      exelines.append('aprun -n {} {}'.format(
-        self.nn*self.np,line))
+      if self.np=='allprocs':
+        exelines.append('mpirun {}'.format(line))
+        ppnstr=',flags=allprocs'
+      else:
+        exelines.append('mpirun -n {} {}'.format(self.nn*self.np,line))
+        ppnstr=':ppn=%d'%self.np
 
     jobout=jobname+'.qsub.out'
     # Submit all jobs.
     qsub=[
         "#PBS -q %s"%self.queue,
-        "#PBS -l nodes=%i:ppn=%i"%(self.nn,self.np),
+        "#PBS -l nodes=%i%s"%(self.nn,ppnstr),
         "#PBS -l walltime=%s"%self.walltime,
         "#PBS -j oe ",
         "#PBS -N %s "%jobname,

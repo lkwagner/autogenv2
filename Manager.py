@@ -23,8 +23,7 @@ def resolve_status(runner,reader,outfiles, method='not_defined'):
     if not os.path.exists(outfile):
       return 'not_started'
 
-  #We are in an error state or we haven't collected 
-  #the results. 
+  #We are in an error state or we haven't collected the results. 
   return "ready_for_analysis"
 
 ######################################################################
@@ -258,7 +257,6 @@ class QWalkfromCrystalManager:
       return 'ok'
     else:
       return 'not_finished'
-    
       
 #######################################################################
 
@@ -272,30 +270,37 @@ class QWalkRunManager:
     writer (Writer object): Object to write input files (see DMCWriter).
     runner (Runner object): Object to handle job submission (see RunnerPBC).
     reader (Reader object): Object to handle reading of QMC output (see DMCReader)
+    completed (bool): Whether the Manager has finished all tasks.
 
   Args: 
-    writer (Writer object): Object to write input files (see DMCWriter).
-    runner (Runner object): Object to handle job submission (see RunnerPBC).
-    reader (Reader object): Object to handle reading of QMC output (see DMCReader)
+    writer (Writer object): Set as writer attribute.
+    runner (Runner object): Set as runner attribute. 
+    reader (Reader object): Set as reader attribute.
     infiles (list of str): List of input files as defined by conversion.
       (TODO fix dependency)
-    separate (bool): Whether to run list with one qwalk command or one command
       for each file.
   '''
 
-  def __init__(self,writer,runner,reader,infiles,separate=False):
+  def __init__(self,writer,runner,reader,infiles):
     self.writer=writer
     self.runner=runner
     self.reader=reader
+    self.completed=False
 
     self.scriptfile=None
     self._runready=False
     self.infiles=infiles
     self.outfiles=["%s.o"%f for f in infiles]
-    self.separate=separate
 
   #------------------------------------------------
   def is_consistent(self,other):
+    ''' Checks that the input settings that determine accuracy are the same. 
+    
+    Args: 
+      other (QWalkRunManager): Check this instance is the same as other.
+    Returns:
+      bool: Whether the accuracy of the two should be the same.
+    '''
     # This documents what needs to be checked.
     return self.writer.is_consistent(other.writer)
 
@@ -305,9 +310,6 @@ class QWalkRunManager:
     
     Args: 
       other (QWRunManager): New object to copy attributes from.
-
-    Returns:
-      None.
     '''
 
     update_attributes(old=self.runner,new=other.runner,
@@ -327,17 +329,25 @@ class QWalkRunManager:
     status=resolve_status(self.runner,self.reader,self.outfiles)
     print("%s status: %s"%(self.writer.qmc_type,status))
     if status=="not_started":
-      exestr="~/bin/qwalk %s"%' '.join(self.infiles)
-      exestr+=" &> %s.out"%self.writer.qmc_abr
+      exestr="/home/busemey2/bin/qwalk %s"%' '.join(self.infiles)
+      exestr+=" &> %s.out"%self.infiles[-1] # TODO better outfile name.
       self.runner.run(exestr)
       print("%s status: submitted"%(self.writer.qmc_type))
     elif status=="ready_for_analysis":
       #This is where we (eventually) do error correction and resubmits
-      self.reader.collect(self.outfiles)
+      status=self.reader.collect(self.outfiles,errtol=self.writer.errtol,minblocks=self.writer.minblocks)
+      if status=='ok':
+        self.completed=True
+      else:
+        print("Status: %s, attempting rerun."%status)
+        exestr="/home/busemey2/bin/qwalk %s"%' '.join(self.infiles)
+        exestr+=" &> %s.out"%self.infiles[-1]
+        self.runner.run(exestr)
+        print(self.runner.exelines)
+    elif status=='done':
       self.completed=True
     else:
-      "Should be 'done'"
-      self.completed=True
+      print("Status: %s"%status)
 
   #------------------------------------------------
   def script(self,jobname=None):
@@ -382,7 +392,6 @@ class QWalkRunManager:
       return 'ok'
     else:
       return 'not_finished'
-    
 
 #######################################################################
 
