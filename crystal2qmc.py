@@ -670,7 +670,7 @@ def write_basis(basis,ions,base="qwalk"):
 
   # If there's no hybridization, at most one of coef_s, coef_p, and coef_dfg is
   # nonzero. Just add them, so we have one array.
-  done_atoms = {}
+  done_atoms = []
   coefs = basis['coef_s'] + basis['coef_p'] + basis['coef_dfg']
 
   shell_type = np.tile("Unknown...",basis['shell_type'].shape)
@@ -680,6 +680,7 @@ def write_basis(basis,ions,base="qwalk"):
   cnt = 0
   aidx = 0
   atom_type = ions['atom_nums'][aidx]
+  done_atoms.append(atom_type)
   outlines = [
       "basis {",
       "  {0}".format(periodic_table[atom_type-200-1]),
@@ -692,12 +693,12 @@ def write_basis(basis,ions,base="qwalk"):
 
     new_atom_type = ions['atom_nums'][new_aidx]
     if aidx != new_aidx:
-      outlines += ["  }","}"]
       if new_atom_type in done_atoms:
-        done_atoms.append(atom_type)
         continue
       else:
+        outlines += ["  }","}"]
         atom_type = new_atom_type
+        done_atoms.append(atom_type)
         aidx = new_aidx
         outlines += [
             "basis {",
@@ -799,6 +800,17 @@ def convert_crystal(
   #return eigsys['kpt_weights'] # Useful for autogen.
   return outfiles
 
+###############################################################################
+# Testing functions.
+def test_basis(
+    base="qwalk",
+    propoutfn="prop.in.o",
+    kfmt='coord',
+    kset='complex'):
+  print("Writing basis only.")
+
+  info, lat_parm, ions, basis, pseudo = read_gred()
+  write_basis(basis,ions,base=base)
 
 ###############################################################################
 if __name__ == "__main__":
