@@ -341,17 +341,19 @@ def find_basis_cutoff(lat_parm):
     return 7.5
 
 ###############################################################################
-def write_slater(basis,eigsys,kpt,base="qwalk",kfmt='coord'):
+def write_slater(basis,eigsys,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
   if kfmt == 'int': kbase = base + '_' + "{}".format(eigsys['kpt_index'][kpt])
   else:             kbase = base + '_' + "{}{}{}".format(*kpt)
   ntot = basis['ntot']
   nmo  = basis['nmo']
   nup  = eigsys['nup']
   ndn  = eigsys['ndn']
+  if maxmo_spin < 0:
+    maxmo_spin=nmo
   uporbs = np.arange(nup)+1
   dnorbs = np.arange(ndn)+1
   if eigsys['nspin'] > 1:
-    dnorbs += nmo
+    dnorbs += maxmo_spin
   if eigsys['ikpt_iscmpx'][kpt]: orbstr = "corbitals"
   else:                          orbstr = "orbitals"
   uporblines = ["{:5d}".format(orb) for orb in uporbs]
@@ -437,11 +439,13 @@ def normalize_eigvec(eigsys,basis,kpt):
       
 ###############################################################################
 # This assumes you have called normalize_eigvec first! TODO better coding style?
-def write_orb(eigsys,basis,ions,kpt,base="qwalk",kfmt='coord'):
+def write_orb(eigsys,basis,ions,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
   if kfmt == 'int':
     outf = open(base + '_' + "{}".format(eigsys['kpt_index'][kpt]) + ".orb",'w')
   else:
     outf = open(base + '_' + "{}{}{}".format(*kpt) + ".orb",'w')
+  if maxmo_spin < 0:
+    maxmo_spin=basis['nmo']
   eigvecs_real = eigsys['eigvecs'][kpt]['real']
   eigvecs_imag = eigsys['eigvecs'][kpt]['imag']
   atidxs = np.unique(basis['atom_shell'])-1
@@ -450,7 +454,7 @@ def write_orb(eigsys,basis,ions,kpt,base="qwalk",kfmt='coord'):
     nao_atom[basis['atom_shell'][shidx]-1] += basis['nao_shell'][shidx]
   #nao_atom = int(round(sum(basis['nao_shell']) / len(ions['positions'])))
   coef_cnt = 1
-  totnmo = basis['nmo'] * eigsys['nspin']
+  totnmo = maxmo_spin*eigsys['nspin'] #basis['nmo'] * eigsys['nspin']
   for moidx in np.arange(totnmo)+1:
     for atidx in atidxs+1:
       for aoidx in np.arange(nao_atom[atidx-1])+1:
@@ -463,22 +467,36 @@ def write_orb(eigsys,basis,ions,kpt,base="qwalk",kfmt='coord'):
           "Counted: {0} \nAvailable: {1}"\
           .format(coef_cnt,eigsys['nspin']*eigvecs_real[0].size),
           "Debug Error")
-  eigreal_flat = [e.flatten() for e in eigvecs_real]
-  eigimag_flat = [e.flatten() for e in eigvecs_imag]
+  eigreal_flat = [e[0:maxmo_spin,:].flatten() for e in eigvecs_real]
+  eigimag_flat = [e[0:maxmo_spin,:].flatten() for e in eigvecs_imag]
   print_cnt = 0
-  outf.write("COEFFICIENTS\n")
-  for sidx in range(eigsys['nspin']):
-    #for cidx in range(coef_cnt):
-    for cidx in range(eigreal_flat[sidx].size):
-      if eigsys['ikpt_iscmpx'][kpt]:
+  if eigsys['ikpt_iscmpx'][kpt]: #complex coefficients
+    for eigr,eigi in zip(eigreal_flat,eigimag_flat):
+      for r,i in zip(eigr,eigi):
         outf.write("({:<.12e},{:<.12e}) "\
-            .format(eigreal_flat[sidx][cidx],eigimag_flat[sidx][cidx]))
-      else:
-        outf.write("{:< 15.12e} ".format(eigreal_flat[sidx][cidx]))
-      print_cnt += 1
-      if print_cnt % 5 == 0: outf.write("\n")
+            .format(r,i))
+        print_cnt+=1
+        if print_cnt%5==0: outf.write("\n")
+  else: #Real coefficients
+    for eigr in eigreal_flat:
+      for r in eigr:
+        outf.write("{:< 15.12e} ".format(r))
+        print_cnt+=1
+        if print_cnt%5==0: outf.write("\n")
+
+
+
+  #for sidx in range(eigsys['nspin']):
+  #  for cidx in range(eigreal_flat[sidx].size):
+  #    if eigsys['ikpt_iscmpx'][kpt]:
+  #      outf.write("({:<.12e},{:<.12e}) "\
+  #          .format(eigreal_flat[sidx][cidx],eigimag_flat[sidx][cidx]))
+  #    else:
+  #      outf.write("{:< 15.12e} ".format(eigreal_flat[sidx][cidx]))
+  #    print_cnt += 1
+  #    if print_cnt % 5 == 0: outf.write("\n")
   outf.close()
-  return outf.name
+  return None
 
 ###############################################################################
 # TODO Generalize to no pseudopotential.
@@ -566,13 +584,19 @@ def write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,base="qwalk",kfmt='coord'):
   return outf.name
 
 ###############################################################################
-def write_jast2(lat_parm,ions,base="qwalk"):
+def write_jast2(lat_parm,ions,base="qwalk",optimizebasis=True):
   basis_cutoff = find_basis_cutoff(lat_parm)
   atom_types = [periodic_table[eidx-200-1] for eidx in ions['atom_nums']]
   atom_types=set(atom_types)
   outlines = [
       "jastrow2",
-      "group {",
+      "group {"
+    ]
+  if optimizebasis:
+    outlines+=[
+        "  optimizebasis"
+      ]
+  outlines+=[
       "  eebasis {",
       "    ee",
       "    cutoff_cusp",
@@ -595,6 +619,10 @@ def write_jast2(lat_parm,ions,base="qwalk"):
       "}",
       "group {",
     ]
+  if optimizebasis:
+    outlines+=[
+        "  optimizebasis"
+      ]
   for atom_type in atom_types:
     outlines += [
       "  eibasis {",

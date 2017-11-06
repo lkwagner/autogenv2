@@ -1,4 +1,5 @@
 from __future__ import print_function
+import os
 ####################################################
 class LinearWriter:
   def __init__(self,options={}):
@@ -90,11 +91,11 @@ class LinearReader:
     complete={}
     for fname,results in self.output.items():
       complete[fname]=True
-      if len(results['sigma']) < self.minsteps:
+      if len(results['energy']) < self.minsteps:
         print("Linear optimize incomplete: number of steps (%f) less than minimum (%f)"%\
-            (len(results['sigma']),self.minsteps))
+            (len(results['energy']),self.minsteps))
         complete[fname]=False
-      if (results['sigma'][-1]-results['sigma'][-2]) > self.vardifftol:
+      if (results['energy'][-1]-results['energy'][-2]) > self.edifftol:
         print("Linear optimize incomplete: change in energy (%f) less than tolerance (%f)"%\
             (len(results['sigma']),self.minsteps))
         complete[fname]=False

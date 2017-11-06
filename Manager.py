@@ -335,7 +335,7 @@ class QWalkRunManager:
       print("%s status: submitted"%(self.writer.qmc_type))
     elif status=="ready_for_analysis":
       #This is where we (eventually) do error correction and resubmits
-      status=self.reader.collect(self.outfiles,errtol=self.writer.errtol,minblocks=self.writer.minblocks)
+      status=self.reader.collect(self.outfiles)
       if status=='ok':
         self.completed=True
       else:

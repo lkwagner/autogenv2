@@ -126,7 +126,7 @@ class VarianceReader:
     # Check files.
     file_complete=self.check_complete()
     self.completed=all([c for f,c in file_complete.items()])
-    if not self.complete:
+    if not self.completed:
       status='restart'
     else:
       status='ok'
