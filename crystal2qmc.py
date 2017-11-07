@@ -467,6 +467,7 @@ def write_orb(eigsys,basis,ions,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
           "Counted: {0} \nAvailable: {1}"\
           .format(coef_cnt,eigsys['nspin']*eigvecs_real[0].size),
           "Debug Error")
+  outf.write("COEFFICIENTS\n")
   eigreal_flat = [e[0:maxmo_spin,:].flatten() for e in eigvecs_real]
   eigimag_flat = [e[0:maxmo_spin,:].flatten() for e in eigvecs_imag]
   print_cnt = 0
@@ -812,6 +813,20 @@ def test_basis(
   info, lat_parm, ions, basis, pseudo = read_gred()
   write_basis(basis,ions,base=base)
 
+def test_orb(
+    base="qwalk",
+    propoutfn="prop.in.o",
+    kfmt='coord',
+    kset='complex',
+    kpt=0):
+  print("Writing orb only.")
+
+  info, lat_parm, ions, basis, pseudo = read_gred()
+  eigsys = read_kred(info,basis)
+  kpt=eigsys['kpt_coords'][kpt]
+  basis['nmo']  = sum(basis['nao_shell']) # = nao
+  write_orb(eigsys,basis,ions,kpt,base,kfmt)
+
 ###############################################################################
 if __name__ == "__main__":
   # TODO clean up with proper arguement parsing.
@@ -835,4 +850,5 @@ if __name__ == "__main__":
   print("system spin drawn from {},".format(propoutfn))
   print("using {} kpoint naming convention,".format(kfmt))
   print("and using {} kpoint set.".format(kset))
-  convert_crystal(base,propoutfn,kfmt,kset)
+  #convert_crystal(base,propoutfn,kfmt,kset)
+  test_orb(base,propoutfn,kfmt,kset)
