@@ -461,12 +461,12 @@ def write_orb(eigsys,basis,ions,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
         outf.write(" {:5d} {:5d} {:5d} {:5d}\n"\
             .format(moidx,aoidx,atidx,coef_cnt))
         coef_cnt += 1
-  coef_cnt -= 1 # Last increment doesn't count.
-  if coef_cnt != eigsys['nspin']*eigvecs_real[0].size:
-    error("Error: Number of coefficients not coming out correctly!\n"+\
-          "Counted: {0} \nAvailable: {1}"\
-          .format(coef_cnt,eigsys['nspin']*eigvecs_real[0].size),
-          "Debug Error")
+  #coef_cnt -= 1 # Last increment doesn't count.
+  #if coef_cnt != eigsys['nspin']*eigvecs_real[0].size:
+  #  error("Error: Number of coefficients not coming out correctly!\n"+\
+  #        "Counted: {0} \nAvailable: {1}"\
+  #        .format(coef_cnt,eigsys['nspin']*eigvecs_real[0].size),
+  #        "Debug Error")
   outf.write("COEFFICIENTS\n")
   eigreal_flat = [e[0:maxmo_spin,:].flatten() for e in eigvecs_real]
   eigimag_flat = [e[0:maxmo_spin,:].flatten() for e in eigvecs_imag]
@@ -695,6 +695,7 @@ def write_basis(basis,ions,base="qwalk"):
     new_atom_type = ions['atom_nums'][new_aidx]
     if aidx != new_aidx:
       if new_atom_type in done_atoms:
+        cnt+=basis['prim_shell'][sidx]
         continue
       else:
         outlines += ["  }","}"]
@@ -729,7 +730,7 @@ def write_moanalysis():
 
 ###############################################################################
 def write_files(lat_parm, ions, basis, pseudo, eigsys, 
-    base='qwalk', kfmt='coord', kset='complex'):
+    base='qwalk', kfmt='coord', kset='complex',nvirtual=50):
   ''' Write out all the QWalk system and wave function definition files. 
   Input parameters defined in convert_crystal, and mostly come from the above.
   
@@ -740,6 +741,7 @@ def write_files(lat_parm, ions, basis, pseudo, eigsys,
   basis['nmo']  = sum(basis['nao_shell']) # = nao
   eigsys['nup'] = int(round(0.5 * (basis['ntot'] + eigsys['totspin'])))
   eigsys['ndn'] = int(round(0.5 * (basis['ntot'] - eigsys['totspin'])))
+  maxmo_spin=min(max(eigsys['nup'],eigsys['ndn'])+nvirtual,basis['nmo'])
 
   if (np.array(eigsys['kpt_coords']) >= 10).any():
     print("Cannot use coord kpoint format when SHRINK > 10.")
@@ -757,9 +759,9 @@ def write_files(lat_parm, ions, basis, pseudo, eigsys,
 
   for kpt in eigsys['kpt_coords']:
     if eigsys['ikpt_iscmpx'][kpt] and kset=='real': continue
-    outfiles['slater'].append(write_slater(basis,eigsys,kpt,base,kfmt))
+    outfiles['slater'].append(write_slater(basis,eigsys,kpt,base,kfmt,maxmo_spin))
     normalize_eigvec(eigsys,basis,kpt)
-    outfiles['orb'].append(write_orb(eigsys,basis,ions,kpt,base,kfmt))
+    outfiles['orb'].append(write_orb(eigsys,basis,ions,kpt,base,kfmt,maxmo_spin))
     outfiles['sys'].append(write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,base,kfmt))
     outfiles['basis'].append(write_basis(basis,ions,base))
     outfiles['jast2'].append(write_jast2(lat_parm,ions,base))
@@ -773,7 +775,8 @@ def convert_crystal(
     base="qwalk",
     propoutfn="prop.in.o",
     kfmt='coord',
-    kset='complex'):
+    kset='complex',
+    nvirtual=50):
   """
   Files are named by [base]_[kfmt option].sys etc.
   kfmt either 'int' or 'coord'.
@@ -794,7 +797,7 @@ def convert_crystal(
     eigsys['totspin'] = 0
 
   outfiles=write_files(lat_parm, ions, basis, pseudo, eigsys, 
-      base, kfmt, kset)
+      base, kfmt, kset, nvirtual)
 
   # I think this behavior was only useful for autogenv1
   # If you want the data, just use the read_* functions directly.
@@ -850,5 +853,4 @@ if __name__ == "__main__":
   print("system spin drawn from {},".format(propoutfn))
   print("using {} kpoint naming convention,".format(kfmt))
   print("and using {} kpoint set.".format(kset))
-  #convert_crystal(base,propoutfn,kfmt,kset)
-  test_orb(base,propoutfn,kfmt,kset)
+  convert_crystal(base,propoutfn,kfmt,kset)
