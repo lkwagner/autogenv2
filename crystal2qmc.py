@@ -190,8 +190,12 @@ def read_gred():
 def read_kred(info,basis):
   eigsys = {}
 
-  kred = open("KRED.DAT",'r').read()
-  kred_words = kred.split()
+  kred = open("KRED.DAT")
+#  print(kred.readline())
+#  kred=kred.read()
+  kred_words = [] #kred.split()
+  for lin in kred:
+    kred_words += lin.split()
   cursor = 0
 
   # Number of k-points in each direction.
