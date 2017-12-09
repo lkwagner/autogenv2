@@ -4,19 +4,22 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from pymatgen.io.cif import CifParser
+from pymatgen.symmetry.analyzer import SpacegroupAnalyzer 
 from pymatgen.io.xyz import XYZ
 from pymatgen.core.periodic_table import Element
 from xml.etree.ElementTree import ElementTree
 import numpy as np
 import os
 
+
 class CrystalWriter:
   def __init__(self,options):
     #Geometry input.
     self.struct=None
     self.struct_input=None # Manual structure input.
-    self.supercell=[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]  
+    self.supercell=None #[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]  
     self.boundary='3d'
+    self.symmetry=False
 
     #Electron model
     self.spin_polarized=True    
@@ -65,7 +68,10 @@ class CrystalWriter:
   def set_struct_fromcif(self,cifstr,primitive=True):
     self.primitive=primitive
     self.cif=cifstr
-    self.struct=CifParser.from_string(self.cif).get_structures(primitive=self.primitive)[0].as_dict()
+    pystruct=CifParser.from_string(self.cif).get_structures(primitive=self.primitive)[0]
+    pysym=SpacegroupAnalyzer(pystruct)
+    self.struct=pystruct.as_dict()
+    self.struct['group_number']=pysym.get_space_group_number()
   #-----------------------------------------------
 
   def set_struct_fromxyz(self,xyzstr):
@@ -261,9 +267,10 @@ class CrystalWriter:
         ]
       for coord in self.struct_input['coords']:
         geomlines+=[' '.join(coord)]
-      geomlines+=['SUPERCON']
-      for row in self.supercell:
-        geomlines+=[' '.join(map(str,row))]
+      if self.supercell is not None:
+        geomlines+=['SUPERCELL']
+        for row in self.supercell:
+          geomlines+=[' '.join(map(str,row))]
       return geomlines
     else:
       raise AssertionError("No geometry input found; set struct or struct_input.")
@@ -274,8 +281,19 @@ class CrystalWriter:
   def geom3d(self):
     lat=self.struct['lattice']
     sites=self.struct['sites']
-    geomlines=["CRYSTAL","0 0 0","1","%g %g %g %g %g %g"%\
-          (lat['a'],lat['b'],lat['c'],lat['alpha'],lat['beta'],lat['gamma'])]
+
+    if self.symmetry:
+      geomlines=[
+          "CRYSTAL","0 0 0",
+          str(self.struct['group_number']),
+          self.space_group_format().format(**lat),
+        ]
+    else:
+      geomlines=[
+          "CRYSTAL","0 0 0",
+          "1",
+          '%g %g %g %g %g %g'%(lat['a'],lat['b'],lat['c'],lat['alpha'],lat['beta'],lat['gamma'])
+        ]
 
     geomlines+=["%i"%len(sites)]
     for v in sites:
@@ -283,10 +301,10 @@ class CrystalWriter:
       nm=str(Element(nm).Z+200)
       geomlines+=[nm+" %g %g %g"%(v['abc'][0],v['abc'][1],v['abc'][2])]
 
-    geomlines+=["SUPERCON"]
-    for row in self.supercell:
-      geomlines+=[' '.join(map(str,row))]
-
+    if self.supercell is not None:
+      geomlines+=["SUPERCON"]
+      for row in self.supercell:
+        geomlines+=[' '.join(map(str,row))]
 
     return geomlines
 
@@ -301,6 +319,49 @@ class CrystalWriter:
       geomlines+=[nm+" %g %g %g"%(v['xyz'][0],v['xyz'][1],v['xyz'][2])]
 
     return geomlines
+
+########################################################
+
+  # TODO needs checking for each structure (crystal will error out with incorrect format).
+  def space_group_format(self):
+    ''' Generate the format of the symmetry group input format for crystal.
+    Returns:
+      str: .format()-able string. 
+    '''
+    format_string=""
+
+    if 1<=self.struct['group_number']<3:
+      #print("Case triclinic")
+      format_string="{a} {b} {c} {alpha} {beta} {gamma}"
+
+    elif 3<=self.struct['group_number']<16:
+      #print("Case monoclinic")
+      format_string="{a} {b} {c} {beta}"
+
+    elif 16<=self.struct['group_number']<75:
+      #print("Case orthorhombic")
+      format_string="{a} {b} {c}"
+     
+    elif 75<=self.struct['group_number']<143:
+      #print("Case tetragonal")
+      format_string="{a} {c}"
+
+    elif 143<=self.struct['group_number']<168:
+      #print("Case trigonal")
+      format_string="{a} {c}"
+
+    elif 168<=self.struct['group_number']<195:
+      #print("Case trigonal")
+      format_string="{a} {c}"
+
+    elif 167<=self.struct['group_number']<231:
+      #print("Case cubic")
+      format_string="{a}"
+
+    else:
+      raise AssertionError("Invalid group_number")
+
+    return format_string
 
 ########################################################
 
@@ -568,3 +629,5 @@ class CrystalReader:
     print("status",status)
     return status
     
+if __name__=='__main__':
+  print(space_group_format(136))
