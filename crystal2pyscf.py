@@ -43,7 +43,10 @@ basis={
   }
 
 ##########################################################################################################
-def crystal2pyscf_mol(propoutfn="prop.in.o",basis='bfd_vtz'):
+def crystal2pyscf_mol(propoutfn="prop.in.o",
+    basis='bfd_vtz',
+    gs=(8,8,8),
+    basis_order=None):
   ''' Make a PySCF object with solution from a crystal run.
 
   Args:
@@ -64,6 +67,7 @@ def crystal2pyscf_mol(propoutfn="prop.in.o",basis='bfd_vtz'):
       [periodic_table[atnum%200-1],tuple(pos)]\
       for atnum,pos in zip(cryions['atom_nums'],cryions['positions'])
     ]
+
   mol=pyscf.gto.Mole(atom=atom,unit='bohr',basis=basis,ecp='bfd')
   mol.build()
 
@@ -72,7 +76,7 @@ def crystal2pyscf_mol(propoutfn="prop.in.o",basis='bfd_vtz'):
   #mf.__dict__.update(pyscf.lib.chkfile.load('../py_eq/pyscf_driver.py.chkfile','scf'))
 
   # Copy over MO info.
-  crydf=format_eigenstates(mol,cryeigsys)
+  crydf=format_eigenstates(mol,cryeigsys,basis_order)
   mf.mo_energy=cryeigsys['eigvals']
   mf.mo_coeff=crydf[[*range(crydf.shape[0])]].values
   mf.mo_occ=cryeigsys['eig_weights'][0][0]*2
@@ -177,7 +181,7 @@ def fix_basis_order(basis_order):
   return amsorted
 
 ##########################################################################################################
-def format_eigenstates_mol(mol,cryeigsys):
+def format_eigenstates_mol(mol,cryeigsys,basis_order=None):
   ''' Organize crystal eigenstates to be consistent with PySCF order.
 
   Args: 
@@ -190,9 +194,21 @@ def format_eigenstates_mol(mol,cryeigsys):
   # Extract.
   crydf=pd.DataFrame(np.array(cryeigsys['eigvecs'][(0,0,0)]['real'][0]).T)
 
-  # Label by patching PySCF order.
+  # PySCF basis order (our goal).
   pydf=pd.DataFrame(mol.spherical_labels(),columns=['atnum','elem','orb','type'])
+
+  # Info about atoms.
   crydf=crydf.join(pydf[['atnum','elem','orb','type']])
+
+  # Reorder basis.
+  def _apply_fix(df):
+    elem=df['elem'].values[0]
+    fixed_basis_order=fix_basis_order(basis_order[elem])
+    return df.reset_index(drop=True).loc[fixed_basis_order]
+  if basis_order is not None:
+    crydf=crydf.groupby(['atnum','elem']).apply(_apply_fix).reset_index(drop=True)
+
+  # Label by patching PySCF order.
   crystal_order=('', 'x', 'y', 'z', 'z^2', 'xz', 'yz',  'x2-y2', 'xy',   'z^3', 'xz^2', 'yz^2', 'zx^2', 'xyz',  'x^3',  'y^3')
   pyscf_order=  ('', 'x', 'y', 'z', 'xy',  'yz', 'z^2', 'xz',   'x2-y2', 'y^3', 'xyz',  'yz^2', 'z^3',  'xz^2', 'zx^2', 'x^3')
   orbmap=dict(zip(pyscf_order,crystal_order))
@@ -454,5 +470,5 @@ def test_counter():
 if __name__=='__main__':
   pass
   # DEBUG
-  #test_crystal2pyscf_cell(ref_chkfile="../pyscf/pyscf_driver.py.chkfile",basis_order={'Si':[0,1,2,3,0,0,1,1]})
+  test_crystal2pyscf_mol(ref_chkfile="../py_str/pyscf_driver.py.chkfile",basis_order={'Si':[0,1,2,3,0,0,1,1]})
   #_test_counter()
