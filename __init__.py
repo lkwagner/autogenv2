@@ -2,6 +2,7 @@ import PySCF
 import PySCFRunner
 import Crystal
 import PySCFRunner
+import PropertiesReader
 import Variance
 import Linear
 import DMC

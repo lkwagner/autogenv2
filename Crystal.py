@@ -304,7 +304,7 @@ class CrystalWriter:
       geomlines+=[nm+" %g %g %g"%(v['abc'][0],v['abc'][1],v['abc'][2])]
 
     if self.supercell is not None:
-      geomlines+=["SUPERCON"]
+      geomlines+=["SUPERCELL"]
       for row in self.supercell:
         geomlines+=[' '.join(map(str,row))]
 
