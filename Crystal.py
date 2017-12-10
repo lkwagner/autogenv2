@@ -51,7 +51,8 @@ class CrystalWriter:
     self.maxcycle=100
     self.edifftol=8
     self.levshift=[]
-    self.broyden=[0.01,60,15]
+    self.diis=True
+    self.broyden=[]
     self.anderson=False
     self.smear=0.0001
 
@@ -164,12 +165,13 @@ class CrystalWriter:
       outlines+=['ATOMSPIN',str(len(self.initial_spins))]
       outlines+=["%i %i"%(i+1,s) for i,s in enumerate(self.initial_spins)]
 
-    if self.levshift!=[]:
-      outlines+=["LEVSHIFT"," ".join(map(str,self.levshift))]
-    else:
-      outlines+=["BROYDEN"," ".join(map(str,self.broyden))]
+    if not self.diis:
+      if self.levshift!=[]:
+        outlines+=["LEVSHIFT"," ".join(map(str,self.levshift))]
+      else:
+        outlines+=["BROYDEN"," ".join(map(str,self.broyden))]
 
-    if self.anderson and len(self.broyden)==0:
+    if self.anderson and len(self.broyden)==0 and not self.diis:
       outlines+=["ANDERSON"]
 
     if self.restart or self.guess_fort is not None:
