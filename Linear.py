@@ -65,10 +65,21 @@ class LinearWriter:
      
 ####################################################
 class LinearReader:
-  def __init__(self,edifftol=0.1,minsteps=5):
+  def __init__(self,sigtol=2.0,minsteps=2):
+    ''' Object for reading, diagnosing, and storing Linear results.
+
+    The arguements control when the object sends a 'restart' flag.
+
+    Args:
+      sigtol (float): How many standard errors away from zero to you consider zero energy change?
+      minsteps (int): Minimum number of steps allowed for no restart.
+    Attributes:
+      output (dict): Results for energy, error, and other information.
+      completed (bool): Whether no more runs are needed.
+    '''
     self.output={}
     self.completed=False
-    self.edifftol=edifftol
+    self.sigtol=sigtol
     self.minsteps=minsteps
 
   def read_outputfile(self,outfile):
@@ -91,14 +102,18 @@ class LinearReader:
     complete={}
     for fname,results in self.output.items():
       complete[fname]=True
+      print(results['energy'])
       if len(results['energy']) < self.minsteps:
         print("Linear optimize incomplete: number of steps (%f) less than minimum (%f)"%\
             (len(results['energy']),self.minsteps))
         complete[fname]=False
-      if (results['energy'][-1]-results['energy'][-2]) > self.edifftol:
-        print("Linear optimize incomplete: change in energy (%f) less than tolerance (%f)"%\
-            (len(results['sigma']),self.minsteps))
-        complete[fname]=False
+      else:
+        ediff=results['energy'][-1]-results['energy'][-2]
+        ediff_err=(results['energy_err'][-1]**2 + results['energy_err'][-2]**2)**0.5
+        if ediff > self.sigtol*ediff_err:
+          print("Linear optimize incomplete: change in energy (%.5f) less than tolerance (%.2f*%.2f=%.5f)"%\
+              (ediff,self.sigtol,ediff_err,self.sigtol*ediff_err))
+          complete[fname]=False
     return complete
           
   #------------------------------------------------
