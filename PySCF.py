@@ -47,8 +47,7 @@ class PySCFWriter:
     # Check important keys are set. 
     for k in d.keys():
       if not k in selfdict.keys():
-        print("Error:",k,"not a keyword for PySCFWriter")
-        raise AssertionError
+        raise AssertionError("Error:",k,"not a keyword for PySCFWriter")
       selfdict[k]=d[k]
 
     # If charge and spin should have same parity.
@@ -274,8 +273,7 @@ class PySCFPBCWriter:
     # Check important keys are set. 
     for k in d.keys():
       if not k in selfdict.keys():
-        print("Error:",k,"not a keyword for PySCFWriter")
-        raise AssertionError
+        raise AssertionError("Error:",k,"not a keyword for PySCFWriter")
       selfdict[k]=d[k]
 
     # Must be done after bdf_library is set.
