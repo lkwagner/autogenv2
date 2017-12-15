@@ -40,6 +40,7 @@ class CrystalWriter:
     self.edifftol=8
     self.levshift=[]
     self.broyden=[0.01,60,15]
+    self.diis=False
     self.smear=0.0001
 
     # Use the new crystal2qmc script. This should change soon!
@@ -127,7 +128,9 @@ class CrystalWriter:
     if self.spin_polarized:
       outlines+=['SPINLOCK',str(self.total_spin)+" 200"]
 
-    if self.levshift!=[]:
+    if self.diis:
+      pass
+    elif self.levshift!=[]:
       outlines+=["LEVSHIFT"," ".join(map(str,self.levshift))]
     else:
       outlines+=["BROYDEN"," ".join(map(str,self.broyden))]
