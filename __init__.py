@@ -6,7 +6,8 @@ import Crystal
 import CrystalRunner
 import DMC
 import JobEnsemble
-import Linear import Manager
+import Linear 
+import Manager
 import Postprocess
 import PropertiesReader
 import PropertiesRunner
