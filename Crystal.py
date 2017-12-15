@@ -262,13 +262,19 @@ class CrystalWriter:
       elements.add(nm)
     basislines=[]
     elements = sorted(list(elements)) # Standardize ordering.
-    for e in elements:
-      basislines+=self.generate_basis(e)
+    if self.boundary=='3d':
+      for e in elements:
+        basislines+=self.generate_basis_3d(e)
+    elif self.boundary=='0d':
+      for e in elements:
+        basislines+=self.generate_basis_0d(e)
+    else:
+      raise AssertionError("Invalid boundary value")
     return basislines
 
 
 ########################################################
-  def generate_basis(self,symbol):
+  def generate_basis_3d(self,symbol):
     """
     Author: "Kittithat (Mick) Krongchon" <pikkienvd3@gmail.com> and Lucas K. Wagner
     Returns a string containing the basis section.  It is modified according to a simple recipe:
@@ -353,6 +359,75 @@ class CrystalWriter:
             line='{} {}'.format(exp,1.0)
             ret+=["0 %i %i %g 1"%(basis_index[angular],1,0.0),line]
             ncontract+=1
+
+    return ["%i %i"%(Element(symbol).number+200,ncontract)] +\
+            self.pseudopotential_section(symbol) +\
+            ret
+
+########################################################
+  def generate_basis_0d(self,symbol):
+    """
+    Author: "Kittithat (Mick) Krongchon" <pikkienvd3@gmail.com> and Lucas K. Wagner
+    Returns a string containing the basis section.  It is modified according to a simple recipe:
+    Args:
+        symbol (str): The symbol of the element to be specified in the
+            D12 file.
+        xml_name (str): The name of the XML pseudopotential and basis
+            set database.
+    Returns:
+        str: The pseudopotential and basis section.
+    """
+    
+    maxorb=3
+    basis_name="vtz"
+    maxcharge={"s":2,"p":6,"d":10,"f":15} #max charge on a basis function
+    max_tot_charge={"s":2,"p":6,"d":10,"f":15} #max total charge in an angular momentum
+    
+    basis_index={"s":0,"p":2,"d":3,"f":4}
+    transition_metals=["Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn"]
+    if symbol in transition_metals:
+      maxorb=4
+      max_tot_charge['s']=4
+    charge_sum={"s":0,"p":0,"d":0,"f":0}
+    tree = ElementTree()
+    tree.parse(self.xml_name)
+    element = tree.find('./Pseudopotential[@symbol="{}"]'.format(symbol))
+    atom_charge = int(element.find('./Effective_core_charge').text)
+    if symbol in self.initial_charges.keys():
+      atom_charge-=self.initial_charges[symbol]
+    basis_path = './Basis-set[@name="{}"]/Contraction'.format(basis_name)
+    found_orbitals = []
+    totcharge=0
+    ret=[]
+    ncontract=0
+    for contraction in element.findall(basis_path):
+        angular = contraction.get('Angular_momentum')
+
+        #Figure out which coefficients to print out based on the minimal exponent
+        nterms = 0
+        basis_part=[]
+        for basis_term in contraction.findall('./Basis-term'):
+            exp = basis_term.get('Exp')
+            coeff = basis_term.get('Coeff')
+            basis_part += ['  {} {}'.format(exp, coeff)]
+            nterms+=1
+        #now write the header 
+        if nterms > 0 and angular in basis_index.keys():
+          found_orbitals.append(angular)          
+          charge=min(atom_charge-totcharge,maxcharge[angular])
+          if charge_sum[angular] >= max_tot_charge[angular]:
+            charge=0
+          #put in a special case for transition metals:
+          #depopulate the 4s if the atom is charged
+          if symbol in transition_metals and symbol in self.initial_charges.keys() \
+                  and self.initial_charges[symbol] > 0 and found_orbitals.count(angular) > 1 \
+                  and angular=="s":
+            charge=0
+          totcharge+=charge
+          charge_sum[angular]+=charge
+          ret+=["0 %i %i %g 1"%(basis_index[angular],nterms,charge)] + basis_part
+          ncontract+=1
+
 
     return ["%i %i"%(Element(symbol).number+200,ncontract)] +\
             self.pseudopotential_section(symbol) +\
