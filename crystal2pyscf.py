@@ -25,7 +25,8 @@ def crystal2pyscf_mol(propoutfn="prop.in.o",
     tuple: (mol,scf) PySCF-equilivent Mole and SCF object.
   '''
   #TODO Make basis from crystal output (fix normalization issue).
-  #TODO Generalize spin and kpoint.
+  #TODO Automatically detect and use correct spin: currently set for unrestricted calculations.
+  nspin=2
 
   # Load crystal data.
   info, crylat_parm, cryions, crybasis, crypseudo = read_gred()
@@ -39,17 +40,15 @@ def crystal2pyscf_mol(propoutfn="prop.in.o",
 
   mol=pyscf.gto.Mole(atom=atom,unit='bohr',basis=basis,ecp='bfd')
   mol.build()
-  #NEXT put in both spin channels.
 
   mf=pyscf.scf.UKS(mol)
-  # Temporary check: fills in any data that's not implemented below.
-  #mf.__dict__.update(pyscf.lib.chkfile.load('../py_eq/pyscf_driver.py.chkfile','scf'))
 
   # Copy over MO info.
   crydfs=format_eigenstates_mol(mol,cryeigsys,basis_order)
-  mf.mo_energy=cryeigsys['eigvals']
-  mf.mo_coeff=[df[[*range(df.shape[0])]].values for df in crydfs]
-  mf.mo_occ=[(cryeigsys['eig_weights'][0][s]>1e-8).astype(float) for s in [0,1]]
+  nvals=len(cryeigsys['eigvals'])//nspin
+  mf.mo_energy=[cryeigsys['eigvals'][:nvals],cryeigsys['eigvals'][nvals:]]
+  mf.mo_coeff=np.array([df[[*range(df.shape[0])]].values for df in crydfs])
+  mf.mo_occ=np.array([(cryeigsys['eig_weights'][0][s]>1e-8).astype(float) for s in [0,1]])
   mf.e_tot=np.nan #TODO compute energy and put it here, if needed.
 
   return mol,mf
@@ -70,12 +69,6 @@ def crystal2pyscf_cell(propoutfn="prop.in.o",
   #TODO Make basis from crystal output (fix normalization issue).
   #TODO Generalize spin and kpoint.
 
-  ## DEBUG available reference.
-  #ref_chkfile="../pyscf/pyscf_driver.py.chkfile"
-  #check_cell=pyscf.pbc.lib.chkfile.load_cell(ref_chkfile)
-  #check_mf=pyscf.pbc.dft.KRKS(check_cell)
-  #check_mf.__dict__.update(pyscf.lib.chkfile.load(ref_chkfile,'scf'))
-
   # Load crystal data.
   info, crylat_parm, cryions, crybasis, crypseudo = read_gred()
   cryeigsys = read_kred(info,crybasis)
@@ -91,26 +84,17 @@ def crystal2pyscf_cell(propoutfn="prop.in.o",
       gs=gs,basis=basis,ecp='bfd')
 
   # Get kpoints that PySCF expects.
-  kpts=cell.make_kpts((4,4,4))
+  # TODO only Gamma for now.
+  kpts=cell.make_kpts((1,1,1))
   kpts=cell.get_scaled_kpts(kpts)
 
-  #print("CRYSTAL")
-  #print(cryeigsys['kpt_coords'])
-
-  # TODO make cell yourself.
-  #cell=check_cell
-
-  mf=pyscf.pbc.dft.KRKS(cell)
-  # Temporary check: fills in any data that's not implemented below.
-  #mf.__dict__.update(pyscf.lib.chkfile.load('../py_eq/pyscf_driver.py.chkfile','scf'))
+  mf=pyscf.pbc.dft.KUKS(cell)
 
   # Copy over MO info.
-  # TODO only Gamma for now.
-  #mf=check_mf
-  crydf=format_eigenstates_cell(cell,cryeigsys,basis_order)
+  crydfs=format_eigenstates_cell(cell,cryeigsys,basis_order)
   mf.mo_energy=cryeigsys['eigvals']
-  mf.mo_coeff=[crydf[[*range(crydf.shape[0])]].values]
-  mf.mo_occ=[(cryeigsys['eig_weights'][0][0]>1e-8).astype(float)*2]
+  mf.mo_coeff=[[df[[*range(df.shape[0])]].values] for df in crydfs]
+  mf.mo_occ=[[(cryeigsys['eig_weights'][0][s]>1e-8).astype(float)] for s in [0,1]]
   mf.e_tot=np.nan #TODO compute energy and put it here, if needed.
 
   return cell,mf
@@ -225,13 +209,13 @@ def format_eigenstates_cell(cell,cryeigsys,basis_order=None):
 
   # Extract.
   # TODO non-Gamma points.
-  crydf=pd.DataFrame(np.array(cryeigsys['eigvecs'][(0,0,0)]['real'][0]).T)
+  crydfs=[pd.DataFrame(np.array(cryeigsys['eigvecs'][(0,0,0)]['real'][s]).T) for s in [0,1]]
 
   # PySCF basis order (our goal).
   pydf=pd.DataFrame(cell.spherical_labels(),columns=['atnum','elem','orb','type'])
 
   # Info about atoms.
-  crydf=crydf.join(pydf[['atnum','elem']])
+  crydfs=[df.join(pydf[['atnum','elem']]) for df in crydfs]
 
   # Reorder basis.
   def _apply_fix(df):
@@ -239,32 +223,23 @@ def format_eigenstates_cell(cell,cryeigsys,basis_order=None):
     fixed_basis_order=fix_basis_order(basis_order[elem])
     return df.reset_index(drop=True).loc[fixed_basis_order]
   if basis_order is not None:
-    crydf=crydf.groupby(['atnum','elem']).apply(_apply_fix).reset_index(drop=True)
+    crydfs=[df.groupby(['atnum','elem']).apply(_apply_fix).reset_index(drop=True) for df in crydfs]
 
   # Label by patching PySCF order.
-  crydf=crydf.join(pydf[['orb','type']])
+  crydfs=[df.join(pydf[['orb','type']]) for df in crydfs]
   crystal_order=('', 'x', 'y', 'z', 'z^2', 'xz', 'yz',  'x2-y2', 'xy',   'z^3', 'xz^2', 'yz^2', 'zx^2', 'xyz',  'x^3',  'y^3')
   pyscf_order=  ('', 'x', 'y', 'z', 'xy',  'yz', 'z^2', 'xz',   'x2-y2', 'y^3', 'xyz',  'yz^2', 'z^3',  'xz^2', 'zx^2', 'x^3')
   orbmap=dict(zip(pyscf_order,crystal_order))
   def convert_order(key):
     try: return orbmap[key]
     except KeyError: return None
-  crydf['type']=crydf['type'].apply(convert_order)
+  for s in [0,1]:
+    crydfs[s]['type']=crydfs[s]['type'].apply(convert_order)
 
   # Reorder crydf.
-  crydf=pydf.merge(crydf,on=['atnum','elem','orb','type'])
+  crydfs=[pydf.merge(df,on=['atnum','elem','orb','type']) for df in crydfs]
 
-  ## DEBUG available reference.
-  #ref_chkfile="../pyscf/pyscf_driver.py.chkfile"
-  #check_cell=pyscf.pbc.lib.chkfile.load_cell(ref_chkfile)
-  #check_mf=pyscf.pbc.dft.KRKS(check_cell)
-  #check_mf.__dict__.update(pyscf.pbc.lib.chkfile.load(ref_chkfile,'scf'))
-  #vector=0
-  ##print(pd.DataFrame({'energy':check_mf.mo_energy[0]}))
-  #crydf['check']=check_mf.mo_coeff[0][:,vector].real
-  #crydf['diff']=crydf[vector]-crydf['check']
-  ##print(crydf[['atnum','elem','orb','type','check',vector,'diff']].round(4))
-  return crydf
+  return crydfs
 
 ##########################################################################################################
 def make_basis(crybasis,ions,base="qwalk"):
@@ -370,6 +345,39 @@ def compute_charge_mol(mol,mf,iaos,minbasis,xc='pbe,pbe'):
   return chrg,spin,pops
 
 ##########################################################################################################
+def compute_charge_cell(cell,mf,iaos,minbasis,xc='pbe,pbe'):
+  ''' Compute the energy of the solution in mol,mf.  
+  Used to check consistency between PySCF run and conversion run.
+
+  Args:
+    mol (Mole): system.
+    mf (SCF object): SCF system with solution inside.
+    iaos (array): iaos generated from an pyscf.lo.iao call.
+    minbasis (PySCF basis): basis for evaluating IAOs (used to generate them).
+  Returns:
+    float: charge info.
+  '''
+  gamma=0
+
+  # Copied from examples.
+  mo_occ = [mf.mo_coeff[s][gamma][:,mf.mo_occ[s][gamma]>0].squeeze() for s in [0,1]]
+  print(iaos.shape)
+
+  # transform mo_occ to IAO representation. Note the AO dimension is reduced
+  mo_occ = [reduce(np.dot, (iaos.T, mf.get_ovlp(), mo_occ[s])) for s in [0,1]]
+
+  # TODO is *2 for spinless calculations?
+  dm = [np.dot(mo_occ[s].squeeze(), mo_occ[s].squeeze().T) for s in [0,1]]
+  pcell = cell.copy()
+  pcell.build(False, False, basis=minbasis)
+  mpops=[mf.mulliken_pop(pcell, dm[s], s=np.eye(pcell.nao_nr()),verbose=1) for s in [0,1]]
+  pops=[mpops[s][0] for s in [0,1]]
+  chrg=mpops[0][1]+mpops[1][1]
+  spin=mpops[0][1]-mpops[1][1]
+
+  return chrg,spin,pops
+
+##########################################################################################################
 def compute_energy_cell(cell,mf,xc='pbe,pbe'):
   ''' Compute the energy of the solution in mol,mf.  
   Used to check consistency between PySCF run and conversion run.
@@ -385,8 +393,8 @@ def compute_energy_cell(cell,mf,xc='pbe,pbe'):
   mf.xc=xc
   mf.direct_scf_tol=1e-5
   h1e=mf.get_hcore(cell)
-  vhf=mf.get_veff(cell,dm[:1,:,:])
-  return mf.energy_tot(dm[:1,:,:],h1e,vhf)
+  vhf=mf.get_veff(cell,dm[:,:1,:])
+  return mf.energy_tot(dm[:,:1,:],h1e,vhf)
 
 ##########################################################################################################
 def test_crystal2pyscf_mol(
@@ -476,7 +484,7 @@ def test_crystal2pyscf_cell(ref_chkfile="pyscf_driver.py.o",propoutfn="prop.in.o
 
   # Reference for checking.
   check_cell=pyscf.pbc.lib.chkfile.load_cell(ref_chkfile)
-  check_mf=pyscf.pbc.dft.KRKS(check_cell)
+  check_mf=pyscf.pbc.dft.KUKS(check_cell)
   check_mf.__dict__.update(pyscf.lib.chkfile.load(ref_chkfile,'scf'))
 
   # Result of conversion.
