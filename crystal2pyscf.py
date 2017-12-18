@@ -315,7 +315,26 @@ def compute_energy_mol(mol,mf,xc='pbe,pbe'):
   return mf.energy_tot(dm,h1e,vhf)
 
 ##########################################################################################################
-def compute_charge_mol(mol,mf,iaos,minbasis,xc='pbe,pbe'):
+def compute_mulliken_mol(mol,mf):
+  ''' Compute the energy of the solution in mol,mf.  
+  Used to check consistency between PySCF run and conversion run.
+
+  Args:
+    mol (Mole): system.
+    mf (SCF object): SCF system with solution inside.
+  Returns:
+    DataFrame: Mulliken orbital populations and orbitals.
+  '''
+  # Copied from examples.
+  dm=mf.make_rdm1()
+  pops,chrg=mf.mulliken_meta(mol,dm,s=mf.get_ovlp(),verbose=0)
+  popdf=pd.DataFrame(mol.spherical_labels(),columns=['atom','element','orb','type'])
+  popdf['spin']=pops[0]-pops[1]
+  popdf['charge']=pops[0]+pops[1]
+  return popdf
+
+##########################################################################################################
+def compute_iao_mol(mol,mf,iaos,minbasis,xc='pbe,pbe'):
   ''' Compute the energy of the solution in mol,mf.  
   Used to check consistency between PySCF run and conversion run.
 
