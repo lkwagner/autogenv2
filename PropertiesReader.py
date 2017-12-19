@@ -9,7 +9,7 @@ class PropertiesReader:
 #-------------------------------------------------      
   def collect(self,outfilename):
     """ Collect results from output."""
-    if os.path.isfile(outfilename):
+    if os.path.isfile("GRED.DAT") and os.path.isfile("KRED.DAT"):
       info, lat_parm, ions, basis, pseudo = read_gred()
       eigsys = read_kred(info,basis)
 
