@@ -125,7 +125,7 @@ class CrystalManager:
     if status=="not_started":
       sh.copy(self.crysinpfn,'INPUT')
       self.runner.run("Pcrystal &> %s"%self.crysoutfn)
-      self.runner.postfix += ["cp %s INPUT"%self.propoutfn,"Pproperties &> %s"%self.propinpfn]
+      self.runner.postfix += ["cp %s INPUT"%self.propoutfn,"Pproperties &> %s.o"%self.propinpfn]
     elif status=="ready_for_analysis":
       #This is where we (eventually) do error correction and resubmits
       status=self.creader.collect(self.crysoutfn)
