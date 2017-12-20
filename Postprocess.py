@@ -8,7 +8,6 @@ class PostprocessWriter:
     self.sysfiles=['qw_000.sys']
     self.wffiles=[]
     self.nskip=0
-    self.timesteps=[] # Set in DMC but need for keeping track of filenames.
     self.tracefiles=[]
     self.qmc_abr='post'
     self.completed=False
