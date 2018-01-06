@@ -316,7 +316,7 @@ def compute_energy_mol(mol,mf,xc='pbe,pbe'):
 
 ##########################################################################################################
 def compute_mulliken_mol(mol,mf):
-  ''' Compute the energy of the solution in mol,mf.  
+  ''' Compute the Mulliken population of the solution in mol,mf.  
   Used to check consistency between PySCF run and conversion run.
 
   Args:
@@ -329,6 +329,26 @@ def compute_mulliken_mol(mol,mf):
   dm=mf.make_rdm1()
   pops,chrg=mf.mulliken_meta(mol,dm,s=mf.get_ovlp(),verbose=0)
   popdf=pd.DataFrame(mol.spherical_labels(),columns=['atom','element','orb','type'])
+  popdf['spin']=pops[0]-pops[1]
+  popdf['charge']=pops[0]+pops[1]
+  return popdf
+
+##########################################################################################################
+def compute_mulliken_cell(cell,mf):
+  ''' Compute the Mulliken population of the solution in cell,mf.  
+  Used to check consistency between PySCF run and conversion run.
+
+  Args:
+    cell (Cell): system.
+    mf (SCF object): SCF system with solution inside.
+  Returns:
+    DataFrame: Mulliken orbital populations and orbitals.
+  '''
+  # Copied from examples.
+  dm=mf.make_rdm1()
+  pops,chrg=mf.mulliken_meta(cell,dm,s=mf.get_ovlp(),verbose=0)
+  pops=[pops[s][0] for s in [0,1]]
+  popdf=pd.DataFrame(cell.spherical_labels(),columns=['atom','element','orb','type'])
   popdf['spin']=pops[0]-pops[1]
   popdf['charge']=pops[0]+pops[1]
   return popdf
