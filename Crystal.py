@@ -27,7 +27,7 @@ class CrystalWriter:
     self.kmesh=[8,8,8]
     self.gmesh=16
     self.tolinteg=[8,8,8,8,18]
-    self.dftgrid='XLGRID'
+    self.dftgrid=''
     
     #Memory
     self.biposize=100000000
@@ -41,7 +41,9 @@ class CrystalWriter:
     self.levshift=[]
     self.broyden=[0.01,60,15]
     self.diis=False
-    self.smear=0.0001
+    self.smear=0.0
+    self.supercell= [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]  
+    
 
     # Use the new crystal2qmc script. This should change soon!
     self.cryapi=True
@@ -55,7 +57,6 @@ class CrystalWriter:
     self.primitive=primitive
     self.cif=cifstr
     self.struct=CifParser.from_string(self.cif).get_structures(primitive=self.primitive)[0].as_dict()
-    self.supercell= [[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]  
     self.boundary="3d"
   #-----------------------------------------------
 
@@ -75,7 +76,7 @@ class CrystalWriter:
       selfdict[k]=d[k]
 
   #-----------------------------------------------
-  def crystal_input(self):
+  def crystal_input(self,section4=[]):
 
     assert self.struct is not None,'Need to set "struct" first.'
     geomlines=self.geom()
@@ -105,9 +106,10 @@ class CrystalWriter:
       "CORRELAT",
       self.functional['correlation'],
       "HYBRID", 
-      str(self.functional['hybrid']),
-      self.dftgrid,
-      "END",
+      str(self.functional['hybrid'])]
+    if self.dftgrid!="":
+      outlines+=[self.dftgrid]
+    outlines+=["END",
       "SCFDIR",
       "BIPOSIZE",
       str(self.biposize),
@@ -121,10 +123,10 @@ class CrystalWriter:
       ' '.join(map(str,self.tolinteg)),
       "MAXCYCLE",
       str(self.maxcycle),
-      "SMEAR",
-      str(self.smear),
       "SAVEWF"
     ]
+    if self.smear > 0:
+      outlines+=["SMEAR",str(self.smear)]
     if self.spin_polarized:
       outlines+=['SPINLOCK',str(self.total_spin)+" 200"]
 
@@ -134,7 +136,7 @@ class CrystalWriter:
       outlines+=["LEVSHIFT"," ".join(map(str,self.levshift))]
     else:
       outlines+=["BROYDEN"," ".join(map(str,self.broyden))]
-
+    outlines+=section4
     if self.restart:
       outlines+=["GUESSP"]
     outlines+=["END"]
@@ -262,19 +264,13 @@ class CrystalWriter:
       elements.add(nm)
     basislines=[]
     elements = sorted(list(elements)) # Standardize ordering.
-    if self.boundary=='3d':
-      for e in elements:
-        basislines+=self.generate_basis_3d(e)
-    elif self.boundary=='0d':
-      for e in elements:
-        basislines+=self.generate_basis_0d(e)
-    else:
-      raise AssertionError("Invalid boundary value")
+    for e in elements:
+      basislines+=self.generate_basis(e)
     return basislines
 
 
 ########################################################
-  def generate_basis_3d(self,symbol):
+  def generate_basis(self,symbol):
     """
     Author: "Kittithat (Mick) Krongchon" <pikkienvd3@gmail.com> and Lucas K. Wagner
     Returns a string containing the basis section.  It is modified according to a simple recipe:
@@ -363,75 +359,6 @@ class CrystalWriter:
     return ["%i %i"%(Element(symbol).number+200,ncontract)] +\
             self.pseudopotential_section(symbol) +\
             ret
-
-########################################################
-  def generate_basis_0d(self,symbol):
-    """
-    Author: "Kittithat (Mick) Krongchon" <pikkienvd3@gmail.com> and Lucas K. Wagner
-    Returns a string containing the basis section.  It is modified according to a simple recipe:
-    Args:
-        symbol (str): The symbol of the element to be specified in the
-            D12 file.
-        xml_name (str): The name of the XML pseudopotential and basis
-            set database.
-    Returns:
-        str: The pseudopotential and basis section.
-    """
-    
-    maxorb=3
-    basis_name="vtz"
-    maxcharge={"s":2,"p":6,"d":10,"f":15} #max charge on a basis function
-    max_tot_charge={"s":2,"p":6,"d":10,"f":15} #max total charge in an angular momentum
-    
-    basis_index={"s":0,"p":2,"d":3,"f":4}
-    transition_metals=["Sc","Ti","V","Cr","Mn","Fe","Co","Ni","Cu","Zn"]
-    if symbol in transition_metals:
-      maxorb=4
-      max_tot_charge['s']=4
-    charge_sum={"s":0,"p":0,"d":0,"f":0}
-    tree = ElementTree()
-    tree.parse(self.xml_name)
-    element = tree.find('./Pseudopotential[@symbol="{}"]'.format(symbol))
-    atom_charge = int(element.find('./Effective_core_charge').text)
-    if symbol in self.initial_charges.keys():
-      atom_charge-=self.initial_charges[symbol]
-    basis_path = './Basis-set[@name="{}"]/Contraction'.format(basis_name)
-    found_orbitals = []
-    totcharge=0
-    ret=[]
-    ncontract=0
-    for contraction in element.findall(basis_path):
-        angular = contraction.get('Angular_momentum')
-
-        #Figure out which coefficients to print out based on the minimal exponent
-        nterms = 0
-        basis_part=[]
-        for basis_term in contraction.findall('./Basis-term'):
-            exp = basis_term.get('Exp')
-            coeff = basis_term.get('Coeff')
-            basis_part += ['  {} {}'.format(exp, coeff)]
-            nterms+=1
-        #now write the header 
-        if nterms > 0 and angular in basis_index.keys():
-          found_orbitals.append(angular)          
-          charge=min(atom_charge-totcharge,maxcharge[angular])
-          if charge_sum[angular] >= max_tot_charge[angular]:
-            charge=0
-          #put in a special case for transition metals:
-          #depopulate the 4s if the atom is charged
-          if symbol in transition_metals and symbol in self.initial_charges.keys() \
-                  and self.initial_charges[symbol] > 0 and found_orbitals.count(angular) > 1 \
-                  and angular=="s":
-            charge=0
-          totcharge+=charge
-          charge_sum[angular]+=charge
-          ret+=["0 %i %i %g 1"%(basis_index[angular],nterms,charge)] + basis_part
-          ncontract+=1
-
-
-    return ["%i %i"%(Element(symbol).number+200,ncontract)] +\
-            self.pseudopotential_section(symbol) +\
-            ret
 ########################################################
 
   def pseudopotential_section(self,symbol):
@@ -495,7 +422,6 @@ class CrystalReader:
       lines = f.readlines()
       for li,line in enumerate(lines):
         if 'SCF ENDED' in line:
-          print(line)
           self.out['total_energy']=float(line.split()[8])    
 
         elif 'TOTAL ATOMIC SPINS' in line:
@@ -505,7 +431,8 @@ class CrystalReader:
             moms += map(float,lines[li+shift].split())
             shift += 1
           self.out['mag_moments']=moms
-      print(self.out)
+      self.out['etots'] = [float(line.split()[3]) for line in lines if "DETOT" in line]
+      
       self.completed=True
     else:
       # Just to be sure/clear...
@@ -523,36 +450,36 @@ class CrystalReader:
   def check_outputfile(self,outfilename,acceptable_scf=10.0):
     """ Check output file. 
 
-    Current return values:
+    Return values:
     no_record, not_started, ok, too_many_cycles, finished (fall-back),
     scf_fail, not_enough_decrease, divergence, not_finished
     """
     if os.path.isfile(outfilename):
-      outf = open(outfilename,'r')
+      outf = open(outfilename,'r',errors='ignore')
     else:
       return "not_started"
 
-    outlines = outf.read().split('\n')
+    outlines = outf.readlines()
     reslines = [line for line in outlines if "ENDED" in line]
 
     if len(reslines) > 0:
       if "CONVERGENCE" in reslines[0]:
         return "ok"
       elif "TOO MANY CYCLES" in reslines[0]:
-        print("CrystalRunner: Too many cycles.")
+        #print("CrystalRunner: Too many cycles.")
         return "too_many_cycles"
       else: # What else can happen?
-        print("CrystalReader: Finished, but unknown state.")
+        #print("CrystalReader: Finished, but unknown state.")
         return "finished"
       
     detots = [float(line.split()[5]) for line in outlines if "DETOT" in line]
     if len(detots) == 0:
-      print("CrystalRunner: Last run completed no cycles.")
+      #print("CrystalRunner: Last run completed no cycles.")
       return "scf_fail"
 
     detots_net = sum(detots[1:])
     if detots_net > acceptable_scf:
-      print("CrystalRunner: Last run performed poorly.")
+      #print("CrystalRunner: Last run performed poorly.")
       return "not_enough_decrease"
 
     etots = [float(line.split()[3]) for line in outlines if "DETOT" in line]
