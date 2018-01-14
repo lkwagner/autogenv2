@@ -4,11 +4,13 @@
 import pandas as pd
 import numpy as np
 from functools import reduce
+import crystal2qmc
 from crystal2qmc import periodic_table,read_gred, read_kred, read_outputfile
 import pyscf
 import pyscf.lo
 import pyscf.pbc
 import pyscf.pbc.dft
+import downfold_tools as dt
 from collections import Counter
 
 ##########################################################################################################
@@ -347,14 +349,15 @@ def compute_mulliken_cell(cell,mf):
   # Copied from examples.
   dm=mf.make_rdm1()
   pops,chrg=mf.mulliken_meta(cell,dm,s=mf.get_ovlp(),verbose=0)
-  pops=[pops[s][0] for s in [0,1]]
+  #print(np.array(pops).shape)
+  #pops=[pops[s][0] for s in [0,1]] # Not sure why I had this?
   popdf=pd.DataFrame(cell.spherical_labels(),columns=['atom','element','orb','type'])
   popdf['spin']=pops[0]-pops[1]
   popdf['charge']=pops[0]+pops[1]
   return popdf
 
 ##########################################################################################################
-def compute_iao_mol(mol,mf,iaos,minbasis,xc='pbe,pbe'):
+def compute_iao_mol(mol,mf,minbasis,xc='pbe,pbe'):
   ''' Compute the energy of the solution in mol,mf.  
   Used to check consistency between PySCF run and conversion run.
 
@@ -366,22 +369,44 @@ def compute_iao_mol(mol,mf,iaos,minbasis,xc='pbe,pbe'):
   Returns:
     float: charge info.
   '''
-  # Copied from examples.
-  mo_occ = [mf.mo_coeff[s][:,mf.mo_occ[s]>0] for s in [0,1]]
+  iaos,iao_reps=dt.compute_iao_reps(mol,mf,basis=minbasis,core=1)
+  iao_dms=[np.dot(iao_reps[s],iao_reps[s].T) for s in [0,1]]
+  pops=[iao_dms[s].diagonal() for s in [0,1]]
 
-  # transform mo_occ to IAO representation. Note the AO dimension is reduced
-  mo_occ = [reduce(np.dot, (iaos.T, mf.get_ovlp(), mo_occ[s])) for s in [0,1]]
-
-  # TODO is *2 for spinless calculations?
-  dm = [np.dot(mo_occ[s], mo_occ[s].T) for s in [0,1]]
   pmol = mol.copy()
   pmol.build(False, False, basis=minbasis)
-  mpops=[mf.mulliken_pop(pmol, dm[s], s=np.eye(pmol.nao_nr()),verbose=1) for s in [0,1]]
-  pops=[mpops[s][0] for s in [0,1]]
-  chrg=mpops[0][1]+mpops[1][1]
-  spin=mpops[0][1]-mpops[1][1]
+  popdf=pd.DataFrame(pmol.spherical_labels(),columns=['atom','element','orb','type'])
 
-  return chrg,spin,pops
+  popdf['spin']=pops[0]-pops[1]
+  popdf['charge']=pops[0]+pops[1]
+
+  return popdf
+
+##########################################################################################################
+def compute_iao_cell(cell,mf,minbasis,xc='pbe,pbe'):
+  ''' Compute the energy of the solution in mol,mf.  
+  Used to check consistency between PySCF run and conversion run.
+
+  Args:
+    mol (Mole): system.
+    mf (SCF object): SCF system with solution inside.
+    iaos (array): iaos generated from an pyscf.lo.iao call.
+    minbasis (PySCF basis): basis for evaluating IAOs (used to generate them).
+  Returns:
+    float: charge info.
+  '''
+  iaos,iao_reps=dt.compute_iao_reps_kpoint(cell,mf,basis=minbasis,core=4)
+  iao_dms=[np.dot(iao_reps[s],iao_reps[s].T) for s in [0,1]]
+  pops=[iao_dms[s].diagonal() for s in [0,1]]
+
+  pcell = cell.copy()
+  pcell.build(False, False, basis=minbasis)
+  popdf=pd.DataFrame(pcell.spherical_labels(),columns=['atom','element','orb','type'])
+
+  popdf['spin']=pops[0]-pops[1]
+  popdf['charge']=pops[0]+pops[1]
+
+  return popdf
 
 ##########################################################################################################
 def compute_charge_cell(cell,mf,iaos,minbasis,xc='pbe,pbe'):
