@@ -58,7 +58,7 @@ def crystal2pyscf_mol(propoutfn="prop.in.o",
 ##########################################################################################################
 def crystal2pyscf_cell(propoutfn="prop.in.o",
     basis='bfd_vtz',
-    gs=(8,8,8),
+    mesh=(16,16,16),
     basis_order=None):
   ''' Make a PySCF object with solution from a crystal run.
 
@@ -83,7 +83,7 @@ def crystal2pyscf_cell(propoutfn="prop.in.o",
 
   cell=pyscf.pbc.gto.Cell()
   cell.build(atom=atom,a=crylat_parm['latvecs'],unit='bohr',
-      gs=gs,basis=basis,ecp='bfd')
+      mesh=mesh,basis=basis,ecp='bfd')
 
   # Get kpoints that PySCF expects.
   # TODO only Gamma for now.
@@ -155,7 +155,7 @@ def format_eigenstates_mol(mol,cryeigsys,basis_order=None):
   crydfs=[pd.DataFrame(np.array(cryeigsys['eigvecs'][(0,0,0)]['real'][s]).T) for s in [0,1]]
 
   # PySCF basis order (our goal).
-  pydf=pd.DataFrame(mol.spherical_labels(),columns=['atnum','elem','orb','type'])
+  pydf=pd.DataFrame(mol.sph_labels(fmt=False),columns=['atnum','elem','orb','type'])
 
   # Info about atoms.
   crydfs=[df.join(pydf[['atnum','elem']]) for df in crydfs]
@@ -214,7 +214,7 @@ def format_eigenstates_cell(cell,cryeigsys,basis_order=None):
   crydfs=[pd.DataFrame(np.array(cryeigsys['eigvecs'][(0,0,0)]['real'][s]).T) for s in [0,1]]
 
   # PySCF basis order (our goal).
-  pydf=pd.DataFrame(cell.spherical_labels(),columns=['atnum','elem','orb','type'])
+  pydf=pd.DataFrame(cell.sph_labels(fmt=False),columns=['atnum','elem','orb','type'])
 
   # Info about atoms.
   crydfs=[df.join(pydf[['atnum','elem']]) for df in crydfs]
@@ -330,7 +330,7 @@ def compute_mulliken_mol(mol,mf):
   # Copied from examples.
   dm=mf.make_rdm1()
   pops,chrg=mf.mulliken_meta(mol,dm,s=mf.get_ovlp(),verbose=0)
-  popdf=pd.DataFrame(mol.spherical_labels(),columns=['atom','element','orb','type'])
+  popdf=pd.DataFrame(mol.sph_labels(fmt=False),columns=['atom','element','orb','type'])
   popdf['spin']=pops[0]-pops[1]
   popdf['charge']=pops[0]+pops[1]
   return popdf
@@ -351,7 +351,7 @@ def compute_mulliken_cell(cell,mf):
   pops,chrg=mf.mulliken_meta(cell,dm,s=mf.get_ovlp(),verbose=0)
   #print(np.array(pops).shape)
   #pops=[pops[s][0] for s in [0,1]] # Not sure why I had this?
-  popdf=pd.DataFrame(cell.spherical_labels(),columns=['atom','element','orb','type'])
+  popdf=pd.DataFrame(cell.sph_labels(fmt=False),columns=['atom','element','orb','type'])
   popdf['spin']=pops[0]-pops[1]
   popdf['charge']=pops[0]+pops[1]
   return popdf
@@ -375,7 +375,7 @@ def compute_iao_mol(mol,mf,minbasis,xc='pbe,pbe'):
 
   pmol = mol.copy()
   pmol.build(False, False, basis=minbasis)
-  popdf=pd.DataFrame(pmol.spherical_labels(),columns=['atom','element','orb','type'])
+  popdf=pd.DataFrame(pmol.sph_labels(fmt=False),columns=['atom','element','orb','type'])
 
   popdf['spin']=pops[0]-pops[1]
   popdf['charge']=pops[0]+pops[1]
@@ -396,12 +396,13 @@ def compute_iao_cell(cell,mf,minbasis,xc='pbe,pbe'):
     float: charge info.
   '''
   iaos,iao_reps=dt.compute_iao_reps_kpoint(cell,mf,basis=minbasis,core=4)
+
   iao_dms=[np.dot(iao_reps[s],iao_reps[s].T) for s in [0,1]]
   pops=[iao_dms[s].diagonal() for s in [0,1]]
 
   pcell = cell.copy()
   pcell.build(False, False, basis=minbasis)
-  popdf=pd.DataFrame(pcell.spherical_labels(),columns=['atom','element','orb','type'])
+  popdf=pd.DataFrame(pcell.sph_labels(fmt=False),columns=['atom','element','orb','type'])
 
   popdf['spin']=pops[0]-pops[1]
   popdf['charge']=pops[0]+pops[1]
