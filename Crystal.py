@@ -18,7 +18,7 @@ class CrystalWriter:
     #Electron model
     self.spin_polarized=True    
     self.xml_name="BFD_Library.xml"
-    self.functional={'exchange':'PBE','correlation':'PBE','hybrid':0}
+    self.functional={'exchange':'PBE','correlation':'PBE','hybrid':0,'predefined':None}
     self.total_spin=0
 
     #Numerical convergence parameters
@@ -100,13 +100,16 @@ class CrystalWriter:
     outlines+=["DFT"]
     if self.spin_polarized:
       outlines+=["SPIN"]
-    outlines += [ 
-      "EXCHANGE",
-      self.functional['exchange'],
-      "CORRELAT",
-      self.functional['correlation'],
-      "HYBRID", 
-      str(self.functional['hybrid'])]
+    if self.functional['predefined']!=None:
+      outlines+=[self.functional['predefined']]
+    else:
+      outlines += [ 
+        "EXCHANGE",
+        self.functional['exchange'],
+        "CORRELAT",
+        self.functional['correlation'],
+        "HYBRID", 
+        str(self.functional['hybrid'])]
     if self.dftgrid!="":
       outlines+=[self.dftgrid]
     outlines+=["END",
