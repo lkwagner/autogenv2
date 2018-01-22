@@ -20,6 +20,9 @@ class CrystalWriter:
     self.supercell=None #[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]  
     self.boundary='3d'
     self.symmetry=False
+    # Having trouble getting correct symmetry number from pymatgen.
+    # Need to just enter it in.
+    self.group_number=1
 
     #Electron model
     self.spin_polarized=True    
@@ -72,7 +75,8 @@ class CrystalWriter:
     pystruct=CifParser.from_string(self.cif).get_structures(primitive=self.primitive)[0]
     pysym=SpacegroupAnalyzer(pystruct)
     self.struct=pystruct.as_dict()
-    self.struct['group_number']=pysym.get_space_group_number()
+    # Doesn't always produce the correct group number.
+    #self.struct['group_number']=pysym.get_space_group_number()
   #-----------------------------------------------
 
   def set_struct_fromxyz(self,xyzstr):
@@ -287,7 +291,7 @@ class CrystalWriter:
     if self.symmetry:
       geomlines=[
           "CRYSTAL","0 0 0",
-          str(self.struct['group_number']),
+          str(self.group_number),
           self.space_group_format().format(**lat),
         ]
     else:
@@ -313,7 +317,7 @@ class CrystalWriter:
 ########################################################
 
   def geom0d(self):
-    geomlines=["MOLECULE","1"]
+    geomlines=["MOLECULE",str(self.group_number)]
     geomlines+=["%i"%len(self.struct['sites'])]
     for v in self.struct['sites']:
       nm=v['species'][0]['element']
@@ -332,31 +336,31 @@ class CrystalWriter:
     '''
     format_string=""
 
-    if 1<=self.struct['group_number']<3:
+    if 1<=self.group_number<3:
       #print("Case triclinic")
       format_string="{a} {b} {c} {alpha} {beta} {gamma}"
 
-    elif 3<=self.struct['group_number']<16:
+    elif 3<=self.group_number<16:
       #print("Case monoclinic")
       format_string="{a} {b} {c} {beta}"
 
-    elif 16<=self.struct['group_number']<75:
+    elif 16<=self.group_number<75:
       #print("Case orthorhombic")
       format_string="{a} {b} {c}"
      
-    elif 75<=self.struct['group_number']<143:
+    elif 75<=self.group_number<143:
       #print("Case tetragonal")
       format_string="{a} {c}"
 
-    elif 143<=self.struct['group_number']<168:
+    elif 143<=self.group_number<168:
       #print("Case trigonal")
       format_string="{a} {c}"
 
-    elif 168<=self.struct['group_number']<195:
+    elif 168<=self.group_number<195:
       #print("Case trigonal")
       format_string="{a} {c}"
 
-    elif 167<=self.struct['group_number']<231:
+    elif 167<=self.group_number<231:
       #print("Case cubic")
       format_string="{a}"
 
