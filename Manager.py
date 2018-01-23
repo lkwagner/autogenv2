@@ -61,9 +61,10 @@ def update_attributes(old,new,skip_keys=[],safe_keys=[]):
         .format(diff['old'],diff['new']))
     for key in diff['new']:
       if key in safe_keys:
-        print("Keeping {} from the latter.".format(diff['new']))
+        print("Keeping {} from the latter.".format(key))
         old.__dict__[key]=new.__dict__[key]
       else:
+        print("Problem with update of {}".format(key))
         raise AssertionError("Unsafe update; new setting affects accuracy.")
   return not issame
 
@@ -164,6 +165,11 @@ class CrystalManager:
       self.runner.run("Pcrystal &> %s"%self.crysoutfn)
       self.restarts+=1
 
+    # Sometimes an error puts it in a state where the crystal is done but not properties.
+    elif status=='done' and not self.preader.completed:
+      print("Crystal is done, but properties not...trying to read properties.")
+      self.preader.collect(self.propoutfn)
+
     self.completed=(self.creader.completed and self.preader.completed)
 
   #------------------------------------------------
@@ -191,12 +197,12 @@ class CrystalManager:
     ''' Safe copy options from other to self. '''
 
     updated=update_attributes(old=self.runner,new=other.runner,
-        safe_keys=['queue','walltime','np','nn','jobname','prefix','postfix'],
-        skip_keys=['queueid'])
+        safe_keys=['queue','walltime','np','nn','jobname'],
+        skip_keys=['queueid','prefix','postfix'])
 
     updated=update_attributes(old=self.writer,new=other.writer,
         safe_keys=['maxcycle','edifftol'],
-        skip_keys=['completed'])
+        skip_keys=['completed','modisymm','restart','guess_fort'])
     if updated:
       self.writer.completed=False
 
