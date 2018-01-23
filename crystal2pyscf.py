@@ -34,6 +34,7 @@ def crystal2pyscf_mol(propoutfn="prop.in.o",
   info, crylat_parm, cryions, crybasis, crypseudo = read_gred()
   cryeigsys = read_kred(info,crybasis)
 
+
   # Format and input structure.
   atom=[
       [periodic_table[atnum%200-1],tuple(pos)]\
@@ -75,6 +76,12 @@ def crystal2pyscf_cell(propoutfn="prop.in.o",
   info, crylat_parm, cryions, crybasis, crypseudo = read_gred()
   cryeigsys = read_kred(info,crybasis)
 
+  totspin=read_outputfile(propoutfn)
+  ntot=int(round(sum(crybasis['charges']))) # Doesn't work for charged cells!
+  nmo=int(round(sum(crybasis['nao_shell'])))
+  nup=int(round(0.5*(ntot + totspin)))
+  ndn=int(round(0.5*(ntot - totspin)))
+
   # Format and input structure.
   atom=[
       [periodic_table[atnum%200-1],tuple(pos)]\
@@ -96,8 +103,10 @@ def crystal2pyscf_cell(propoutfn="prop.in.o",
   crydfs=format_eigenstates_cell(cell,cryeigsys,basis_order)
   mf.mo_energy=cryeigsys['eigvals']
   mf.mo_coeff=[[df[[*range(df.shape[0])]].values] for df in crydfs]
-  mf.mo_occ=[[(cryeigsys['eig_weights'][0][s]>1e-8).astype(float)] for s in [0,1]]
-  mf.e_tot=np.nan #TODO compute energy and put it here, if needed.
+  mf.mo_occ=np.zeros((2,1,nmo))
+  mf.mo_occ[0,0,0:nup]+=1
+  mf.mo_occ[1,0,0:ndn]+=1
+  mf.e_tot=np.nan #TODO compute energy and put it here, if needed.K
 
   return cell,mf
 
@@ -297,316 +306,6 @@ def make_basis(crybasis,ions,base="qwalk"):
       ))
       cnt += 1
   return '\n'.join(blines)
-
-##########################################################################################################
-def compute_energy_mol(mol,mf,xc='pbe,pbe'):
-  ''' Compute the energy of the solution in mol,mf.  
-  Used to check consistency between PySCF run and conversion run.
-
-  Args:
-    mol (Mole): system.
-    mf (SCF object): SCF system with solution inside.
-  Returns:
-    float: Energy from calcualation
-  '''
-
-  dm=mf.make_rdm1()
-  mf.xc=xc
-  h1e=mf.get_hcore(mol)
-  vhf=mf.get_veff(mol,dm)
-  return mf.energy_tot(dm,h1e,vhf)
-
-##########################################################################################################
-def compute_mulliken_mol(mol,mf):
-  ''' Compute the Mulliken population of the solution in mol,mf.  
-  Used to check consistency between PySCF run and conversion run.
-
-  Args:
-    mol (Mole): system.
-    mf (SCF object): SCF system with solution inside.
-  Returns:
-    DataFrame: Mulliken orbital populations and orbitals.
-  '''
-  # Copied from examples.
-  dm=mf.make_rdm1()
-  pops,chrg=mf.mulliken_meta(mol,dm,s=mf.get_ovlp(),verbose=0)
-  popdf=pd.DataFrame(mol.sph_labels(fmt=False),columns=['atom','element','orb','type'])
-  popdf['spin']=pops[0]-pops[1]
-  popdf['charge']=pops[0]+pops[1]
-  return popdf
-
-##########################################################################################################
-def compute_mulliken_cell(cell,mf):
-  ''' Compute the Mulliken population of the solution in cell,mf.  
-  Used to check consistency between PySCF run and conversion run.
-
-  Args:
-    cell (Cell): system.
-    mf (SCF object): SCF system with solution inside.
-  Returns:
-    DataFrame: Mulliken orbital populations and orbitals.
-  '''
-  # Copied from examples.
-  dm=mf.make_rdm1()
-  pops,chrg=mf.mulliken_meta(cell,dm,s=mf.get_ovlp(),verbose=0)
-  #print(np.array(pops).shape)
-  #pops=[pops[s][0] for s in [0,1]] # Not sure why I had this?
-  popdf=pd.DataFrame(cell.sph_labels(fmt=False),columns=['atom','element','orb','type'])
-  popdf['spin']=pops[0]-pops[1]
-  popdf['charge']=pops[0]+pops[1]
-  return popdf
-
-##########################################################################################################
-def compute_iao_mol(mol,mf,minbasis,xc='pbe,pbe'):
-  ''' Compute the energy of the solution in mol,mf.  
-  Used to check consistency between PySCF run and conversion run.
-
-  Args:
-    mol (Mole): system.
-    mf (SCF object): SCF system with solution inside.
-    iaos (array): iaos generated from an pyscf.lo.iao call.
-    minbasis (PySCF basis): basis for evaluating IAOs (used to generate them).
-  Returns:
-    float: charge info.
-  '''
-  iaos,iao_reps=dt.compute_iao_reps(mol,mf,basis=minbasis,core=1)
-  iao_dms=[np.dot(iao_reps[s],iao_reps[s].T) for s in [0,1]]
-  pops=[iao_dms[s].diagonal() for s in [0,1]]
-
-  pmol = mol.copy()
-  pmol.build(False, False, basis=minbasis)
-  popdf=pd.DataFrame(pmol.sph_labels(fmt=False),columns=['atom','element','orb','type'])
-
-  popdf['spin']=pops[0]-pops[1]
-  popdf['charge']=pops[0]+pops[1]
-
-  return popdf
-
-##########################################################################################################
-def compute_iao_cell(cell,mf,minbasis,xc='pbe,pbe'):
-  ''' Compute the energy of the solution in mol,mf.  
-  Used to check consistency between PySCF run and conversion run.
-
-  Args:
-    mol (Mole): system.
-    mf (SCF object): SCF system with solution inside.
-    iaos (array): iaos generated from an pyscf.lo.iao call.
-    minbasis (PySCF basis): basis for evaluating IAOs (used to generate them).
-  Returns:
-    float: charge info.
-  '''
-  iaos,iao_reps=dt.compute_iao_reps_kpoint(cell,mf,basis=minbasis,core=4)
-
-  iao_dms=[np.dot(iao_reps[s],iao_reps[s].T) for s in [0,1]]
-  pops=[iao_dms[s].diagonal() for s in [0,1]]
-
-  pcell = cell.copy()
-  pcell.build(False, False, basis=minbasis)
-  popdf=pd.DataFrame(pcell.sph_labels(fmt=False),columns=['atom','element','orb','type'])
-
-  popdf['spin']=pops[0]-pops[1]
-  popdf['charge']=pops[0]+pops[1]
-
-  return popdf
-
-##########################################################################################################
-def compute_charge_cell(cell,mf,iaos,minbasis,xc='pbe,pbe'):
-  ''' Compute the energy of the solution in mol,mf.  
-  Used to check consistency between PySCF run and conversion run.
-
-  Args:
-    mol (Mole): system.
-    mf (SCF object): SCF system with solution inside.
-    iaos (array): iaos generated from an pyscf.lo.iao call.
-    minbasis (PySCF basis): basis for evaluating IAOs (used to generate them).
-  Returns:
-    float: charge info.
-  '''
-  gamma=0
-
-  # Copied from examples.
-  mo_occ = [mf.mo_coeff[s][gamma][:,mf.mo_occ[s][gamma]>0].squeeze() for s in [0,1]]
-  print(iaos.shape)
-
-  # transform mo_occ to IAO representation. Note the AO dimension is reduced
-  mo_occ = [reduce(np.dot, (iaos.T, mf.get_ovlp(), mo_occ[s])) for s in [0,1]]
-
-  # TODO is *2 for spinless calculations?
-  dm = [np.dot(mo_occ[s].squeeze(), mo_occ[s].squeeze().T) for s in [0,1]]
-  pcell = cell.copy()
-  pcell.build(False, False, basis=minbasis)
-  mpops=[mf.mulliken_pop(pcell, dm[s], s=np.eye(pcell.nao_nr()),verbose=1) for s in [0,1]]
-  pops=[mpops[s][0] for s in [0,1]]
-  chrg=mpops[0][1]+mpops[1][1]
-  spin=mpops[0][1]-mpops[1][1]
-
-  return chrg,spin,pops
-
-##########################################################################################################
-def compute_energy_cell(cell,mf,xc='pbe,pbe'):
-  ''' Compute the energy of the solution in mol,mf.  
-  Used to check consistency between PySCF run and conversion run.
-
-  Args:
-    cell (Cell): system.
-    mf (SCF object): SCF system with solution inside.
-  Returns:
-    float: Energy from calcualation
-  '''
-
-  dm=mf.make_rdm1()
-  mf.xc=xc
-  mf.direct_scf_tol=1e-5
-  h1e=mf.get_hcore(cell)
-  vhf=mf.get_veff(cell,dm[:,:1,:])
-  return mf.energy_tot(dm[:,:1,:],h1e,vhf)
-
-##########################################################################################################
-def test_crystal2pyscf_mol(
-    ref_chkfile="pyscf_driver.py.o",
-    propoutfn="prop.in.o",
-    basis_order=None,
-    minbasis=None):
-  ''' Test converter by reading an identical PySCF run and checking results are consistent.'''
-  #TODO Doc
-
-  # Reference for checking.
-  check_mol=pyscf.lib.chkfile.load_mol(ref_chkfile)
-  check_mol.verbose=1
-  check_mf=pyscf.scf.UKS(check_mol)
-  check_mf.__dict__.update(pyscf.lib.chkfile.load(ref_chkfile,'scf'))
-
-  # Result of conversion.
-  mol,mf=crystal2pyscf_mol(basis_order=basis_order)
-
-  ### Begin tests. ###
-
-  # Energies:
-  print("\nBeginning tests...\n")
-  print("  Energy test:")
-  print("    Test energy...")
-  test_energy=compute_energy_mol(mol,mf)
-  print("    {} Ha".format(test_energy))
-  print("    Reference energy...")
-  check_energy=compute_energy_mol(check_mol,check_mf)
-  print("    {} Ha".format(check_energy))
-  err=test_energy-check_energy
-  etest=abs(err)<1e-5
-  if not etest: 
-    print("    Energy test failed.\n")
-  else: 
-    print("    passed.\n")
-
-
-  # Charges:
-  if minbasis is not None:
-    mo_occ = check_mf.mo_coeff[0][:,check_mf.mo_occ[0]>0]
-    iaos = pyscf.lo.iao.iao(check_mol, mo_occ, minao=minbasis)
-
-    # Orthogonalize IAO
-    iaos = pyscf.lo.vec_lowdin(iaos, mf.get_ovlp())
-
-    check_charge,check_spin,check_pops=compute_charge_mol(check_mol,check_mf,iaos,minbasis)
-    test_charge,test_spin,test_pops=compute_charge_mol(mol,mf,iaos,minbasis)
-
-    print("  Charge test:")
-    print("    Test charge...")
-    print("    {}".format(test_charge))
-    print("    Reference charge...")
-    print("    {}".format(check_charge))
-    err=abs(test_charge-check_charge).sum()
-    ctest=abs(err)<1e-2
-    if not ctest: 
-      print("    Charge test failed.\n")
-    else: 
-      print("    passed.\n")
-
-    print("  Spin test:")
-    print("    Test spin...")
-    print("    {}".format(test_spin))
-    print("    Reference charge...")
-    print("    {}".format(check_spin))
-    err=abs(test_spin-check_spin).sum()
-    ctest=abs(err)<1e-2
-    if not ctest: 
-      print("    Spin test failed.\n")
-    else: 
-      print("    passed.\n")
-  else:
-    ctest=True
-    stest=True
-
-
-  if not all([etest]):
-    print("\n\n !!! Some tests failed! Shame on you, friend! !!!")
-  else:
-    print("\n\n === All tests passed! Good on you, friend! ===")
-
-##########################################################################################################
-def test_crystal2pyscf_cell(ref_chkfile="pyscf_driver.py.o",propoutfn="prop.in.o",basis_order=None):
-  ''' Test converter by reading an identical PySCF run and checking results are consistent.'''
-  #TODO Doc
-
-  # Reference for checking.
-  check_cell=pyscf.pbc.lib.chkfile.load_cell(ref_chkfile)
-  check_mf=pyscf.pbc.dft.KUKS(check_cell)
-  check_mf.__dict__.update(pyscf.lib.chkfile.load(ref_chkfile,'scf'))
-
-  # Result of conversion.
-  cell,mf=crystal2pyscf_cell(basis=basis,gs=(8,8,8),basis_order=basis_order)
-
-  #print("DIFF")
-  #for key in cell.__dict__.keys():
-  #  try:
-  #    if cell.__dict__[key]!=check_cell.__dict__[key]:
-  #      print("Key:  {}".format(key))
-  #      print("  Ref:  {}".format(check_cell.__dict__[key]))
-  #      print("  Test: {}".format(cell.__dict__[key]))
-  #  except ValueError:
-  #    try:
-  #      if all(cell.__dict__[key]!=check_cell.__dict__[key]):
-  #        print("Key:  {}".format(key))
-  #        print("  Ref:  {}".format(check_cell.__dict__[key]))
-  #        print("  Test: {}".format(cell.__dict__[key]))
-  #    except Exception as e: 
-  #      print("Key:  {}".format(key))
-  #      print("  Cannot compare.", type(e), e)
-  #      print("  Ref:  {}".format(check_cell.__dict__[key]))
-  #      print("  Test: {}".format(cell.__dict__[key]))
-
-  ### Begin tests. ###
-
-  #assert 0
-
-  # Energies:
-  print("\nBeginning tests...\n")
-  print("  Energy test:")
-  print("    Test energy...")
-  test_energy=compute_energy_cell(cell,mf)
-  print("    {} Ha".format(test_energy))
-  print("    Reference energy...")
-  check_energy=compute_energy_cell(check_cell,check_mf)
-  print("    {} Ha".format(check_energy))
-  err=test_energy-check_energy
-  etest=abs(err)<1e-5
-  if not etest: 
-    print("    Energy test failed; test: {:.8} Ha, check {:.8} Ha.".format(test_energy,check_energy))
-  else: 
-    print("    passed.")
-
-  if not all([etest]):
-    print("\n\n !!! Some tests failed! Shame on you, friend! !!!")
-  else:
-    print("\n\n === All tests passed! Good on you, friend! ===")
-
-##########################################################################################################
-def test_counter():
-  print("These should match:")
-  print(np.array([0,9,10,1,2,3,11,12,13,
-           14,15,16,4,5,6,7,8,17,
-           18,19,20,21,22,23,24,
-           25,26,27,28,29,30,31,32]))
-  print(fix_basis_order([0,1,2,0,0,1,1,2,2,3]))
 
 ##########################################################################################################
 if __name__=='__main__':
