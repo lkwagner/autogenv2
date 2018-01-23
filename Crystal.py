@@ -254,16 +254,7 @@ class CrystalWriter:
 ########################################################
   def geom(self):
     """Generate the geometry section for CRYSTAL"""
-    if self.struct is not None:
-      assert self.boundary in ['0d','3d'],"Invalid or not implemented boundary."
-      if self.boundary=="3d":
-        return self.geom3d()
-      elif self.boundary=='0d': 
-        return self.geom0d()
-      else:
-        print("Weird value of self.boundary",self.boundary)
-        quit() # This shouldn't happen.
-    elif self.struct_input is not None:
+    if self.struct_input is not None:
       geomlines=[
           'CRYSTAL',
           '0 0 0',
@@ -278,6 +269,15 @@ class CrystalWriter:
         for row in self.supercell:
           geomlines+=[' '.join(map(str,row))]
       return geomlines
+    elif self.struct is not None:
+      assert self.boundary in ['0d','3d'],"Invalid or not implemented boundary."
+      if self.boundary=="3d":
+        return self.geom3d()
+      elif self.boundary=='0d': 
+        return self.geom0d()
+      else:
+        print("Weird value of self.boundary",self.boundary)
+        quit() # This shouldn't happen.
     else:
       raise AssertionError("No geometry input found; set struct or struct_input.")
 
