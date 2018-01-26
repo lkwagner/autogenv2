@@ -106,7 +106,7 @@ def crystal2pyscf_cell(propoutfn="prop.in.o",
   mf.mo_occ=np.zeros((2,1,nmo))
   mf.mo_occ[0,0,0:nup]+=1
   mf.mo_occ[1,0,0:ndn]+=1
-  mf.e_tot=np.nan #TODO compute energy and put it here, if needed.K
+  mf.e_tot=np.nan #TODO compute energy and put it here, if needed.
 
   return cell,mf
 
