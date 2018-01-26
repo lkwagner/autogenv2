@@ -742,7 +742,7 @@ def write_files(lat_parm, ions, basis, pseudo, eigsys,
 
   # Useful quantities.
   basis['ntot'] = int(round(sum(basis['charges'])))
-  basis['nmo']  = sum(basis['nao_shell']) # = nao
+  basis['nmo']  = sum(basis['nao_shell'])
   eigsys['nup'] = int(round(0.5 * (basis['ntot'] + eigsys['totspin'])))
   eigsys['ndn'] = int(round(0.5 * (basis['ntot'] - eigsys['totspin'])))
   maxmo_spin=min(max(eigsys['nup'],eigsys['ndn'])+nvirtual,basis['nmo'])

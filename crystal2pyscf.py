@@ -77,7 +77,7 @@ def crystal2pyscf_cell(propoutfn="prop.in.o",
   cryeigsys = read_kred(info,crybasis)
 
   totspin=read_outputfile(propoutfn)
-  ntot=int(round(sum(crybasis['charges']))) # Doesn't work for charged cells!
+  ntot=int(round(sum(crybasis['charges'])))
   nmo=int(round(sum(crybasis['nao_shell'])))
   nup=int(round(0.5*(ntot + totspin)))
   ndn=int(round(0.5*(ntot - totspin)))
@@ -101,8 +101,8 @@ def crystal2pyscf_cell(propoutfn="prop.in.o",
 
   # Copy over MO info.
   crydfs=format_eigenstates_cell(cell,cryeigsys,basis_order)
-  mf.mo_energy=cryeigsys['eigvals']
-  mf.mo_coeff=[[df[[*range(df.shape[0])]].values] for df in crydfs]
+  mf.mo_coeff=np.array([[df[[*range(df.shape[0])]].values] for df in crydfs])
+  mf.mo_energy=cryeigsys['eigvals'].reshape(cryeigsys['eig_weights'].shape).swapaxes(0,1)
   mf.mo_occ=np.zeros((2,1,nmo))
   mf.mo_occ[0,0,0:nup]+=1
   mf.mo_occ[1,0,0:ndn]+=1
