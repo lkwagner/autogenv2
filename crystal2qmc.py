@@ -374,6 +374,47 @@ def write_slater(basis,eigsys,kpt,base="qwalk",kfmt='coord'):
   return outlines # Might be confusing.
 
 ###############################################################################
+def write_orbplot(basis,eigsys,kpt,base="qwalk",kfmt='coord'):
+  if kfmt == 'int': kbase = base + '_' + "{}".format(eigsys['kpt_index'][kpt])
+  else:             kbase = base + '_' + "{}{}{}".format(*kpt)
+  ntot = basis['ntot']
+  nmo  = basis['nmo']
+  nup  = eigsys['nup']
+  ndn  = eigsys['ndn']
+  uporbs = np.arange(nup)+1
+  dnorbs = np.arange(ndn)+1
+  if eigsys['nspin'] > 1:
+    dnorbs += nmo
+  if eigsys['ikpt_iscmpx'][kpt]: orbstr = "corbitals"
+  else:                          orbstr = "orbitals"
+  uporblines = ["{:5d}".format(orb) for orb in uporbs]
+  width = 10
+  for i in reversed(range(width,len(uporblines),width)):
+    uporblines.insert(i,"\n ")
+  dnorblines = ["{:5d}".format(orb) for orb in dnorbs]
+  for i in reversed(range(width,len(dnorblines),width)):
+    dnorblines.insert(i,"\n ")
+  outlines_prefix = [
+      "method { ",
+      "plot",
+      "{0} {{".format(orbstr),
+      "cutoff_mo",
+      "  magnify 1",
+      "  nmo {0}".format(dnorbs[-1]),
+      "  orbfile {0}.orb".format(kbase),
+      "  include {0}.basis".format(base),
+      "  centers { useglobal }",
+      "}",
+      "plotorbitals {",
+    ]
+  outlines_postfix= ["}","}","include "+kbase+".sys"]
+  with open(kbase+".up.plot",'w') as outf:
+    outf.write("\n".join(outlines_prefix+ [" ".join(uporblines)] + outlines_postfix))
+  with open(kbase+".dn.plot",'w') as outf:
+    outf.write("\n".join(outlines_prefix+ [" ".join(dnorblines)] + outlines_postfix))
+  
+
+###############################################################################
 # f orbital normalizations are from 
 # <http://winter.group.shef.ac.uk/orbitron/AOs/4f/equations.html>
 def normalize_eigvec(eigsys,basis,kpt):
@@ -727,6 +768,7 @@ def convert_crystal(
   for kpt in eigsys['kpt_coords']:
     if eigsys['ikpt_iscmpx'][kpt] and kset=='real': continue
     write_slater(basis,eigsys,kpt,base,kfmt)
+    write_orbplot(basis,eigsys,kpt,base,kfmt)
     normalize_eigvec(eigsys,basis,kpt)
     write_orb(eigsys,basis,ions,kpt,base,kfmt)
     write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,base,kfmt)
