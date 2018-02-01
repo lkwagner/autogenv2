@@ -100,7 +100,8 @@ class CrystalWriter:
     outlines+=["DFT"]
     if self.spin_polarized:
       outlines+=["SPIN"]
-    if self.functional['predefined']!=None:
+    if not ('predefined' in self.functional.keys()) \
+        or self.functional['predefined']!=None:
       outlines+=[self.functional['predefined']]
     else:
       outlines += [ 
