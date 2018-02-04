@@ -100,8 +100,8 @@ class CrystalWriter:
     outlines+=["DFT"]
     if self.spin_polarized:
       outlines+=["SPIN"]
-    if not ('predefined' in self.functional.keys()) \
-        or self.functional['predefined']!=None:
+    if 'predefined' in self.functional.keys() \
+        and self.functional['predefined']!=None:
       outlines+=[self.functional['predefined']]
     else:
       outlines += [ 
@@ -411,8 +411,13 @@ class CrystalWriter:
     return strlist
 import os 
 
+
+###################################################################
+
 class CrystalReader:
-  """ Tries to extract properties of crystal run, or else diagnose what's wrong. """
+  """ Extract properties of crystal run. 
+  output values are stored in self.out dictionary when collect() is run. 
+  """
   def __init__(self):
     self.completed=False
     self.out={}
@@ -470,28 +475,22 @@ class CrystalReader:
       if "CONVERGENCE" in reslines[0]:
         return "ok"
       elif "TOO MANY CYCLES" in reslines[0]:
-        #print("CrystalRunner: Too many cycles.")
         return "too_many_cycles"
-      else: # What else can happen?
-        #print("CrystalReader: Finished, but unknown state.")
+      else: 
         return "finished"
       
     detots = [float(line.split()[5]) for line in outlines if "DETOT" in line]
     if len(detots) == 0:
-      #print("CrystalRunner: Last run completed no cycles.")
       return "scf_fail"
 
     detots_net = sum(detots[1:])
     if detots_net > acceptable_scf:
-      #print("CrystalRunner: Last run performed poorly.")
       return "not_enough_decrease"
 
     etots = [float(line.split()[3]) for line in outlines if "DETOT" in line]
     if etots[-1] > 0:
-      print("CrystalRunner: Energy divergence.")
       return "divergence"
     
-    print("CrystalRunner: Not finished.")
     return "not_finished"
   
   
@@ -500,6 +499,5 @@ class CrystalReader:
     """ Decide status of crystal run. """
 
     status=self.check_outputfile(outfilename)
-    print("status",status)
     return status
     
