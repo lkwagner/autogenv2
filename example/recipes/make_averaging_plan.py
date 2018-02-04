@@ -1,5 +1,5 @@
 import sys
-sys.path.append("../")
+sys.path.append("../../")
 
 from JobEnsemble import JobEnsemble
 import Recipes as job
