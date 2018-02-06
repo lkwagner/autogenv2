@@ -18,13 +18,13 @@ periodic_table = [
 
 ###############################################################################
 # Reads in the geometry, basis, and pseudopotential from GRED.DAT.
-def read_gred():
+def read_gred(gred="GRED.DAT"):
   lat_parm = {}
   ions = {}
   basis = {}
   pseudo = {}
 
-  gred = open("GRED.DAT",'r').read()
+  gred = open(gred,'r').read()
 
   # Fix numbers with no space between them.
   gred = gred.replace("-"," -")
@@ -187,10 +187,10 @@ def read_gred():
 
 ###############################################################################
 # Reads in kpoints and eigen{values,vectors} from KRED.DAT.
-def read_kred(info,basis):
+def read_kred(info,basis,kred="KRED.DAT"):
   eigsys = {}
 
-  kred = open("KRED.DAT")
+  kred = open(kred)
 #  print(kred.readline())
 #  kred=kred.read()
   kred_words = [] #kred.split()
@@ -742,7 +742,7 @@ def write_files(lat_parm, ions, basis, pseudo, eigsys,
 
   # Useful quantities.
   basis['ntot'] = int(round(sum(basis['charges'])))
-  basis['nmo']  = sum(basis['nao_shell']) # = nao
+  basis['nmo']  = sum(basis['nao_shell'])
   eigsys['nup'] = int(round(0.5 * (basis['ntot'] + eigsys['totspin'])))
   eigsys['ndn'] = int(round(0.5 * (basis['ntot'] - eigsys['totspin'])))
   maxmo_spin=min(max(eigsys['nup'],eigsys['ndn'])+nvirtual,basis['nmo'])

@@ -7,6 +7,7 @@ from pymatgen.io.cif import CifParser
 from pymatgen.symmetry.analyzer import SpacegroupAnalyzer 
 from pymatgen.io.xyz import XYZ
 from pymatgen.core.periodic_table import Element
+from crystal2qmc import periodic_table # TODO should this be in crystal2qmc?
 from xml.etree.ElementTree import ElementTree
 import numpy as np
 import os
@@ -256,6 +257,7 @@ class CrystalWriter:
   def geom(self):
     """Generate the geometry section for CRYSTAL"""
     if self.struct_input is not None:
+      # TODO make into function like geom3d?
       geomlines=[
           'CRYSTAL',
           '0 0 0',
@@ -263,8 +265,11 @@ class CrystalWriter:
           ' '.join(map(str,self.struct_input['parameters'])),
           str(len(self.struct_input['coords']))
         ]
+      self._elements=set()
       for coord in self.struct_input['coords']:
-        geomlines+=[' '.join(coord)]
+        geomlines+=[' '.join(map(str,coord))]
+        self._elements.add(periodic_table[coord[0]-200-1].capitalize()) # Assumes ECP!
+      self._elements = sorted(list(self._elements)) # Standardize ordering.
       if self.supercell is not None:
         geomlines+=['SUPERCELL']
         for row in self.supercell:
@@ -288,6 +293,11 @@ class CrystalWriter:
   def geom3d(self):
     lat=self.struct['lattice']
     sites=self.struct['sites']
+    self._elements=set()
+    for s in self.struct['sites']:
+      nm=s['species'][0]['element']
+      self._elements.add(nm)
+    self._elements = sorted(list(self._elements)) # Standardize ordering.
 
     if self.symmetry:
       geomlines=[
@@ -374,13 +384,8 @@ class CrystalWriter:
 
   def basis_section(self):
     if self.basislines is None:
-      elements=set()
-      for s in self.struct['sites']:
-        nm=s['species'][0]['element']
-        elements.add(nm)
       basislines=[]
-      elements = sorted(list(elements)) # Standardize ordering.
-      for e in elements:
+      for e in self._elements:
         basislines+=self.generate_basis(e)
     else:
       basislines=self.basislines
