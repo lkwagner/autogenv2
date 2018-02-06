@@ -1,3 +1,5 @@
+import Crystal
+import PropertiesReader
 import os
 #import PySCF # TODO uncomment, due to library issue 
 import shutil as sh
@@ -72,11 +74,18 @@ def update_attributes(old,new,skip_keys=[],safe_keys=[]):
 class CrystalManager:
   """ Internal class managing process of running a DFT job though Crystal.
   Has authority over file names associated with this task."""
-  def __init__(self,writer,runner,crys_reader,prop_reader,trylev=False):
-    ''' convert controls if QWalk input files are produced. '''
+  def __init__(self,writer,runner,crys_reader=None,prop_reader=None,trylev=False):
+    ''' convert controls if QWalk input files are produced. None makes a default instance.'''
     self.writer=writer
-    self.creader=crys_reader
-    self.preader=prop_reader
+
+    if crys_reader is None:
+      self.creader=Crystal.CrystalReader()
+    else:
+      self.creader=crys_reader
+    if prop_reader is None:
+      self.preader=PropertiesReader.PropertiesReader()
+    else:
+      self.preader=prop_reader
     self.runner=runner
 
     # Internal.
