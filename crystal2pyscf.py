@@ -93,7 +93,7 @@ def crystal2pyscf_cell(
 
   cell=pyscf.pbc.gto.Cell()
   cell.build(atom=atom,a=crylat_parm['latvecs'],unit='bohr',
-      mesh=mesh,basis=basis,ecp='bfd')
+      mesh=mesh,basis=basis,ecp='bfd',verbose=1)
 
   # Get kpoints that PySCF expects.
   # TODO only Gamma for now.
