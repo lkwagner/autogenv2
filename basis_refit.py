@@ -100,7 +100,7 @@ if __name__=="__main__":
                 err=0
               else:
                 err=1e8
-                for ebase in [0.16,0.18,0.20]:
+                for ebase in [0.20]:
                   exptest=[]
                   for i in range(10):
                     exptest.append(ebase*2**i)
@@ -108,7 +108,7 @@ if __name__=="__main__":
                   print(ebase,errtest)
                   df['symbol'].append(child.attrib['symbol'])
                   df['shell'].append(shell)
-                  df['err'].append(err)
+                  df['err'].append(pftest)
                   df['angular'].append(basis['el'])
                   df['ebase'].append(ebase)
                   if errtest < err:
@@ -126,7 +126,7 @@ if __name__=="__main__":
                   attrib={'Exp':str(e),'Coeff':str(c)}))
               print("err",err)
 
-  tree.write("BFD_PBC.xml")             
+  tree.write("BFD_PBC0.20.xml")             
   import pandas as pd
   pd.DataFrame(df).to_csv("errors.csv")
 
