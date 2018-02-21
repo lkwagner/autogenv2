@@ -1,5 +1,5 @@
 import sys
-sys.path.append("../")
+sys.path.append("../../")
 
 from JobEnsemble import JobEnsemble
 import Recipes as job
@@ -37,7 +37,7 @@ for m,func in methods.items():
         'dft':f,
         'kpts':[2,2,2],
         'gs':[4,4,4],
-        'bfd_library':'../BFD_Library.xml'}
+        'bfd_library':'../../BFD_Library.xml'}
 
     joblist.append(job.PySCFQWalk(
                                   'si'+m+f.replace(',',''),
