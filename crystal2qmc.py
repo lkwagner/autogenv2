@@ -345,10 +345,39 @@ def find_basis_cutoff(lat_parm):
     return 7.5
 
 ###############################################################################
-def write_slater(basis,eigsys,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
-  if kfmt == 'int': kbase = base + '_' + "{}".format(eigsys['kpt_index'][kpt])
-  else:             kbase = base + '_' + "{}{}{}".format(*kpt)
-  ntot = basis['ntot']
+def ground_state_orbs():
+  ''' Find the numbers corresponding to the ground state orbitals. '''
+
+
+###############################################################################
+def write_slater(basis,eigsys,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1,
+    swaporbs=None,outbase=None):
+  ''' Write the slater file.
+
+  Args: 
+    basis (dict): basis data from GRED.
+    eigsys (dict): eigsys data from KRED.
+    kpt (int or tuple): kpoint. 
+    base (str): written to [base][kptstr].slater.
+    kfmt (str): Format of kpoint naming. 
+    maxmo_spin (int): Largest MO in up spin channel.
+    swaporbs (dict): Map orb numbers to each other to do excitations. 
+      Example: {10:11,102:105} will excite 10 to 11 and 102 to 105.
+    outbase (str): Manual override to output file base. Useful for excitations.
+  Returns:
+    list: lines that were written.
+  '''
+  if outbase is None: 
+    outbase=base
+
+  if kfmt == 'int': 
+    kbase = base + '_' + "{}".format(eigsys['kpt_index'][kpt])
+    outfn = outbase + '_' + "{}".format(eigsys['kpt_index'][kpt])
+  else:
+    kbase = base + '_' + "{}{}{}".format(*kpt)
+    outfn = outbase + '_' + "{}{}{}".format(*kpt)
+
+  # Figure out orbital numbers.
   nmo  = basis['nmo']
   nup  = eigsys['nup']
   ndn  = eigsys['ndn']
@@ -358,8 +387,17 @@ def write_slater(basis,eigsys,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
   dnorbs = np.arange(ndn)+1
   if eigsys['nspin'] > 1:
     dnorbs += maxmo_spin
+
+  # Modify for excitations.
+  if swaporbs is not None:
+    for idx,up in enumerate(uporbs):
+      if up in swaporbs.keys(): uporbs[idx]=swaporbs[up]
+    for idx,dn in enumerate(dnorbs):
+      if dn in swaporbs.keys(): dnorbs[idx]=swaporbs[dn]
+
   if eigsys['ikpt_iscmpx'][kpt]: orbstr = "corbitals"
   else:                          orbstr = "orbitals"
+
   uporblines = ["{:5d}".format(orb) for orb in uporbs]
   width = 10
   for i in reversed(range(width,len(uporblines),width)):
@@ -367,12 +405,13 @@ def write_slater(basis,eigsys,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
   dnorblines = ["{:5d}".format(orb) for orb in dnorbs]
   for i in reversed(range(width,len(dnorblines),width)):
     dnorblines.insert(i,"\n ")
+
   outlines = [
       "slater",
       "{0} {{".format(orbstr),
-      "cutoff_mo",
+      "blas2_mo",
       "  magnify 1",
-      "  nmo {0}".format(dnorbs[-1]),
+      "  nmo {0}".format(dnorbs.max()),
       "  orbfile {0}.orb".format(kbase),
       "  include {0}.basis".format(base),
       "  centers { useglobal }",
@@ -385,7 +424,7 @@ def write_slater(basis,eigsys,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
       "  " + " ".join(dnorblines),
       "}"
     ]
-  with open(kbase+".slater",'w') as outf:
+  with open(outfn+'.slater','w') as outf:
     outf.write("\n".join(outlines))
   return outlines # Might be confusing.
 
@@ -734,7 +773,7 @@ def write_moanalysis():
 
 ###############################################################################
 def write_files(lat_parm, ions, basis, pseudo, eigsys, 
-    base='qwalk', kfmt='coord', kset='complex',nvirtual=50):
+    base='qwalk', kfmt='coord', kset='complex',nvirtual=50,excitations=()):
   ''' Write out all the QWalk system and wave function definition files. 
   Input parameters defined in convert_crystal, and mostly come from the above.
   
@@ -769,6 +808,10 @@ def write_files(lat_parm, ions, basis, pseudo, eigsys,
     outfiles['sys'].append(write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,base,kfmt))
     outfiles['basis'].append(write_basis(basis,ions,base))
     outfiles['jast2'].append(write_jast2(lat_parm,ions,base))
+    
+    for eidx,excitation in enumerate(excitations):
+      outfiles['slater'].append(write_slater(basis,eigsys,kpt,base,kfmt,maxmo_spin,
+        swaporbs=excitation,outbase="{}x{}".format(base,eidx)))
 
   return outfiles
 
@@ -780,7 +823,8 @@ def convert_crystal(
     propoutfn="prop.in.o",
     kfmt='coord',
     kset='complex',
-    nvirtual=50):
+    nvirtual=50,
+    excitations=()):
   """
   Files are named by [base]_[kfmt option].sys etc.
   kfmt either 'int' or 'coord'.
@@ -801,7 +845,7 @@ def convert_crystal(
     eigsys['totspin'] = 0
 
   outfiles=write_files(lat_parm, ions, basis, pseudo, eigsys, 
-      base, kfmt, kset, nvirtual)
+      base, kfmt, kset, nvirtual,excitations)
 
   # I think this behavior was only useful for autogenv1
   # If you want the data, just use the read_* functions directly.
