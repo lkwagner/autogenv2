@@ -2,7 +2,7 @@ from __future__ import print_function
 import os
 import shutil as sh
 from pymatgen.io.cif import CifParser
-from pyscf import lib
+import pyscf
 from pyscf.scf.uhf import UHF,mulliken_meta
 
 
@@ -386,7 +386,7 @@ class PySCFReader:
   def read_chkfile(self,chkfile):
     ''' Read all data from the chkfile.'''
     ret={}
-    mol=lib.chkfile.load_mol(chkfile)
+    mol=pyscf.lib.chkfile.load_mol(chkfile)
 
     # TODO density matrix for mcscf parts.
     # I don't think those results are saved in the chkfile, necessarily,
@@ -397,7 +397,7 @@ class PySCFReader:
     ret['density_matrix']=dm
 
     for key in ('scf','mcscf'):
-      ret[key]=lib.chkfile.load(chkfile,key)
+      ret[key]=pyscf.lib.chkfile.load(chkfile,key)
     return ret
           
   ##------------------------------------------------

@@ -21,8 +21,7 @@ class CrystalWriter:
     self.supercell=None #[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]  
     self.boundary='3d'
     self.symmetry=False
-    # Having trouble getting correct symmetry number from pymatgen.
-    # Need to just enter it in.
+    # Enter this to ensure it's correct. If symmetry is on and this is 1, it will try to guess group_number.
     self.group_number=1
 
     #Electron model
@@ -74,10 +73,12 @@ class CrystalWriter:
     self.primitive=primitive
     self.cif=cifstr
     pystruct=CifParser.from_string(self.cif).get_structures(primitive=self.primitive)[0]
-    pysym=SpacegroupAnalyzer(pystruct)
+    if self.symmetry and  self.group_number==1:
+      # Defaults are too low. These tolerances *may* be too tight.
+      # If the produced space group number is too low, try tightening this.
+      pysym=SpacegroupAnalyzer(pystruct,symprec=1e-5,angle_tolerance=1e-5)
+      self.struct['group_number']=pysym.get_space_group_number()
     self.struct=pystruct.as_dict()
-    # Doesn't always produce the correct group number.
-    #self.struct['group_number']=pysym.get_space_group_number()
   #-----------------------------------------------
 
   def set_struct_fromxyz(self,xyzstr):
