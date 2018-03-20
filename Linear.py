@@ -7,7 +7,7 @@ class LinearWriter:
     self.wffiles=[]
     self.basenames=['qw_000']
     self.completed=False
-    self.total_nstep=2048
+    self.total_nstep=16384
     self.total_fit=2048
     self.set_options(options)
   #-----------------------------------------------
