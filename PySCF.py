@@ -4,6 +4,7 @@ import shutil as sh
 from pymatgen.io.cif import CifParser
 import pyscf
 from pyscf.scf.uhf import UHF,mulliken_meta
+from copy import deepcopy
 
 
 ####################################################
@@ -32,6 +33,7 @@ class PySCFWriter:
     # method: %s    -- CASSCF or CASCI.
     self.cas={}
 
+    # Used to name functions from conversion.
     self.basename ='qw'
 
     # Default chosen by method at runtime.
@@ -42,18 +44,22 @@ class PySCFWriter:
   #-----------------------------------------------
     
   def set_options(self, d):
+    saved=deepcopy(self.__dict__)
     selfdict=self.__dict__
 
     # Check important keys are set. 
     for k in d.keys():
       if not k in selfdict.keys():
-        raise AssertionError("Error:",k,"not a keyword for PySCFWriter")
+        raise AssertionError("Invalid option. %s not a keyword for PySCFWriter"%k)
       selfdict[k]=d[k]
 
     # If charge and spin should have same parity.
-    assert selfdict['charge']%2==selfdict['spin']%2,"""
-      Spin and charge should both be even or both be odd.
-      Charge=%d, spin=%d."""%(selfdict['charge'],selfdict['spin'])
+    if selfdict['charge']%2!=selfdict['spin']%2:
+      reason='Spin and charge should both be even or both be odd. Charge=%d, spin=%d.'\
+          %(selfdict['charge'],selfdict['spin'])
+      selfdict['charge']=saved['charge']
+      selfdict['spin']=saved['spin']
+      raise AssertionError("Invalid option. "+reason)
 
     # If postHF got set, new options are required input.
     if self.postHF==True:
@@ -107,7 +113,6 @@ class PySCFWriter:
         "from pyscf.dft.rks import RKS",
         "from pyscf.dft.roks import ROKS",
         "from pyscf.dft.uks import UKS",
-        "from pyscf2qwalk import print_qwalk,print_qwalk_pbc",
         "mol=gto.Mole(verbose=4)",
         "mol.build(atom='''"+self.xyz+"''',",
         "basis='%s',"%self.basis,
@@ -140,10 +145,7 @@ class PySCFWriter:
                    "mc.kernel()",
                    'print ("PostHF_done")',
 
-                   "print_qwalk(mol, mc, method= 'mcscf', tol = %g , basename = '%s')"%(
                     self.cas['tol'], self.basename)]
-    else:
-      outlines +=[ "print_qwalk(mol,m)"]
     outlines += ['print ("All_done")']
 
     restart_outlines=[] 
@@ -211,7 +213,6 @@ def generate_pbc_basis(xml_name,symbol,min_exp=0.2,naug=2,alpha=3,
 ####################################################
 class PySCFPBCWriter:
   def __init__(self,options={}):
-    #self.basis='bfd_vtz' # I think this gets ignored.
     self.charge=0
     self.cif=''
     self.completed=False
@@ -321,8 +322,8 @@ class PySCFPBCWriter:
         "from pyscf.pbc.scf import KRHF as RHF",
         "from pyscf.pbc.scf import KUHF as UHF",
         "from pyscf.pbc.dft import KRKS as RKS",
-        "from pyscf.pbc.dft import KUKS as UKS",
-        "from pyscf2qwalk import print_qwalk"]
+        "from pyscf.pbc.dft import KUKS as UKS"
+      ]
 
     #The basis
     outlines+=["basis={"]
@@ -369,7 +370,6 @@ class PySCFPBCWriter:
 
     outlines+=["print('E(HF) =',m.kernel(numpy.array(dm_kpts)))"]
     
-    outlines +=[ "print_qwalk_pbc(mol,m)"]
     outlines += ['print ("All_done")']
 
     f.write('\n'.join(outlines))
@@ -389,11 +389,10 @@ class PySCFReader:
     mol=pyscf.lib.chkfile.load_mol(chkfile)
 
     # TODO density matrix for mcscf parts.
-    # I don't think those results are saved in the chkfile, necessarily,
-    # unfortunately.
+    # I don't think those results are saved in the chkfile.
     uhf=UHF(mol)
     dm=uhf.from_chk('pyscf_driver.py.chkfile')
-    ret['basis_labels']=mol.spherical_labels()
+    ret['basis_labels']=mol.sph_labels(fmt=False)
     ret['density_matrix']=dm
 
     for key in ('scf','mcscf'):
@@ -432,6 +431,7 @@ class PySCFReader:
         converged=True
         self.output[outfile] = self.read_chkfile(chkfile)
         self.output[outfile]['chkfile']=chkfile
+        self.output[outfile]['conversion']=[]
         break
     if converged:
       self.completed=True
@@ -439,23 +439,6 @@ class PySCFReader:
     else:
       return 'killed'
 
-  #def collect(self,outfile,chkfile):
-  #  problem=False
-  #  if outfile not in self.output.keys():
-  #    self.output[outfile]={}
-  #  lines = open(outfile,'r').read().split()
-  #  for line in reversed(lines):
-  #    if "converged SCF energy" in line: 
-  #  if 'All_done' not in lines:
-  #     problem= True
-  #  else: # Only read in properties if self-consistent.
-  #    self.output[outfile] = self.read_chkfile(chkfile)
-  #  self.output[outfile]['chkfile']=chkfile
-  #  if not problem:
-  #    self.completed=True
-  #  else:
-  #    print('Problem detected in PySCF run.')
- 
   #------------------------------------------------
   def write_summary(self):
     print("#### Variance optimization")
