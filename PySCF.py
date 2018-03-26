@@ -141,11 +141,8 @@ class PySCFWriter:
                    self.cas['method'], self.cas['ncas'], self.cas['nelec'][0], 
                    self.cas['nelec'][1], self.cas['ncore']), 
                    "mc.direct_scf_tol=%f"%self.direct_scf_tol,
-
                    "mc.kernel()",
-                   'print ("PostHF_done")',
-
-                    self.cas['tol'], self.basename)]
+                   'print ("PostHF_done")']
     outlines += ['print ("All_done")']
 
     restart_outlines=[] 
@@ -369,9 +366,7 @@ class PySCFPBCWriter:
       outlines+=['m.xc="%s"'%self.dft]
 
     outlines+=["print('E(HF) =',m.kernel(numpy.array(dm_kpts)))"]
-    
     outlines += ['print ("All_done")']
-
     f.write('\n'.join(outlines))
 
     self.completed=True
