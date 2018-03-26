@@ -69,9 +69,11 @@ class PySCFRunnerPBS:
     return submitter.check_PBS_status(self.queueid)
 
   #-------------------------------------
-  def run(self,exestr):
+  def run(self,exestr,loc='./'):
     ''' Accumulate executable commands.'''
+    self.exelines.append('cd %s'%loc)
     self.exelines.append(exestr)
+    self.exelines.append('cd $cwd')
 
   #-------------------------------------
   def script(self,scriptfile):
@@ -118,7 +120,8 @@ class PySCFRunnerPBS:
          "#PBS -o %s"%jobout,
          "cd ${PBS_O_WORKDIR}",
          "export OMP_NUM_THREADS=%d"%(self.nn*self.np),
-         "export PYTHONPATH=%s"%(':'.join(self.ppath))
+         "export PYTHONPATH=%s"%(':'.join(self.ppath)),
+         "cwd=`pwd`"
        ] + self.prefix + self.exelines + self.postfix
     qsubfile="qsub.in"
     with open(qsubfile,'w') as f:
