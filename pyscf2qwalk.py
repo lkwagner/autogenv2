@@ -541,37 +541,45 @@ def print_qwalk_pbc(cell,mf,method='scf',tol=0.01,basename='qw'):
   
 ###########################################################
 
-
 def print_qwalk(mol,mf,method='scf',tol=0.01,basename='qw'):
+  ''' Convenience function for converting any PySCF object. '''
   if isinstance(mol,pbc.gto.Cell):
-    print_qwalk_pbc(mol,mf,method,tol,basename)
+    return print_qwalk_pbc(mol,mf,method,tol,basename)
   else:
-    print_qwalk_mol(mol,mf,method,tol,basename)
+    return print_qwalk_mol(mol,mf,method,tol,basename)
   
-       
-if __name__=='__main__':
-  import sys
+###########################################################
+
+def print_qwalk_chkfile(chkfile,method='scf',tol=0.01,basename='qw'):
+  ''' Convenience function for converting using only the chkfile.'''
   from pyscf import lib
   import pyscf
-  import h5py
-  assert len(sys.argv)>=2,"""
-  Usage: python pyscf2qwalk.py chkfile <basename>"""
 
-  chkfile=sys.argv[1]
-  basename='qw'
-  if len(sys.argv)>2:
-    basename=sys.argv[2]
-
-  # The Mole object is saved as a string
+  # The Mole object is saved as a string.
   try:
     mol=pbc.gto.cell.loads(lib.chkfile.load(chkfile,'mol'))
   except:
     mol=pyscf.gto.loads(lib.chkfile.load(chkfile,'mol'))
 
+  # This ensures that no extra stuff is enabled by using a proper SCF object.
   class FakeMF:
     def __init__(self,chkfile):
       self.__dict__=lib.chkfile.load(chkfile,'scf')
 
   mf=FakeMF(chkfile)  
-  print_qwalk(mol,mf,basename=basename)
+  return print_qwalk(mol,mf,basename=basename)
+  
+###########################################################
 
+if __name__=='__main__':
+  import sys
+  assert len(sys.argv)>=2,"""
+  Usage: python pyscf2qwalk.py chkfile <basename>"""
+  chkfile=sys.argv[1]
+
+  basename='qw'
+  if len(sys.argv)>2:
+    basename=sys.argv[2]
+
+  print("Files produced:")
+  print( print_qwalk_chkfile(chkfile,basename=basename) )
