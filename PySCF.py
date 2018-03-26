@@ -386,7 +386,7 @@ class PySCFReader:
     # TODO density matrix for mcscf parts.
     # I don't think those results are saved in the chkfile.
     uhf=UHF(mol)
-    dm=uhf.from_chk('pyscf_driver.py.chkfile')
+    dm=uhf.from_chk(chkfile)
     ret['basis_labels']=mol.sph_labels(fmt=False)
     ret['density_matrix']=dm
 
@@ -414,7 +414,6 @@ class PySCFReader:
     return restart
 
   #------------------------------------------------
-     
   def collect(self,outfile,chkfile):
     if outfile not in self.output.keys():
       self.output[outfile]={}
