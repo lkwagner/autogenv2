@@ -4,6 +4,8 @@ import os
 #import PySCF # TODO uncomment, due to library issue 
 import shutil as sh
 import numpy as np
+import pyscf2qwalk
+import pickle as pkl
 from copy import deepcopy
 
 ######################################################################
@@ -232,7 +234,7 @@ class CrystalManager:
 
 #######################################################################
 
-class QWalkfromCrystalManager:
+class Crystal2QWalkManager:
   """Set up a QWalk job from Crystal. 
   In this we will Convert from a CRYAPI_OUT-ed properties run. 
   """
@@ -410,31 +412,57 @@ class QWalkRunManager:
 
 #######################################################################
 
-
 class PySCFManager:
-  def __init__(self,writer,runner,reader):
-    self.writer=writer
-    self.runner=runner
-    self.reader=reader
-    self.driverfn='pyscf_driver.py'
-    self.outfile=self.driverfn+'.o'
-    self.chkfile=self.driverfn+'.chkfile'
-    self.completed=False
-    self.restarts=0
+  def __init__(self,writer,runner=None,reader=None,name='psycf_run',path=None):
+    ''' PySCFManager managers the writing of a PySCF input file, it's running, and managing the results.
+    Args:
+      writer (PySCFWriter): writer for input.
+      runner (runner object): to run job.
+      reader (PySCFReader): to read PySCF output.
+      name (str): identifier for this job.
+      path (str): directory where this manager is free to store information.
+    '''
+    # Where to save self.
+    self.pickle="%s.pkl"%name
+
+    # Ensure path is set up correctly.
+    if path is None:
+      path=os.path.getcwd()
+    if path[-1]!='/': path+='/'
+    self.path=path
+
+    # Handle old results if present.
+    if os.path.exists("%s/%s"%(self.path,self.pickle)):
+      print("Continuing old results.")
+      old=pkl.load(open("%s/%s"%(self.path,self.pickle),'rb'))
+      if False: #not self.is_consistent(old):
+        raise NotImplementedError("Handling updated input files is not implemented yet.")
+      else:
+        self.__dict__=old.__dict__
+    else:
+      print("Starting job for the first time.")
+      self.writer=writer
+      if reader is not None: self.reader=reader
+      else: self.reader=PySCF.PySCFReader()
+      if runner is not None: self.runner=runner
+      else: self.runner=PySCF.PySCFRunnerPBS()
+
+      self.driverfn='pyscf_driver.py'
+      self.outfile=self.driverfn+'.o'
+      self.chkfile=self.driverfn+'.chkfile'
+      self.qwfiles={}
+      self.completed=False
+      self.restarts=0
+
   #------------------------------------------------
   # Obsolete with update_options?
   def is_consistent(self,other):
-    # This documents what needs to be checked.
+    ''' This documents what needs to be checked.'''
     return self.writer.is_consistent(other.writer)
 
   #------------------------------------------------
   def update_options(self,other):
     ''' Safe copy options from other to self. '''
-
-    updated=update_attributes(old=self.runner,new=other.runner,
-        safe_keys=['queue','walltime','np','nn','jobname','prefix','postfix'],
-        skip_keys=['queueid'])
-
     updated=update_attributes(old=self.writer,new=other.writer,
         safe_keys=['max_cycle'],
         skip_keys=['completed','chkfile','dm_generator'])
@@ -443,6 +471,12 @@ class PySCFManager:
     
   #------------------------------------------------
   def nextstep(self):
+    ''' Determine and perform the next step in the calculation.'''
+    cwd=os.getcwd()
+    if not os.path.exists(self.path): os.mkdir(self.path)
+    print(self.path)
+    os.chdir(self.path)
+
     if not self.writer.completed:
       self.writer.pyscf_input(self.driverfn,self.chkfile)
     
@@ -451,20 +485,23 @@ class PySCFManager:
     if status=="running":
       pass
     elif status=="not_started":
-      self.runner.run("/usr/bin/python %s &> %s"%(self.driverfn,self.outfile))
+      self.runner.run("/usr/bin/python3 %s &> %s"%(self.driverfn,self.outfile),loc=os.getcwd())
     elif status=="ready_for_analysis":
-      #This is where we (eventually) do error correction and resubmits
       status=self.reader.collect(self.outfile,self.chkfile)
       if status=='killed':
         sh.copy(self.driverfn,"%d.%s"%(self.restarts,self.driverfn))
         sh.copy(self.outfile,"%d.%s"%(self.restarts,self.outfile))
         sh.copy(self.chkfile,"%d.%s"%(self.restarts,self.chkfile))
-        self.writer.dm_generator=PySCF.dm_from_chkfile("%d.%s"%(self.restarts,self.chkfile))
+        if os.path.exists(self.chkfile):
+          self.writer.dm_generator=PySCF.dm_from_chkfile("%d.%s"%(self.restarts,self.chkfile))
         self.writer.pyscf_input(self.driverfn,self.chkfile)
-        self.runner.run("/usr/bin/python %s &> %s"%(self.driverfn,self.outfile))
+        self.runner.run("/usr/bin/python3 %s &> %s"%(self.driverfn,self.outfile))
         self.restarts+=1
 
     self.completed=self.reader.completed
+    with open(self.pickle,'wb') as outf:
+      pkl.dump(self,outf)
+    os.chdir(cwd)
 
   #------------------------------------------------
   def script(self,jobname=None):
@@ -486,12 +523,25 @@ class PySCFManager:
     self._runready=False # After running, we won't run again without more analysis.
       
   #------------------------------------------------
-
   def write_summary(self):
     self.reader.write_summary()
 
+  #------------------------------------------------
+  def export_qwalk(self):
+    ''' Use the results of the run to generate a slater determinant trial fuction. '''
+    if len(self.qwfiles)==0:
+      if not self.completed:
+        print("PySCF incomplete, attempting to continue calculation.")
+        self.nextstep()
+        return None
+      else:
+        print("Converting to qwalk.")
+        self.qwfiles=pyscf2qwalk.print_qwalk_chkfile(self.chkfile)
+    return self.qwfiles
+
   #----------------------------------------
   def status(self):
+    ''' Determine the course of action based on info from reader and runner.'''
     current_status = resolve_status(self.runner,self.reader,[self.outfile], 'pyscf')
     if current_status == 'done':
       return 'ok'
