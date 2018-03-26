@@ -398,7 +398,6 @@ class PySCFManager:
 class QWalkRunManager:
   def __init__(self,writer,reader,runner=None,name='qw_run',path=None):
     ''' QWalkManager managers the writing of a QWalk input files, it's running, and managing the results.
-
     Args:
       writer (qwalk writer): writer for input.
       reader (qwalk reader): to read job.
@@ -406,8 +405,7 @@ class QWalkRunManager:
       name (str): identifier for this job. This names the files associated with run.
       path (str): directory where this manager is free to store information.
     '''
-    # Where to save self.
-    self.pickle="%s.pkl"%name
+    self.pickle="%s.%s.pkl"%(writer.qmc_abr,name)
 
     # Ensure path is set up correctly.
     if path is None:
@@ -434,6 +432,7 @@ class QWalkRunManager:
     self.completed=False
     self.scriptfile=None
     self._runready=False
+
     self.infile="%s.%s"%(name,writer.qmc_abr)
     self.outfile="%s.o"%infile
     self.stdout="%s.out"%infile
