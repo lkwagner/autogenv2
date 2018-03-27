@@ -42,18 +42,16 @@ class RunnerPBS:
     return submitter.check_PBS_stati(self.queueid)
 
   #-------------------------------------
-  def add_task(self,exestr,loc):
+  def add_task(self,exestr):
     ''' Accumulate executable commands.
     Args: 
       exestr (str): executible statement. Will be prepended with appropriate mpirun. 
-      loc (str): absolute path to location to execute.
     '''
 
-    for line in self.exelines:
-      if self.np=='allprocs':
-        self.exelines.append("cd {loc}; mpirun {exe}; cd $cwd".format(loc=loc,exe=exestr))
-      else:
-        self.exelines.append("cd {loc}; mpirun -n {tnp} {exe}; cd $cwd".format(loc=loc,tnp=self.nn*self.np,exe=exestr))
+    if self.np=='allprocs':
+      self.exelines.append("mpirun {exe}".format(exe=exestr))
+    else:
+      self.exelines.append("mpirun -n {tnp} {exe}".format(tnp=self.nn*self.np,exe=exestr))
 
   #-------------------------------------
   def script(self,scriptfile):
@@ -77,8 +75,13 @@ class RunnerPBS:
       jobname=self.jobname
 
     if len(self.exelines)==0:
-      print("RunnerPBS: no jobs to run.")
+      print("runner: no jobs to run.")
       return
+    
+    if self.np=='allprocs':
+      ppnstr='flags=allprocs'
+    else:
+      ppnstr=':ppn=%d'%self.np
 
     jobout=jobname+'.qsub.out'
     # Submit all jobs.
@@ -90,16 +93,16 @@ class RunnerPBS:
         "#PBS -N %s "%jobname,
         "#PBS -o %s "%jobout,
         "cd %s"%os.getcwd(),
-      ] + self.prefix + exelines + self.postfix
+      ] + self.prefix + self.exelines + self.postfix
     qsubfile=jobname+".qsub"
     with open(qsubfile,'w') as f:
       f.write('\n'.join(qsub))
     try:
       result = sub.check_output("qsub %s"%(qsubfile),shell=True)
       self.queueid.append(result.decode().split()[0].split('.')[0])
-      print("Submitted as %s"%self.queueid)
+      print("runner: Submitted as %s"%self.queueid)
     except sub.CalledProcessError:
-      print("Error submitting job. Check queue settings.")
+      print("runner: Error submitting job. Check queue settings.")
 
     # Remove exelines so the runner is ready for the next go.
     self.exelines=[]
@@ -132,7 +135,15 @@ class PySCFRunnerPBS(RunnerPBS):
     else:              self.prefix=prefix
     if postfix is None: self.postfix=[]
     else:               self.postfix=postfix
-    self.queueid=None
+    self.queueid=[]
+
+  #-------------------------------------
+  def add_task(self,exestr):
+    ''' Accumulate executable commands.
+    Args: 
+      exestr (str): executible statement. Will be prepended with appropriate mpirun. 
+    '''
+    self.exelines.append(exestr)
 
   #-------------------------------------
   def script(self,scriptfile):
@@ -142,13 +153,6 @@ class PySCFRunnerPBS(RunnerPBS):
     if len(self.exelines)==0:
       return False
 
-    # Shuffle executions with directory changes.
-    actions=[]
-    for loc,exe in zip(self.loclines,self.exelines):
-      actions.append(loc)
-      actions.append(exe)
-      actions.append('cd $cwd')
-
     # Prepend mp specs.
     actions=["export OMP_NUM_THREADS=%d"%(self.nn*self.np)]+actions
 
@@ -157,7 +161,6 @@ class PySCFRunnerPBS(RunnerPBS):
       outf.write('\n'.join(self.prefix + actions + self.postfix))
 
     # Remove exelines so the runner is ready for the next go.
-    self.loclines=[]
     self.exelines=[]
 
     return True
@@ -165,17 +168,10 @@ class PySCFRunnerPBS(RunnerPBS):
   #-------------------------------------
   def submit(self,jobname=None):
     if len(self.exelines)==0: 
-      print("Nothing to run.")
+      print(self.__class__.__name__,": Nothing to run.")
       return
     if jobname is None: jobname=self.jobname
 
-    # Shuffle executions with directory changes.
-    actions=[]
-    for loc,exe in zip(self.loclines,self.exelines):
-      actions.append(loc)
-      actions.append(exe)
-      actions.append('cd $cwd')
-    
     jobout=jobname+".jobout"
     qsublines=[
          "#PBS -q %s"%self.queue,
@@ -197,16 +193,15 @@ class PySCFRunnerPBS(RunnerPBS):
          "export OMP_NUM_THREADS=%d"%(self.nn*self.np),
          "export PYTHONPATH=%s"%(':'.join(self.ppath)),
          "cwd=`pwd`"
-       ] + self.prefix + actoins + self.postfix
-    qsubfile="qsub.in"
+       ] + self.prefix + self.exelines + self.postfix
+    qsubfile=jobname+".qsub"
     with open(qsubfile,'w') as f:
       f.write('\n'.join(qsublines))
     result = sub.check_output("qsub %s"%(qsubfile),shell=True)
-    self.queueid = result.decode().split()[0]
-    print("Submitted as %s"%self.queueid)
+    self.queueid.append(result.decode().split()[0])
+    print("runner: Submitted as %s"%self.queueid)
 
     # Clear out the lines to set up for the next job.
-    self.loclines=[]
     self.exelines=[]
 
 # TODO Specialize a runner for running QWalk jobs in the same directory together. 

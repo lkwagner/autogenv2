@@ -72,15 +72,15 @@ class PySCFWriter:
     skipkeys = ['completed','chkfile','dm_generator']
     for otherkey in other.__dict__.keys():
       if otherkey not in self.__dict__.keys():
-        print('other is missing a key.')
+        print(self.__class__.__name__,': other is missing a key.')
         return False
     for selfkey in self.__dict__.keys():
       if selfkey not in other.__dict__.keys():
-        print('self is missing a key.')
+        print(self.__class__.__name__,': self is missing a key.')
         return False
     for key in self.__dict__.keys():
       if self.__dict__[key]!=other.__dict__[key] and key not in skipkeys:
-        print("Different keys [{}] = \n{}\n or \n {}"\
+        print(self.__class__.__name__,": Different keys [{}] = \n{}\n or \n {}"\
             .format(key,self.__dict__[key],other.__dict__[key]))
         return False
     return True
@@ -99,7 +99,7 @@ class PySCFWriter:
       elif self.method in ['UKS','UHF']:
         self.dm_generator=dm_from_uhf_minao()
       else:
-        print("Warning: default guess not set for method=%s.\n Trying UHF."%self.method)
+        print(self.__class__.__name__,": Warning--default guess not set for method=%s.\n Trying UHF."%self.method)
         self.dm_generator=dm_from_uhf_minao()
 
     for i in self.pyscf_path:
