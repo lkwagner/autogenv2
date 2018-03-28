@@ -415,17 +415,17 @@ class PySCFReader:
 
   #------------------------------------------------
   def collect(self,outfile,chkfile):
-    if outfile not in self.output.keys():
-      self.output[outfile]={}
+    self.output={}
+    self.output['file']=outfile
 
     converged=False
     lines = open(outfile,'r').read().split('\n')
     for line in reversed(lines):
       if "converged SCF energy" in line: 
         converged=True
-        self.output[outfile] = self.read_chkfile(chkfile)
-        self.output[outfile]['chkfile']=chkfile
-        self.output[outfile]['conversion']=[]
+        self.output.update(self.read_chkfile(chkfile))
+        self.output['chkfile']=chkfile
+        self.output['conversion']=[]
         break
     if converged:
       self.completed=True

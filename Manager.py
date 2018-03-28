@@ -311,7 +311,6 @@ class PySCFManager:
       pass
     elif status=="not_started":
       self.runner.add_task("/usr/bin/python3 %s &> %s"%(self.driverfn,self.outfile))
-      print(self.runner.exelines)
     elif status=="ready_for_analysis":
       status=self.reader.collect(self.outfile,self.chkfile)
       if status=='killed':
