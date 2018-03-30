@@ -7,7 +7,7 @@ Goal: Provide tools that make it easy to manage and store QWalk runs.
 
 Check out the intro folder, which constains a set of jupyter notebooks to help you understand how this package works.
 
-Working through all the notebooks should only take $\sim 10$ minutes.
+Working through all the notebooks should only take ~10 minutes.
 
 #Object definitions
 
