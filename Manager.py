@@ -251,6 +251,7 @@ class PySCFManager:
     if path[-1]!='/': path+='/'
     self.path=path
 
+    print(self.__class__.__name__,": initializing")
     print(self.__class__.__name__,": name= %s"%self.name)
     print(self.__class__.__name__,": path= %s"%self.path)
 
@@ -299,6 +300,7 @@ class PySCFManager:
   #------------------------------------------------
   def nextstep(self):
     ''' Determine and perform the next step in the calculation.'''
+    print(self.__class__.__name__,": next step.")
     cwd=os.getcwd()
     os.chdir(self.path)
 
@@ -322,6 +324,8 @@ class PySCFManager:
         self.writer.pyscf_input(self.driverfn,self.chkfile)
         self.runner.add_task("/usr/bin/python3 %s &> %s"%(self.driverfn,self.outfile))
         self.restarts+=1
+      elif status=='ok':
+        print(self.__class__.__name__,": %s status= %s, task complete."%(self.name,status))
 
     # Ready for bundler or else just submit the jobs as needed.
     if self.bundle:
@@ -349,8 +353,8 @@ class PySCFManager:
   def export_qwalk(self):
     ''' Export QWalk input files into current directory.'''
     if len(self.qwfiles)==0:
+      self.nextstep()
       if not self.completed:
-        self.nextstep()
         return False
       else:
         print(self.__class__.__name__,": %s generating QWalk files."%self.name)
@@ -375,19 +379,21 @@ class PySCFManager:
 
 #######################################################################
 class QWalkManager:
-  def __init__(self,writer,reader,runner=None,name='qw_run',path=None,bundle=False,qwalk='~/bin/qwalk'):
+  def __init__(self,writer,reader,runner=None,trialfunc=None,name='qw_run',path=None,bundle=False,qwalk='~/bin/qwalk'):
     ''' QWalkManager managers the writing of a QWalk input files, it's running, and managing the results.
     Args:
       writer (qwalk writer): writer for input.
       reader (qwalk reader): to read job.
       runner (runner object): to run job.
+      trialfunc (TrialFunction): TrialFunction object for generating trail function input. 
+        Note: This is only used if write.trailfunc arguement==''. 
       name (str): identifier for this job. This names the files associated with run.
       path (str): directory where this manager is free to store information.
       bundle (bool): False - submit jobs. True - dump job commands into a script for a bundler to run.
       qwalkbin (str): absolute path to qwalk executible.
     '''
     self.name=name
-    self.pickle="%s.%s.pkl"%(self.name,writer.qmc_abr)
+    self.pickle="%s.pkl"%(self.name)
 
     # Ensure path is set up correctly.
     if path is None:
@@ -395,10 +401,13 @@ class QWalkManager:
     if path[-1]!='/': path+='/'
     self.path=path
 
+    print(self.__class__.__name__,": initializing")
     print(self.__class__.__name__,": name= %s"%self.name)
     print(self.__class__.__name__,": path= %s"%self.path)
+
     self.writer=writer
     self.reader=reader
+    self.trialfunc=trialfunc
     self.qwalk=qwalk
     if runner is not None: self.runner=runner
     else: self.runner=Runner.RunnerPBS()
@@ -413,7 +422,7 @@ class QWalkManager:
 
     # Handle old results if present.
     if os.path.exists(self.path+self.pickle):
-      print(self.__class__.__name__,": Rebooting old manager.")
+      print(self.__class__.__name__,": Recovering old manager.")
       old=pkl.load(open(self.path+self.pickle,'rb'))
       old.update_options(self)
       self=old
@@ -446,13 +455,25 @@ class QWalkManager:
   #------------------------------------------------
   def nextstep(self):
     ''' Perform next step in calculation. trialfunc managers are updated if they aren't completed yet.'''
+
+    print(self.__class__.__name__,": next step.")
+
+    # Check dependency is completed first.
+    if self.writer.trialfunc=='':
+      self.writer.trialfunc=self.trialfunc.export(self.path)
+
+    # Work on this job.
     cwd=os.getcwd()
     os.chdir(self.path)
 
+    dir(self.reader)
+
+    # Write the input file.
     if not self.writer.completed:
       self.writer.qwalk_input(self.infile)
     
     status=resolve_status(self.runner,self.reader,self.outfile)
+    print(self.__class__.__name__,": %s status= %s"%(self.name,status))
     if status=="not_started" and self.writer.completed:
       exestr="%s %s &> %s"%(self.qwalk,self.infile,self.stdout)
       self.runner.add_task(exestr)
@@ -461,6 +482,7 @@ class QWalkManager:
       #This is where we (eventually) do error correction and resubmits
       status=self.reader.collect(self.outfile)
       if status=='ok':
+        print(self.__class__.__name__,": %s status= %s, task complete."%(self.name,status))
         self.completed=True
       else:
         print(self.__class__.__name__,": %s status= %s, attempting rerun."%(self.name,status))
@@ -508,68 +530,3 @@ class QWalkManager:
       return 'ok'
     else:
       return 'not_finished'
-    
-  #----------------------------------------
-  def generate_slater(self,slatman,kpoint=0):
-    ''' Generate a Slater wave function from a manager that generates a Slater determinant.
-
-    Args: 
-      slatman (Manager): Manager with a Slater-determinant-generating result.
-    Returns:
-      str or None: None if managers are not ready, QWalk section (str) if they are.
-    '''
-    # Ensure files are correctly generated.
-    if not (slatman.export_qwalk() and jastman.export_qwalk()):
-      return ''
-
-    if type(slatman.qwfiles['slater'])==list:
-      slater=slatman.path+slatman.qwfiles['slater'][kpoint]
-      sys=slatman.qwfiles['sys'][kpoint]
-    else:
-      slater=slatman.path+slatman.qwfiles['slater']
-      sys=slatman.path+slatman.qwfiles['sys']
-    outlines=[
-        'include %s/%s'%(os.path.relpath(self.path,slatman.path),sys),
-        'trialfunc { ',
-        '  include %s/%s'%(os.path.relpath(self.path,slatman.path),slater),
-        '}'
-      ]
-    self.writer.trialfunc='\n'.join(outlines)
-
-  #----------------------------------------
-  def generate_slaterjastrow(self,slatman,jastman,qmcpath='./',kpoint=0):
-    ''' Generate a Slater-Jastrow wave function from a manager that generates a Slater determinant and
-      a manager that generates a Jastrow factor.
-
-    Args: 
-      slatman (Manager): Manager with a Slater-determinant-generating result.
-      jastman (Manager): Manager with a Jastrow-generating result. 
-    Returns:
-      str or None: None if managers are not ready, QWalk section (str) if they are.
-    '''
-    # Ensure files are correctly generated.
-    if not (slatman.export_qwalk() and jastman.export_qwalk()):
-      return ''
-
-    if type(slatman.qwfiles['slater'])==list:
-      slater=slatman.qwfiles['slater'][kpoint]
-      sys=slatman.qwfiles['sys'][kpoint]
-    else:
-      slater=slatman.qwfiles['slater']
-      sys=slatman.qwfiles['sys']
-    jastrow=jastman.qwfiles['jastrow']
-
-    # There may be a use case for these two to be different, but I want to check the first time this happens. 
-    # You can have weird bugs if you use different system files for each wave function term, I think.
-    # Should find a way to check for this bug. 
-    assert jastman.path+jastman.qwfiles['sys']==slatman.path+slatman.qwfiles['sys'],\
-        'System file probably should be the same between Jastrow and Slater files. '
-
-    outlines=[
-        'include %s/%s'%(os.path.relpath(self.path,slatman.path),sys),
-        'trialfunc { slater-jastrow ',
-        '  wf1 { include %s/%s }'%(os.path.relpath(self.path,slatman.path),slater),
-        '  wf2 { include %s/%s }'%(os.path.relpath(self.path,slatman.path),jastrow),
-        '}'
-      ]
-    self.writer.trialfunc='\n'.join(outlines)

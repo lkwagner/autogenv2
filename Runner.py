@@ -75,7 +75,7 @@ class RunnerPBS:
       jobname=self.jobname
 
     if len(self.exelines)==0:
-      print(self.__class__.__name__,"no jobs to run.")
+      #print(self.__class__.__name__,": All tasks completed or queued.")
       return
     
     if self.np=='allprocs':
@@ -100,9 +100,9 @@ class RunnerPBS:
     try:
       result = sub.check_output("qsub %s"%(qsubfile),shell=True)
       self.queueid.append(result.decode().split()[0].split('.')[0])
-      print("Runner: Submitted as %s"%self.queueid)
+      print(self.__class__.__name__,": Submitted as %s"%self.queueid)
     except sub.CalledProcessError:
-      print("Runner: Error submitting job. Check queue settings.")
+      print(self.__class__.__name__,": Error submitting job. Check queue settings.")
 
     # Remove exelines so the runner is ready for the next go.
     self.exelines=[]
@@ -168,7 +168,7 @@ class PySCFRunnerPBS(RunnerPBS):
   #-------------------------------------
   def submit(self,jobname=None):
     if len(self.exelines)==0: 
-      print(self.__class__.__name__,": Nothing to run.")
+      #print(self.__class__.__name__,": All tasks completed or queued.")
       return
     if jobname is None: jobname=self.jobname
 

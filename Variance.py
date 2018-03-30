@@ -6,7 +6,7 @@ class VarianceWriter:
     ''' Object for producing input into a variance optimization QWalk run. 
     Args:
       options (dict): editable options are as follows.
-        trialfunc (str): (required) system and trial wavefunction section.
+        trialfunc (str): system and trial wavefunction section.
         errtol (float): tolerance for the variance. 
         minblocks (int): minimum number of VMC steps to take.
         iterations (int): number of VMC steps to attempt.
@@ -24,33 +24,12 @@ class VarianceWriter:
     self.set_options(options)
     
   #-----------------------------------------------
-    
   def set_options(self, d):
     selfdict=self.__dict__
     for k in d.keys():
       if not k in selfdict.keys():
         raise AssertionError("Error:",k,"not a keyword for VarianceWriter")
       selfdict[k]=d[k]
-  #-----------------------------------------------
-  def is_consistent(self,other):
-    #In principle we should check for the files, but 
-    #they are often determined *after* the plan has been 
-    #written so it's not currently practical to check them.
-    skipkeys = ['completed','sysfiles','slaterfiles','jastfiles']
-    for otherkey in other.__dict__.keys():
-      if otherkey not in self.__dict__.keys():
-        print(self.__class__.__name__,': other is missing a key.')
-        return False
-    for selfkey in self.__dict__.keys():
-      if selfkey not in other.__dict__.keys():
-        print(self.__class__.__name__,': self is missing a key.')
-        return False
-    for key in self.__dict__.keys():
-      if self.__dict__[key]!=other.__dict__[key] and key not in skipkeys:
-        print(self.__class__.__name__,": Different keys [{}] = \n{}\n or \n {}"\
-            .format(key,self.__dict__[key],other.__dict__[key]))
-        return False
-    return True
     
   #-----------------------------------------------
   def qwalk_input(self,infile):
