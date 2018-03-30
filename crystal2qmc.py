@@ -1,29 +1,11 @@
-''' 
-crystal2qmc
-
-This module can read Crystal output and organize the data into python dictionaries.
-It then takes those dictionaries and writes out the appropriate QWalk files.
-
-Example:
-
-  >>> qw_writer=QWalkWriter()
-  >>> qw_writer.read_gredkred("GRED.DAT","KRED.DAT")
-  >>> qw_writer.write_files()
-
-You can also just use `convert_crystal` with defaults and it should work
-for most cases.
-
-By default this will write the ground state determinant from a Crystal run and
-output several of the QWalk input files needed to get VMC or DMC started. 
-There are also routines here to make excitations or multideterminant inputs out of the Crystal run.
-'''
-
 from __future__ import division,print_function
 import numpy as np
 import sys
 
-# List of all atoms. Useful for translating elements from strings to integers and back. 
-# Yes, I know it's neither periodic nor a table.
+def error(message,errortype):
+  print(message)
+  exit(errortype)
+
 periodic_table = [
   "h","he","li","be","b","c","n","o","f","ne","na","mg","al","si","p","s","cl","ar",
   "k","ca","sc","ti","v","cr","mn","fe","co","ni","cu","zn","ga","ge","as","se","br",
@@ -36,26 +18,13 @@ periodic_table = [
 
 ###############################################################################
 # Reads in the geometry, basis, and pseudopotential from GRED.DAT.
-def read_gred(gred="GRED.DAT"):
-  ''' Read GRED.DAT file to read in Hamiltonian specs.
-
-  Args:
-    gred (str): Name of GRED.DAT file produced by properties using CRYAPI_OUT
-  Returns:
-    info (dict): Misc. information used by Crystal to organize the data.
-    lat_parm (dict): Lattice parameters.
-    ions (dict): Ion charges and positions, etc.
-    basis (dict): Basis set information.
-    pseudo (dict): Pseudopotential information.
-  '''
-    
-    
+def read_gred():
   lat_parm = {}
   ions = {}
   basis = {}
   pseudo = {}
 
-  gred = open(gred,'r').read()
+  gred = open("GRED.DAT",'r').read()
 
   # Fix numbers with no space between them.
   gred = gred.replace("-"," -")
@@ -192,24 +161,10 @@ def read_gred(gred="GRED.DAT"):
       pseudo[atom]['exponents'] = exponents[start:end]
 
   ## Density matrix information.
-  ## This is impossible to figure out.  See `cryapi_inp.f`.
-  ## I think the order is overlap, Fock matrix, then DM in real space. 
-  ## I'm not yet sure where the real space grid for the DM is defined.
+  # This is impossible to figure out.  See `cryapi_inp.f`.
   #atomic_charges = np.array(gred_words[cursor:cursor+natoms],dtype=float)
   #cursor += natoms
-  ## A hacky way to get past all the symmetry stuff:
-  ## Keep reading until you hit the floats.
-  #nspin=info[63]+1
-  #npgt=info[11]
-  #nfgt=info[10]
-  #print(npgt,nfgt)
-  #for c in range(cursor,len(gred_words)):
-  #  if 'E' in gred_words[c]:
-  #    cursor=c
-  #    break
-  #print(gred_words[cursor-1:cursor+2])
-
-
+  #mvlaf = info[55] #???
   ## Skip symmetry information.
   #cursor += mvlaf*4 + info[19]*info[1] + 
   #print("atomic_charges",atomic_charges)
@@ -218,19 +173,10 @@ def read_gred(gred="GRED.DAT"):
 
 ###############################################################################
 # Reads in kpoints and eigen{values,vectors} from KRED.DAT.
-def read_kred(info,basis,kred="KRED.DAT"):
-  ''' Read KRED.DAT file to read in the eigenstates and eigenvalues of a Crystal run.
-
-  Args:
-    info (dict): info dictionary output from read_gred()
-    basis (dict): basis dictionary output from read_gred()
-  Returns: 
-    eigsys (dict): eigenvalues and vectors. 
-  '''
-
+def read_kred(info,basis):
   eigsys = {}
 
-  kred = open(kred)
+  kred = open("KRED.DAT")
 #  print(kred.readline())
 #  kred=kred.read()
   kred_words = [] #kred.split()
@@ -289,8 +235,8 @@ def read_kred(info,basis,kred="KRED.DAT"):
     try:
       new_kpt_coord = tuple([int(w) for w in kred_words[cursor:cursor+3]])
     except IndexError: # End of file.
-      raise AssertionError("ERROR: KRED.DAT seems to have ended prematurely.\n" + \
-            "Didn't find all {0} kpoints.".format(nikpts))
+      error("ERROR: KRED.DAT seems to have ended prematurely.\n" + \
+            "Didn't find all {0} kpoints.".format(nikpts),"IO Error")
     cursor += 3
 
     # If new_kpt_coord is an inequivilent point...
@@ -368,579 +314,470 @@ def read_outputfile(fname = "prop.in.o"):
   return spin
 
 ###############################################################################
-def convert_crystal(base='qwalk',propoutfn='crys.in.o',kfmt='coord',kset='complex'):
-  ''' You can just call this function to create the object and produce the files.
-  This means you won't get an object to use for other things, but maybe you don't want it.
-  It does require GRED.DAT, KRED.DAT, and crys.in.o to in the directory.
+def find_basis_cutoff(lat_parm):
+  if lat_parm['struct_dim'] > 0:
+    latvecs = lat_parm['latvecs']
+    cutoff_divider = 2.000001
+    cross01 = np.cross(latvecs[0], latvecs[1])
+    cross12 = np.cross(latvecs[1], latvecs[2])
+    cross02 = np.cross(latvecs[0], latvecs[2])
 
-  Args:
-    base (str): files are written with names [base].[filetype] and [base]_[kpt].[filetype].
-    kfmt (str): 'coord' or 'int'. 'coord' would name the gamma point 000, int names it 0.
-    kset (str): 'complex' or 'real'. Do you want only real or all the complex kpoints?
-  Returns:
-    dict: contains lists of each file produced organized by type.
-  '''
-
-  qw_writer=QWalkWriter()
-  qw_writer.read_gredkred()
-  outfiles=qw_writer.write_files(base,kfmt,kset)
-
-  return outfiles
+    heights = [0,0,0]
+    heights[0]=abs(np.dot(latvecs[0], cross12)/np.dot(cross12,cross12)**.5)
+    heights[1]=abs(np.dot(latvecs[1], cross02)/np.dot(cross02,cross02)**.5)
+    heights[2]=abs(np.dot(latvecs[2], cross01)/np.dot(cross01,cross01)**.5)
+    return min(heights)/cutoff_divider
+  else:
+    return 7.5
 
 ###############################################################################
-class QWalkWriter:
-  # This format should allow this writer to convert any program's results into QWalk input files.
-  def __init__(self,nvirtual=50,gred=None,kred=None,xml=None):
-    ''' This object can handle generation of input files for QWalk.
+def write_slater(basis,eigsys,kpt,base="qwalk",kfmt='coord'):
+  if kfmt == 'int': kbase = base + '_' + "{}".format(eigsys['kpt_index'][kpt])
+  else:             kbase = base + '_' + "{}{}{}".format(*kpt)
+  ntot = basis['ntot']
+  nmo  = basis['nmo']
+  nup  = eigsys['nup']
+  ndn  = eigsys['ndn']
+  uporbs = np.arange(nup)+1
+  dnorbs = np.arange(ndn)+1
+  if eigsys['nspin'] > 1:
+    dnorbs += nmo
+  if eigsys['ikpt_iscmpx'][kpt]: orbstr = "corbitals"
+  else:                          orbstr = "orbitals"
+  uporblines = ["{:5d}".format(orb) for orb in uporbs]
+  width = 10
+  for i in reversed(range(width,len(uporblines),width)):
+    uporblines.insert(i,"\n ")
+  dnorblines = ["{:5d}".format(orb) for orb in dnorbs]
+  for i in reversed(range(width,len(dnorblines),width)):
+    dnorblines.insert(i,"\n ")
+  outlines = [
+      "slater",
+      "{0} {{".format(orbstr),
+      "cutoff_mo",
+      "  magnify 1",
+      "  nmo {0}".format(dnorbs[-1]),
+      "  orbfile {0}.orb".format(kbase),
+      "  include {0}.basis".format(base),
+      "  centers { useglobal }",
+      "}",
+      "detwt { 1.0 }",
+      "states {",
+      "  # Spin up orbitals.", 
+      "  " + " ".join(uporblines),
+      "  # Spin down orbitals.",
+      "  " + " ".join(dnorblines),
+      "}"
+    ]
+  with open(kbase+".slater",'w') as outf:
+    outf.write("\n".join(outlines))
+  return outlines # Might be confusing.
 
-    Args:
-      gred (str): GRED.DAT path, if you want to populate the object with that.
-      kred (str): KRED.DAT path, if you want to populate the object with that.
-      xml (str): Crystal CRYAPI_OUT XML if you want to populate the object with that.
+###############################################################################
+def write_orbplot(basis,eigsys,kpt,base="qwalk",kfmt='coord'):
+  if kfmt == 'int': kbase = base + '_' + "{}".format(eigsys['kpt_index'][kpt])
+  else:             kbase = base + '_' + "{}{}{}".format(*kpt)
+  ntot = basis['ntot']
+  nmo  = basis['nmo']
+  nup  = eigsys['nup']
+  ndn  = eigsys['ndn']
+  uporbs = np.arange(nup)+1
+  dnorbs = np.arange(ndn)+1
+  if eigsys['nspin'] > 1:
+    dnorbs += nmo
+  if eigsys['ikpt_iscmpx'][kpt]: orbstr = "corbitals"
+  else:                          orbstr = "orbitals"
+  uporblines = ["{:5d}".format(orb) for orb in uporbs]
+  width = 10
+  for i in reversed(range(width,len(uporblines),width)):
+    uporblines.insert(i,"\n ")
+  dnorblines = ["{:5d}".format(orb) for orb in dnorbs]
+  for i in reversed(range(width,len(dnorblines),width)):
+    dnorblines.insert(i,"\n ")
+  outlines_prefix = [
+      "method { ",
+      "plot",
+      "{0} {{".format(orbstr),
+      "cutoff_mo",
+      "  magnify 1",
+      "  nmo {0}".format(dnorbs[-1]),
+      "  orbfile {0}.orb".format(kbase),
+      "  include {0}.basis".format(base),
+      "  centers { useglobal }",
+      "}",
+      "plotorbitals {",
+    ]
+  outlines_postfix= ["}","}","include "+kbase+".sys"]
+  with open(kbase+".up.plot",'w') as outf:
+    outf.write("\n".join(outlines_prefix+ [" ".join(uporblines)] + outlines_postfix))
+  with open(kbase+".dn.plot",'w') as outf:
+    outf.write("\n".join(outlines_prefix+ [" ".join(dnorblines)] + outlines_postfix))
+  
 
-    '''
-    self.info, self.lat_parm, self.ions, self.basis, self.pseudo = {},{},{},{},{}
-    self.eigsys = {}
+###############################################################################
+# f orbital normalizations are from 
+# <http://winter.group.shef.ac.uk/orbitron/AOs/4f/equations.html>
+def normalize_eigvec(eigsys,basis,kpt):
+  snorm = 1./(4.*np.pi)**0.5
+  pnorm = snorm*(3.)**.5
+  dnorms = [
+      .5*(5./(4*np.pi))**.5,
+      (15./(4*np.pi))**.5,
+      (15./(4*np.pi))**.5,
+      .5*(15./(4.*np.pi))**.5,
+      (15./(4*np.pi))**.5
+    ]
+  fnorms = [
+      ( 7./(16.*np.pi))**.5,
+      (21./(32.*np.pi))**.5,
+      (21./(32.*np.pi))**.5,
+      (105./(16.*np.pi))**.5, # xyz
+      (105./(4.*np.pi))**.5,
+      (35./(32.*np.pi))**.5,
+      (35./(32.*np.pi))**.5
+    ]
 
-    if xml is not None:
-      raise NotImplementedError("Crystal17 XML reader not implemented.")
-    elif gred is not None and kred is not None:
-      self.read_gredkred(gred,kred,nvirtual=nvirtual)
+  # Duplicate coefficients for complex, and if multiple basis elements are d.
+  # This is to align properly with the d-components of eigvecs.
+  tmp = [[f for f in dnorms] for i in range(sum(basis['shell_type']==3))]
+  dnorms = []
+  for l in tmp: dnorms += l
+  dnorms = np.array(dnorms)
+  # Likewise for f.
+  tmp = [[f for f in fnorms] for i in range(sum(basis['shell_type']==4))]
+  fnorms = []
+  for l in tmp: fnorms += l
+  fnorms = np.array(fnorms)
 
-  ###
-  def read_gredkred(self,gred='GRED.DAT',kred='KRED.DAT',spinfn='crys.in.o',nvirtual=50):
-    '''
-    Populate the QWalkWriter with data from `gred` and `kred`, which are paths to the output of CRYAPI_OUT.
+  ao_type = []
+  for sidx in range(len(basis['shell_type'])):
+    ao_type += \
+      [basis['shell_type'][sidx] for ao in range(basis['nao_shell'][sidx])]
+  ao_type = np.array(ao_type)
 
-    Args:
-      gred (str): GRED.DAT path, if you want to populate the object with that.
-      kred (str): KRED.DAT path, if you want to populate the object with that.
-      spinfn (str): Crystal output file (either crystal or properties) from which to find the total spin.
-    '''
-    # Currently also needs `spinfn` to find the total spin, but this shouldn't be required if you can find
-    # the density matrix somewhere else in the output.
+  if any(ao_type==1):
+    error("sp orbtials not implemented in normalize_eigvec(...)","Not implemented")
 
-    self.info, self.lat_parm, self.ions, self.basis, self.pseudo = read_gred()
-    self.eigsys = read_kred(self.info,self.basis)
-
-    if self.eigsys['nspin'] > 1:
-      self.eigsys['totspin'] = read_outputfile(spinfn)
-    else:
-      self.eigsys['totspin'] = 0
-
-    # Useful quantities based on the read data.
-    self.basis['ntot'] = int(round(sum(self.basis['charges'])))
-    self.basis['nmo']  = sum(self.basis['nao_shell'])
-    self.eigsys['nup'] = int(round(0.5 * (self.basis['ntot'] + self.eigsys['totspin'])))
-    self.eigsys['ndn'] = int(round(0.5 * (self.basis['ntot'] - self.eigsys['totspin'])))
-    self.maxmo_spin=min(max(self.eigsys['nup'],self.eigsys['ndn'])+nvirtual,self.basis['nmo'])
-
-    # Change Crystal normalization to QWalk normalization.
-    self.normalize_eigvec()
-
-  ###
-  def find_basis_cutoff(self):
-    if self.lat_parm['struct_dim'] > 0:
-      latvecs = self.lat_parm['latvecs']
-      cutoff_divider = 2.000001
-      cross01 = np.cross(latvecs[0], latvecs[1])
-      cross12 = np.cross(latvecs[1], latvecs[2])
-      cross02 = np.cross(latvecs[0], latvecs[2])
-
-      heights = [0,0,0]
-      heights[0]=abs(np.dot(latvecs[0], cross12)/np.dot(cross12,cross12)**.5)
-      heights[1]=abs(np.dot(latvecs[1], cross02)/np.dot(cross02,cross02)**.5)
-      heights[2]=abs(np.dot(latvecs[2], cross01)/np.dot(cross01,cross01)**.5)
-      return min(heights)/cutoff_divider
-    else:
-      return 7.5
-
-  ###
-  def generate_slater(self,kpt,orbfile,basisfile,swaporbs=None):
-    ''' Generate the string for a slater file.
-    Args: 
-      kpt (int): kpoint index.
-      swaporbs (dict): Map orb numbers to each other to do excitations. 
-        Example: {10:11,102:105} will excite 10 to 11 and 102 to 105.
-    Returns: 
-      str: contents of slater file.
-    '''
-
-    # Figure out orbital numbers.
-    nmo  = self.basis['nmo']
-    nup  = self.eigsys['nup']
-    ndn  = self.eigsys['ndn']
-    if self.maxmo_spin < 0:
-      self.maxmo_spin=nmo
-    uporbs = np.arange(nup)+1
-    dnorbs = np.arange(ndn)+1
-    if self.eigsys['nspin'] > 1:
-      dnorbs += self.maxmo_spin
-
-    # Modify for excitations.
-    if swaporbs is not None:
-      for idx,up in enumerate(uporbs):
-        if up in swaporbs.keys(): uporbs[idx]=swaporbs[up]
-      for idx,dn in enumerate(dnorbs):
-        if dn in swaporbs.keys(): dnorbs[idx]=swaporbs[dn]
-
-    if self.eigsys['ikpt_iscmpx'][kpt]: orbstr = "corbitals"
-    else:                               orbstr = "orbitals"
-
-    uporblines = ["{:5d}".format(orb) for orb in uporbs]
-    width = 10
-    for i in reversed(range(width,len(uporblines),width)):
-      uporblines.insert(i,"\n ")
-    dnorblines = ["{:5d}".format(orb) for orb in dnorbs]
-    for i in reversed(range(width,len(dnorblines),width)):
-      dnorblines.insert(i,"\n ")
-
-    outlines = [
-        "slater",
-        "{0} {{".format(orbstr),
-        "blas2_mo",
-        "  magnify 1",
-        "  nmo {0}".format(dnorbs.max()),
-        "  orbfile {0}".format(orbfile),
-        "  include {0}".format(basisfile),
-        "  centers { useglobal }",
-        "}",
-        "detwt { 1.0 }",
-        "states {",
-        "  # Spin up orbitals.", 
-        "  " + " ".join(uporblines),
-        "  # Spin down orbitals.",
-        "  " + " ".join(dnorblines),
-        "}"
-      ]
-    return '\n'.join(outlines)
-
-  ###
-  def normalize_eigvec(self):
-    ''' Normalize the eigenstate at `kpt`. '''
-    snorm = 1./(4.*np.pi)**0.5
-    pnorm = snorm*(3.)**.5
-    dnorms = [
-        .5*(5./(4*np.pi))**.5,
-        (15./(4*np.pi))**.5,
-        (15./(4*np.pi))**.5,
-        .5*(15./(4.*np.pi))**.5,
-        (15./(4*np.pi))**.5
-      ]
-    # f orbital normalizations are from 
-    # <http://winter.group.shef.ac.uk/orbitron/AOs/4f/equations.html>
-    fnorms = [
-        ( 7./(16.*np.pi))**.5,
-        (21./(32.*np.pi))**.5,
-        (21./(32.*np.pi))**.5,
-        (105./(16.*np.pi))**.5, # xyz
-        (105./(4.*np.pi))**.5,
-        (35./(32.*np.pi))**.5,
-        (35./(32.*np.pi))**.5
-      ]
-
-    # Duplicate coefficients for complex, and if multiple basis elements are d.
-    # This is to align properly with the d-components of eigvecs.
-    tmp = [[f for f in dnorms] for i in range(sum(self.basis['shell_type']==3))]
-    dnorms = []
-    for l in tmp: dnorms += l
-    dnorms = np.array(dnorms)
-    # Likewise for f.
-    tmp = [[f for f in fnorms] for i in range(sum(self.basis['shell_type']==4))]
-    fnorms = []
-    for l in tmp: fnorms += l
-    fnorms = np.array(fnorms)
-
-    ao_type = []
-    for sidx in range(len(self.basis['shell_type'])):
-      ao_type += \
-        [self.basis['shell_type'][sidx] for ao in range(self.basis['nao_shell'][sidx])]
-    ao_type = np.array(ao_type)
-
-    if any(ao_type==1):
-      raise NotImplementedError("sp orbtials not implemented in normalize_eigvec(...)")
-
-    for part in ['real','imag']:
-      for spin in range(self.eigsys['nspin']):
-        for kpt in self.eigsys['kpt_coords']:
-          self.eigsys['eigvecs'][kpt][part][spin][:,ao_type==0] *= snorm
-          self.eigsys['eigvecs'][kpt][part][spin][:,ao_type==2] *= pnorm
-          self.eigsys['eigvecs'][kpt][part][spin][:,ao_type==3] *= dnorms
-          self.eigsys['eigvecs'][kpt][part][spin][:,ao_type==4] *= fnorms
+  for part in ['real','imag']:
+    for spin in range(eigsys['nspin']):
+      eigsys['eigvecs'][kpt][part][spin][:,ao_type==0] *= snorm
+      eigsys['eigvecs'][kpt][part][spin][:,ao_type==2] *= pnorm
+      eigsys['eigvecs'][kpt][part][spin][:,ao_type==3] *= dnorms
+      eigsys['eigvecs'][kpt][part][spin][:,ao_type==4] *= fnorms
+  return None
       
-  ###
-  def write_orb(self,kpt,orbfilename):
-    ''' Write the orb file. The orbitals are quite large and not worth storing in RAM.
-    Args: 
-      kpt (int): kpoint index.
-      orbfile (str): output file for orb.
-    '''
-    outf=open(orbfilename,'w')
-
-    if self.maxmo_spin < 0:
-      self.maxmo_spin=self.basis['nmo']
-    eigvecs_real = self.eigsys['eigvecs'][kpt]['real']
-    eigvecs_imag = self.eigsys['eigvecs'][kpt]['imag']
-    atidxs = np.unique(self.basis['atom_shell'])-1
-    nao_atom = np.zeros(atidxs.size,dtype=int)
-    for shidx in range(len(self.basis['nao_shell'])):
-      nao_atom[self.basis['atom_shell'][shidx]-1] += self.basis['nao_shell'][shidx]
-    #nao_atom = int(round(sum(self.basis['nao_shell']) / len(ions['positions'])))
-    coef_cnt = 1
-    totnmo = self.maxmo_spin*self.eigsys['nspin'] #self.basis['nmo'] * self.eigsys['nspin']
-    for moidx in np.arange(totnmo)+1:
-      for atidx in atidxs+1:
-        for aoidx in np.arange(nao_atom[atidx-1])+1:
-          outf.write(" {:5d} {:5d} {:5d} {:5d}\n"\
-              .format(moidx,aoidx,atidx,coef_cnt))
-          coef_cnt += 1
-
-    outf.write("COEFFICIENTS\n")
-    eigreal_flat = [e[0:self.maxmo_spin,:].flatten() for e in eigvecs_real]
-    eigimag_flat = [e[0:self.maxmo_spin,:].flatten() for e in eigvecs_imag]
-    print_cnt = 0
-    if self.eigsys['ikpt_iscmpx'][kpt]: #complex coefficients
-      for eigr,eigi in zip(eigreal_flat,eigimag_flat):
-        for r,i in zip(eigr,eigi):
-          outf.write("({:<.12e},{:<.12e}) "\
-              .format(r,i))
-          print_cnt+=1
-          if print_cnt%5==0: outf.write("\n")
-    else: #Real coefficients
-      for eigr in eigreal_flat:
-        for r in eigr:
-          outf.write("{:< 15.12e} ".format(r))
-          print_cnt+=1
-          if print_cnt%5==0: outf.write("\n")
-
-    outf.close()
-    return None
-
-  ###
-  def generate_sys(self,kpt):
-    ''' Write the system file for QWalk. 
-
-    Args:
-      kpt (int): Which kpoint to write it for. 
-      base (str): Base name to append the kpoint name to. 
-    Returns: 
-      str: contents of sys file.
-    '''
-    outlines = []
-    min_exp = min(self.basis['prim_gaus'])
-    cutoff_length = (-np.log(1e-8)/min_exp)**.5
-    basis_cutoff = self.find_basis_cutoff()
-    cutoff_divider = basis_cutoff*2.0 / cutoff_length
-    if self.lat_parm['struct_dim'] != 0:
-      outlines += [
-          "system { periodic",
-          "  nspin {{ {} {} }}".format(self.eigsys['nup'],self.eigsys['ndn']),
-          "  latticevec {",
-        ]
-      for i in range(3):
-        outlines.append("    {:< 15} {:< 15} {:< 15}".format(*self.lat_parm['latvecs'][i]))
-      outlines += [
-          "  }",
-          "  origin { 0 0 0 }",
-          "  cutoff_divider {0}".format(cutoff_divider),
-          "  kpoint {{ {:4}   {:4}   {:4} }}".format(
-              *(np.array(kpt)/self.eigsys['nkpts_dir']*2.)
-            )
-        ]
-    else: # is molecule.
-      outlines += [
-          "system { molecule",
-          "  nspin {{ {} {} }}".format(self.eigsys['nup'],self.eigsys['ndn']),
-        ]
-    for aidx in range(len(self.ions['positions'])):
-      if self.ions['atom_nums'][aidx]-200-1 < 0:
-        raise NotImplementedError("All-electron calculations not implemented yet.")
-      outlines.append(
-        "  atom {{ {0} {1} coor {2} }}".format(
-          periodic_table[self.ions['atom_nums'][aidx]-200-1], # Assumes ECP.
-          self.ions['charges'][aidx],
-          "{:< 15} {:< 15} {:< 15}".format(*self.ions['positions'][aidx])
-        )
-      )
-    outlines.append("}")
-    done = []
-    # TODO Generalize to no pseudopotential.
-    for elem in self.pseudo.keys():
-      atom_name = periodic_table[elem-200-1]
-      n_per_j = self.pseudo[elem]['n_per_j']
-      numL = sum(n_per_j>0)
-
-      for i in range(1,len(n_per_j)):
-        if (n_per_j[i-1]==0)and(n_per_j[i]!=0):
-          raise NotImplementedError("ERROR: Weird pseudopotential, please generalize generate_sys(...).")
-
-      n_per_j = n_per_j[n_per_j>0]
-      order = list(np.arange(n_per_j[0],sum(n_per_j))) + \
-              list(np.arange(n_per_j[0])) 
-      exponents   = self.pseudo[elem]['exponents'][order]
-      prefactors  = self.pseudo[elem]['prefactors'][order]
-      r_exps      = self.pseudo[elem]['r_exps'][order]
-      if numL > 2: aip = 12
-      else:        aip =  6
-      npjline = n_per_j[1:].tolist()+[n_per_j[0]]
-      outlines += [
-          "pseudo {",
-          "  {}".format(atom_name),
-          "  aip {:d}".format(aip),
-          "  basis {{ {}".format(atom_name),
-          "    rgaussian",
-          "    oldqmc {",
-          "      0.0 {:d}".format(numL),
-          "      "+' '.join(["{}" for i in range(numL)]).format(*npjline)
-        ]
-      cnt = 0
-      for eidx in range(len(exponents)):
-        outlines.append("      {:d}   {:<12} {:< 12}".format(
-          r_exps[cnt]+2,
-          float(exponents[cnt]),
-          float(prefactors[cnt])
-        ))
-        cnt += 1
-      outlines += ["    }","  }","}"]
-    return '\n'.join(outlines)
-
-  ###
-  def generate_jast2(self,optimizebasis=True):
-    ''' Write a starting 2-body jastrow file for QWalk. 
-
-    Args:
-      optimizebasis (bool): Whether you want QWalk to optimize any basis functions present in the expansion.
-    Returns: 
-      str: contents of jast2 file.
-    '''
-    basis_cutoff = self.find_basis_cutoff()
-    atom_types = [periodic_table[eidx-200-1] for eidx in self.ions['atom_nums']]
-    atom_types=set(atom_types)
-    outlines = [
-        "jastrow2",
-        "group {"
-      ]
-    if optimizebasis:
-      outlines+=[
-          "  optimizebasis"
-        ]
-    outlines+=[
-        "  eebasis {",
-        "    ee",
-        "    cutoff_cusp",
-        "    gamma 24.0",
-        "    cusp 1.0",
-        "    cutoff {0}".format(basis_cutoff),
-        "  }",
-        "  eebasis {",
-        "    ee",
-        "    cutoff_cusp",
-        "    gamma 24.0",
-        "    cusp 1.0",
-        "    cutoff {0}".format(basis_cutoff),
-        "  }",
-        "  twobody_spin {",
-        "    freeze",
-        "    like_coefficients { 0.25 0.0 }",
-        "    unlike_coefficients { 0.0 0.5 }",
-        "  }",
-        "}",
-        "group {",
-      ]
-    if optimizebasis:
-      outlines+=[
-          "  optimizebasis"
-        ]
-    for atom_type in atom_types:
-      outlines += [
-        "  eibasis {",
-        "    {0}".format(atom_type),
-        "    polypade",
-        "    beta0 0.2",
-        "    nfunc 3",
-        "    rcut {0}".format(basis_cutoff),
-        "  }"
-      ]
-    outlines += [
-        "  onebody {",
-      ]
-    for atom_type in atom_types:
-      outlines += [
-        "    coefficients {{ {0} 0.0 0.0 0.0}}".format(atom_type),
-      ]
-    outlines += [
-        "  }",
-        "  eebasis {",
-        "    ee",
-        "    polypade",
-        "    beta0 0.5",
-        "    nfunc 3",
-        "    rcut {0}".format(basis_cutoff),
-        "  }",
-        "  twobody {",
-        "    coefficients { 0.0 0.0 0.0 }",
-        "  }",
-        "}"
-      ]
-    return '\n'.join(outlines)
-
-  ###
-  def generate_basis(self):
-    ''' Write a starting 2-body jastrow file for QWalk. 
-
-    Args:
-      optimizebasis (bool): Whether you want QWalk to optimize any basis functions present in the expansion.
-    Returns: 
-      str: contents of jast2 file.
-    '''
-    hybridized_check = 0.0
-    hybridized_check += sum(abs(self.basis['coef_s'] * self.basis['coef_p']))
-    hybridized_check += sum(abs(self.basis['coef_p'] * self.basis['coef_dfg']))
-    hybridized_check += sum(abs(self.basis['coef_s'] * self.basis['coef_dfg']))
-    if hybridized_check > 1e-10:
-      raise NotImplementedError("Hybridized AOs (like sp) not implmemented in generate_basis(...)")
-
-    # If there's no hybridization, at most one of coef_s, coef_p, and coef_dfg is
-    # nonzero. Just add them, so we have one array.
-    done_atoms = []
-    coefs = self.basis['coef_s'] + self.basis['coef_p'] + self.basis['coef_dfg']
-
-    shell_type = np.tile("Unknown...",self.basis['shell_type'].shape)
-    typemap = ["S","SP","P","5D","7F_crystal","G","H"]
-    for i in range(5): shell_type[self.basis['shell_type']==i] = typemap[i]
-
-    cnt = 0
-    aidx = 0
-    atom_type = self.ions['atom_nums'][aidx]
-    done_atoms.append(atom_type)
-    outlines = [
-        "basis {",
-        "  {0}".format(periodic_table[atom_type-200-1]),
-        "  aospline",
-        "  normtype CRYSTAL",
-        "  gamess {"
-      ]
-    for sidx in range(len(shell_type)):
-      new_aidx = self.basis['atom_shell'][sidx]-1
-
-      new_atom_type = self.ions['atom_nums'][new_aidx]
-      if aidx != new_aidx:
-        if new_atom_type in done_atoms:
-          cnt+=self.basis['prim_shell'][sidx]
-          continue
-        else:
-          outlines += ["  }","}"]
-          atom_type = new_atom_type
-          done_atoms.append(atom_type)
-          aidx = new_aidx
-          outlines += [
-              "basis {",
-              "  {0}".format(periodic_table[atom_type-200-1]),
-              "  aospline",
-              "  normtype CRYSTAL",
-              "  gamess {"
-            ]
-
-      nprim = self.basis['prim_shell'][sidx]
-      outlines.append("    {0} {1}".format(shell_type[sidx],nprim))
-      for pidx in range(nprim):
-        outlines.append("      {0} {1} {2}".format(
-          pidx+1,
-          self.basis['prim_gaus'][cnt],
-          coefs[cnt]
-        ))
-        cnt += 1
-    outlines += ["  }","}"]
-
-    return '\n'.join(outlines)
-
-  ###
-  def write_files(self,base='qwalk',kfmt='coord',kset='complex'):
-    ''' Write out all the QWalk system and wave function definition files. 
-
-    Args:
-      base (str): files are written with names [base].[filetype] and [base]_[kpt].[filetype].
-      kfmt (str): 'coord' or 'int'. 'coord' would name the gamma point 000, int names it 0.
-      kset (str): 'complex' or 'real'. Do you want only real or all the complex kpoints?
-    Returns:
-      dict: contains lists of each file produced organized by type.
-    '''
-
-    if (np.array(self.eigsys['kpt_coords']) >= 10).any():
-      print("Cannot use coord kpoint format when SHRINK > 10.")
-      print("Falling back on int format (old style).")
-      kfmt = 'int'
-
-   
-    outfiles={
-        'orb':[],
-        'sys':[],
-        'basis':[],
-        'jast2':[],
-        'slater':[]
-      }
-    
-    with open("%s.jast2"%base,'w') as outf:
-      outf.write(self.generate_jast2())
-      outfiles['jast2'].append(outf.name)
-
-    with open("%s.basis"%base,'w') as outf:
-      outf.write(self.generate_basis())
-      outfiles['basis'].append(outf.name)
-
-
-    for kpt in self.eigsys['kpt_coords']:
-      if self.eigsys['ikpt_iscmpx'][kpt] and kset=='real': continue
-      if kfmt == 'int': 
-        kbase = base + '_' + "{}".format(self.eigsys['kpt_index'][kpt])
+###############################################################################
+# This assumes you have called normalize_eigvec first! TODO better coding style?
+def write_orb(eigsys,basis,ions,kpt,base="qwalk",kfmt='coord'):
+  if kfmt == 'int':
+    outf = open(base + '_' + "{}".format(eigsys['kpt_index'][kpt]) + ".orb",'w')
+  else:
+    outf = open(base + '_' + "{}{}{}".format(*kpt) + ".orb",'w')
+  eigvecs_real = eigsys['eigvecs'][kpt]['real']
+  eigvecs_imag = eigsys['eigvecs'][kpt]['imag']
+  atidxs = np.unique(basis['atom_shell'])-1
+  nao_atom = np.zeros(atidxs.size,dtype=int)
+  for shidx in range(len(basis['nao_shell'])):
+    nao_atom[basis['atom_shell'][shidx]-1] += basis['nao_shell'][shidx]
+  #nao_atom = int(round(sum(basis['nao_shell']) / len(ions['positions'])))
+  coef_cnt = 1
+  totnmo = basis['nmo'] * eigsys['nspin']
+  for moidx in np.arange(totnmo)+1:
+    for atidx in atidxs+1:
+      for aoidx in np.arange(nao_atom[atidx-1])+1:
+        outf.write(" {:5d} {:5d} {:5d} {:5d}\n"\
+            .format(moidx,aoidx,atidx,coef_cnt))
+        coef_cnt += 1
+  coef_cnt -= 1 # Last increment doesn't count.
+  if coef_cnt != eigsys['nspin']*eigvecs_real[0].size:
+    error("Error: Number of coefficients not coming out correctly!\n"+\
+          "Counted: {0} \nAvailable: {1}"\
+          .format(coef_cnt,eigsys['nspin']*eigvecs_real[0].size),
+          "Debug Error")
+  eigreal_flat = [e.flatten() for e in eigvecs_real]
+  eigimag_flat = [e.flatten() for e in eigvecs_imag]
+  print_cnt = 0
+  outf.write("COEFFICIENTS\n")
+  for sidx in range(eigsys['nspin']):
+    #for cidx in range(coef_cnt):
+    for cidx in range(eigreal_flat[sidx].size):
+      if eigsys['ikpt_iscmpx'][kpt]:
+        outf.write("({:<.12e},{:<.12e}) "\
+            .format(eigreal_flat[sidx][cidx],eigimag_flat[sidx][cidx]))
       else:
-        kbase = base + '_' + "{}{}{}".format(*kpt)
-
-      with open("%s.sys"%kbase,'w') as outf:
-        outf.write(self.generate_sys(kpt))
-        outfiles['sys'].append(outf.name)
-
-      orbfilename="%s.orb"%kbase
-      self.write_orb(kpt,orbfilename)
-      outfiles['orb'].append(orbfilename)
-
-      with open("%s.slater"%kbase,'w') as outf:
-        outf.write(
-            self.generate_slater(
-              kpt,orbfile=orbfilename,basisfile=outfiles['basis'][-1] ))
-        outfiles['slater'].append(outf.name)
-
-    return outfiles
+        outf.write("{:< 15.12e} ".format(eigreal_flat[sidx][cidx]))
+      print_cnt += 1
+      if print_cnt % 5 == 0: outf.write("\n")
+  outf.close()
+  return None
 
 ###############################################################################
-# Testing functions.
-def test_basis(
+# TODO Generalize to no pseudopotential.
+def write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,base="qwalk",kfmt='coord'):
+  outlines = []
+  min_exp = min(basis['prim_gaus'])
+  cutoff_length = (-np.log(1e-8)/min_exp)**.5
+  basis_cutoff = find_basis_cutoff(lat_parm)
+  cutoff_divider = basis_cutoff*2.0 / cutoff_length
+  if kfmt == 'int': kbase = base + '_' + "{}".format(eigsys['kpt_index'][kpt])
+  else:             kbase = base + '_' + "{}{}{}".format(*kpt)
+  if lat_parm['struct_dim'] != 0:
+    outlines += [
+        "system { periodic",
+        "  nspin {{ {} {} }}".format(eigsys['nup'],eigsys['ndn']),
+        "  latticevec {",
+      ]
+    for i in range(3):
+      outlines.append("    {:< 15} {:< 15} {:< 15}".format(*lat_parm['latvecs'][i]))
+    outlines += [
+        "  }",
+        "  origin { 0 0 0 }",
+        "  cutoff_divider {0}".format(cutoff_divider),
+        "  kpoint {{ {:4}   {:4}   {:4} }}".format(
+            *(np.array(kpt)/eigsys['nkpts_dir']*2.)
+          )
+      ]
+  else: # is molecule.
+    outlines += [
+        "system { molecule",
+        "  nspin {{ {} {} }}".format(eigsys['nup'],eigsys['ndn']),
+      ]
+  for aidx in range(len(ions['positions'])):
+    if ions['atom_nums'][aidx]-200-1 < 0:
+      error("All-electron calculations not implemented yet.","Not implemented")
+    outlines.append(
+      "  atom {{ {0} {1} coor {2} }}".format(
+        periodic_table[ions['atom_nums'][aidx]-200-1], # Assumes ECP.
+        ions['charges'][aidx],
+        "{:< 15} {:< 15} {:< 15}".format(*ions['positions'][aidx])
+      )
+    )
+  outlines.append("}")
+  done = []
+  for elem in pseudo.keys():
+    atom_name = periodic_table[elem-200-1]
+    n_per_j = pseudo[elem]['n_per_j']
+    numL = sum(n_per_j>0)
+
+    for i in range(1,len(n_per_j)):
+      if (n_per_j[i-1]==0)and(n_per_j[i]!=0):
+        error("ERROR: Weird pseudopotential, please generalize write_sys(...).",
+              "Not implemented.")
+
+    n_per_j = n_per_j[n_per_j>0]
+    order = list(np.arange(n_per_j[0],sum(n_per_j))) + \
+            list(np.arange(n_per_j[0])) 
+    exponents   = pseudo[elem]['exponents'][order]
+    prefactors  = pseudo[elem]['prefactors'][order]
+    r_exps      = pseudo[elem]['r_exps'][order]
+    if numL > 2: aip = 12
+    else:        aip =  6
+    npjline = n_per_j[1:].tolist()+[n_per_j[0]]
+    outlines += [
+        "pseudo {",
+        "  {}".format(atom_name),
+        "  aip {:d}".format(aip),
+        "  basis {{ {}".format(atom_name),
+        "    rgaussian",
+        "    oldqmc {",
+        "      0.0 {:d}".format(numL),
+        "      "+' '.join(["{}" for i in range(numL)]).format(*npjline)
+      ]
+    cnt = 0
+    for eidx in range(len(exponents)):
+      outlines.append("      {:d}   {:<12} {:< 12}".format(
+        r_exps[cnt]+2,
+        float(exponents[cnt]),
+        float(prefactors[cnt])
+      ))
+      cnt += 1
+    outlines += ["    }","  }","}"]
+  with open(kbase+".sys",'w') as outf:
+    outf.write("\n".join(outlines))
+  return None
+
+###############################################################################
+def write_jast2(lat_parm,ions,base="qwalk"):
+  basis_cutoff = find_basis_cutoff(lat_parm)
+  atom_types = [periodic_table[eidx-200-1] for eidx in ions['atom_nums']]
+  atom_types=set(atom_types)
+  outlines = [
+      "jastrow2",
+      "group {",
+      "  optimizebasis",
+      "  eebasis {",
+      "    ee",
+      "    cutoff_cusp",
+      "    gamma 24.0",
+      "    cusp 1.0",
+      "    cutoff {0}".format(basis_cutoff),
+      "  }",
+      "  eebasis {",
+      "    ee",
+      "    cutoff_cusp",
+      "    gamma 24.0",
+      "    cusp 1.0",
+      "    cutoff {0}".format(basis_cutoff),
+      "  }",
+      "  twobody_spin {",
+      "    freeze",
+      "    like_coefficients { 0.25 0.0 }",
+      "    unlike_coefficients { 0.0 0.5 }",
+      "  }",
+      "}",
+      "group {",
+      "  optimize_basis",
+    ]
+  for atom_type in atom_types:
+    outlines += [
+      "  eibasis {",
+      "    {0}".format(atom_type),
+      "    polypade",
+      "    beta0 0.2",
+      "    nfunc 3",
+      "    rcut {0}".format(basis_cutoff),
+      "  }"
+    ]
+  outlines += [
+      "  onebody {",
+    ]
+  for atom_type in atom_types:
+    outlines += [
+      "    coefficients {{ {0} 0.0 0.0 0.0}}".format(atom_type),
+    ]
+  outlines += [
+      "  }",
+      "  eebasis {",
+      "    ee",
+      "    polypade",
+      "    beta0 0.5",
+      "    nfunc 3",
+      "    rcut {0}".format(basis_cutoff),
+      "  }",
+      "  twobody {",
+      "    coefficients { 0.0 0.0 0.0 }",
+      "  }",
+      "}"
+    ]
+  with open(base+".jast2",'w') as outf:
+    outf.write("\n".join(outlines))
+  return None
+
+###############################################################################
+def write_basis(basis,ions,base="qwalk"):
+  hybridized_check = 0.0
+  hybridized_check += sum(abs(basis['coef_s'] * basis['coef_p']))
+  hybridized_check += sum(abs(basis['coef_p'] * basis['coef_dfg']))
+  hybridized_check += sum(abs(basis['coef_s'] * basis['coef_dfg']))
+  if hybridized_check > 1e-10:
+    error("Hybridized AOs (like sp) not implmemented in write_basis(...)",
+          "Not implemented.")
+
+  # If there's no hybridization, at most one of coef_s, coef_p, and coef_dfg is
+  # nonzero. Just add them, so we have one array.
+  done_atoms = {}
+  coefs = basis['coef_s'] + basis['coef_p'] + basis['coef_dfg']
+
+  shell_type = np.tile("Unknown...",basis['shell_type'].shape)
+  typemap = ["S","SP","P","5D","7F_crystal","G","H"]
+  for i in range(5): shell_type[basis['shell_type']==i] = typemap[i]
+
+  cnt = 0
+  aidx = 0
+  atom_type = ions['atom_nums'][aidx]
+  outlines = [
+      "basis {",
+      "  {0}".format(periodic_table[atom_type-200-1]),
+      "  aospline",
+      "  normtype CRYSTAL",
+      "  gamess {"
+    ]
+  for sidx in range(len(shell_type)):
+    new_aidx = basis['atom_shell'][sidx]-1
+
+    new_atom_type = ions['atom_nums'][new_aidx]
+    if aidx != new_aidx:
+      outlines += ["  }","}"]
+      if new_atom_type in done_atoms:
+        done_atoms.append(atom_type)
+        continue
+      else:
+        atom_type = new_atom_type
+        aidx = new_aidx
+        outlines += [
+            "basis {",
+            "  {0}".format(periodic_table[atom_type-200-1]),
+            "  aospline",
+            "  normtype CRYSTAL",
+            "  gamess {"
+          ]
+
+    nprim = basis['prim_shell'][sidx]
+    outlines.append("    {0} {1}".format(shell_type[sidx],nprim))
+    for pidx in range(nprim):
+      outlines.append("      {0} {1} {2}".format(
+        pidx+1,
+        basis['prim_gaus'][cnt],
+        coefs[cnt]
+      ))
+      cnt += 1
+  outlines += ["  }","}"]
+  with open(base+".basis",'w') as outf:
+    outf.write("\n".join(outlines))
+  return None
+
+###############################################################################
+def write_moanalysis():
+  return None
+
+###############################################################################
+# Begin actual execution.
+# TODO test kfmt fallback.
+def convert_crystal(
     base="qwalk",
     propoutfn="prop.in.o",
     kfmt='coord',
     kset='complex'):
-  print("Writing basis only.")
-
-  info, lat_parm, ions, basis, pseudo = read_gred()
-  write_basis(basis,ions,base=base)
-
-def test_orb(
-    base="qwalk",
-    propoutfn="prop.in.o",
-    kfmt='coord',
-    kset='complex',
-    kpt=0):
-  print("Writing orb only.")
-
+  """
+  Files are named by [base]_[kfmt option].sys etc.
+  kfmt either 'int' or 'coord'.
+  kfmt = 'int' interates up from zero to name kpoints.
+  kfmt = 'coord' uses integer coordinate of kpoint and is more readable, but
+    doesn't work for SHRINK > 10 because it assumes one-digit coordinates.
+    kfmt will fall back on 'int' if it find this problem.
+  """
   info, lat_parm, ions, basis, pseudo = read_gred()
   eigsys = read_kred(info,basis)
-  kpt=eigsys['kpt_coords'][kpt]
-  basis['nmo']  = sum(basis['nao_shell']) # = nao
-  write_orb(eigsys,basis,ions,kpt,base,kfmt)
 
-###############################################################################
+  if eigsys['nspin'] > 1:
+    eigsys['totspin'] = read_outputfile(propoutfn)
+  else:
+    eigsys['totspin'] = 0
+
+  # Useful quantities.
+  basis['ntot'] = int(round(sum(basis['charges'])))
+  basis['nmo']  = sum(basis['nao_shell']) # = nao
+  eigsys['nup'] = int(round(0.5 * (basis['ntot'] + eigsys['totspin'])))
+  eigsys['ndn'] = int(round(0.5 * (basis['ntot'] - eigsys['totspin'])))
+
+  if (np.array(eigsys['kpt_coords']) >= 10).any():
+    print("Cannot use coord kpoint format when SHRINK > 10.")
+    print("Falling back on int format (old style).")
+    kfmt = 'int'
+ 
+  for kpt in eigsys['kpt_coords']:
+    if eigsys['ikpt_iscmpx'][kpt] and kset=='real': continue
+    write_slater(basis,eigsys,kpt,base,kfmt)
+    write_orbplot(basis,eigsys,kpt,base,kfmt)
+    normalize_eigvec(eigsys,basis,kpt)
+    write_orb(eigsys,basis,ions,kpt,base,kfmt)
+    write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,base,kfmt)
+    write_basis(basis,ions,base)
+    write_jast2(lat_parm,ions,base)
+
+  return eigsys['kpt_weights'] # Useful for autogen.
+
 if __name__ == "__main__":
-  # TODO clean up with proper arguement parsing.
   if len(sys.argv) > 1:
     base = sys.argv[1]
   else: 
@@ -961,7 +798,5 @@ if __name__ == "__main__":
   print("system spin drawn from {},".format(propoutfn))
   print("using {} kpoint naming convention,".format(kfmt))
   print("and using {} kpoint set.".format(kset))
+  convert_crystal(base,propoutfn,kfmt,kset)
 
-  qw_writer=QWalkWriter()
-  qw_writer.read_gredkred()
-  qw_writer.write_files(base,kfmt,kset)

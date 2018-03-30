@@ -419,7 +419,7 @@ def find_atom_types(mol):
 
   return list(set(atom_types))
 
-def print_jastrow(mol,outf,optbasis=True):
+def print_jastrow(mol,basename='qw',threebody=False):
   
   basis_cutoff = find_basis_cutoff(mol)
   atom_types = find_atom_types(mol)
@@ -461,7 +461,7 @@ def print_jastrow(mol,outf,optbasis=True):
       "    {0}".format(atom_type),
       "    polypade",
       "    beta0 0.2",
-      "    nfunc 3",
+      "    nfunc 4",
       "    rcut {0}".format(basis_cutoff),
       "  }"
     ]
@@ -470,10 +470,15 @@ def print_jastrow(mol,outf,optbasis=True):
     ]
   for atom_type in atom_types:
     outlines += [
-      "    coefficients {{ {0} 0.0 0.0 0.0}}".format(atom_type),
+      "    coefficients {{ {0} 0.0 0.0 0.0 0.0 }}".format(atom_type),
     ]
   outlines += [
-      "  }",
+      "  }"]
+  outlines+=['threebody {',]
+  for atom_type in atom_types:
+    outlines+=["    coefficients {{ {0} 0. 0. 0. 0.  0. 0. 0. 0.  0. 0. 0. 0.  }}".format(atom_type) ] 
+  outlines+=['}']
+  outlines+=[
       "  eebasis {",
       "    ee",
       "    polypade",
@@ -486,7 +491,12 @@ def print_jastrow(mol,outf,optbasis=True):
       "  }",
       "}"
   ]
-  outf.write("\n".join(outlines))
+  fname=basename+'.jast2'
+  if threebody:
+    fname=basename+'.jast3'
+
+  with open(fname,'w') as outf:
+    outf.write("\n".join(outlines))
   return None
 
 
@@ -496,7 +506,8 @@ def print_jastrow(mol,outf,optbasis=True):
 def print_qwalk_mol(mol, mf, method='scf', tol=0.01, basename='qw'):
   files={
       'basis':basename+".basis",
-      'jastrow':basename+".jast2",
+      'jastrow2':basename+".jast2",
+      'jastrow3':basename+".jast3",
       'sys':basename+".sys",
       'slater':basename+".slater",
       'orb':basename+".orb"
@@ -505,7 +516,9 @@ def print_qwalk_mol(mol, mf, method='scf', tol=0.01, basename='qw'):
   print_orb(mol,mf,open(files['orb'],'w'))
   print_basis(mol,open(files['basis'],'w'))
   print_sys(mol,open(files['sys'],'w'))
-  print_jastrow(mol,open(files['jastrow'],'w'))
+  print_jastrow(mol,open(files['jastrow2'],'w'))
+  print_jastrow(mol,open(files['jastrow3'],'w'),threebody=True)
+
   if method == 'scf':
     print_slater(mol,mf,files['orb'],files['basis'],open(files['slater'],'w'))
   elif method == 'mcscf':

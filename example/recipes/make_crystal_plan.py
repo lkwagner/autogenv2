@@ -1,5 +1,5 @@
 import sys
-sys.path.append("../")
+sys.path.append("../../")
 
 from JobEnsemble import JobEnsemble
 import Recipes as recipes
@@ -9,7 +9,6 @@ import os
 
 dft_opts={
     'xml_name':os.getcwd()+'/../BFD_Library.xml',
-    'basis_params':[0.2,0,3],
     'cutoff':0.0,
     'dftgrid':'LGRID',
     'spin_polarized':False
@@ -28,8 +27,8 @@ dmc_opts={
     }
 
 pbc_opts={
-    'xml_name':os.getcwd()+'/../BFD_Library.xml',
-    'basis_params':[0.4,1,3],
+    'xml_name':os.getcwd()+'/../../BFD_Library.xml',
+    'basis_params':[0.2,2,3],
     'cutoff':0.2,
     'dftgrid':'LGRID',
     'spin_polarized':False,

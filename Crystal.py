@@ -27,7 +27,7 @@ class CrystalWriter:
     #Electron model
     self.spin_polarized=True    
     self.xml_name="BFD_Library.xml"
-    self.functional={'exchange':'PBE','correlation':'PBE','hybrid':0}
+    self.functional={'exchange':'PBE','correlation':'PBE','hybrid':0,'predefined':None}
     self.total_spin=0
     self.modisymm=None
 
@@ -42,7 +42,7 @@ class CrystalWriter:
     self.kmesh=[8,8,8]
     self.gmesh=16
     self.tolinteg=[8,8,8,8,18]
-    self.dftgrid='XLGRID'
+    self.dftgrid=''
     
     #Memory
     self.biposize=100000000
@@ -97,7 +97,7 @@ class CrystalWriter:
       selfdict[k]=d[k]
 
   #-----------------------------------------------
-  def crystal_input(self):
+  def crystal_input(self,section4=[]):
 
     geomlines=self.geom()
     basislines=self.basis_section()
@@ -138,15 +138,20 @@ class CrystalWriter:
     outlines+=["DFT"]
     if self.spin_polarized:
       outlines+=["SPIN"]
-    outlines += [ 
-      "EXCHANGE",
-      self.functional['exchange'],
-      "CORRELAT",
-      self.functional['correlation'],
-      "HYBRID", 
-      str(self.functional['hybrid']),
-      self.dftgrid,
-      "END",
+    if 'predefined' in self.functional.keys() \
+        and self.functional['predefined']!=None:
+      outlines+=[self.functional['predefined']]
+    else:
+      outlines += [ 
+        "EXCHANGE",
+        self.functional['exchange'],
+        "CORRELAT",
+        self.functional['correlation'],
+        "HYBRID", 
+        str(self.functional['hybrid'])]
+    if self.dftgrid!="":
+      outlines+=[self.dftgrid]
+    outlines+=["END",
       "SCFDIR",
       "BIPOSIZE",
       str(self.biposize),
@@ -160,10 +165,10 @@ class CrystalWriter:
       ' '.join(map(str,self.tolinteg)),
       "MAXCYCLE",
       str(self.maxcycle),
-      "SMEAR",
-      str(self.smear),
       "SAVEWF"
     ]
+    if self.smear > 0:
+      outlines+=["SMEAR",str(self.smear)]
     if self.spin_polarized:
       outlines+=['SPINLOCK','%d %d'%(self.total_spin,self.maxcycle)]
 
@@ -180,6 +185,7 @@ class CrystalWriter:
     if self.anderson and len(self.broyden)==0 and not self.diis:
       outlines+=["ANDERSON"]
 
+    outlines+=section4
     if self.restart or self.guess_fort is not None:
       outlines+=["GUESSP"]
     outlines+=["END"]
@@ -531,8 +537,13 @@ class CrystalWriter:
     return strlist
 import os 
 
+
+###################################################################
+
 class CrystalReader:
-  """ Tries to extract properties of crystal run, or else diagnose what's wrong. """
+  """ Extract properties of crystal run. 
+  output values are stored in self.out dictionary when collect() is run. 
+  """
   def __init__(self):
     self.completed=False
     self.out={}
@@ -592,44 +603,38 @@ class CrystalReader:
   def check_outputfile(self,outfilename,acceptable_scf=10.0):
     """ Check output file. 
 
-    Current return values:
+    Return values:
     no_record, not_started, ok, too_many_cycles, finished (fall-back),
     scf_fail, not_enough_decrease, divergence, not_finished
     """
     if os.path.isfile(outfilename):
-      outf = open(outfilename,'r')
+      outf = open(outfilename,'r',errors='ignore')
     else:
       return "not_started"
 
-    outlines = outf.read().split('\n')
+    outlines = outf.readlines()
     reslines = [line for line in outlines if "ENDED" in line]
 
     if len(reslines) > 0:
       if "CONVERGENCE" in reslines[0]:
         return "ok"
       elif "TOO MANY CYCLES" in reslines[0]:
-        print("CrystalRunner: Too many cycles.")
         return "too_many_cycles"
-      else: # What else can happen?
-        print("CrystalReader: Finished, but unknown state.")
+      else: 
         return "finished"
       
     detots = [float(line.split()[5]) for line in outlines if "DETOT" in line]
     if len(detots) == 0:
-      print("CrystalRunner: Last run completed no cycles.")
       return "scf_fail"
 
     detots_net = sum(detots[1:])
     if detots_net > acceptable_scf:
-      print("CrystalRunner: Last run performed poorly.")
       return "not_enough_decrease"
 
     etots = [float(line.split()[3]) for line in outlines if "DETOT" in line]
     if etots[-1] > 0:
-      print("CrystalRunner: Energy divergence.")
       return "divergence"
     
-    print("CrystalRunner: Not finished.")
     return "not_finished"
   
   
@@ -638,7 +643,6 @@ class CrystalReader:
     """ Decide status of crystal run. """
 
     status=self.check_outputfile(outfilename)
-    print("status",status)
     return status
     
 if __name__=='__main__':
