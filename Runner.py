@@ -197,9 +197,12 @@ class PySCFRunnerPBS(RunnerPBS):
     qsubfile=jobname+".qsub"
     with open(qsubfile,'w') as f:
       f.write('\n'.join(qsublines))
-    result = sub.check_output("qsub %s"%(qsubfile),shell=True)
-    self.queueid.append(result.decode().split()[0])
-    print(self.__class__.__name__,": Submitted as %s"%self.queueid)
+    try: 
+      result = sub.check_output("qsub %s"%(qsubfile),shell=True)
+      self.queueid.append(result.decode().split()[0])
+      print(self.__class__.__name__,": Submitted as %s"%self.queueid)
+    except sub.CalledProcessError:
+      print("Runner: Error submitting job. Check queue settings.")
 
     # Clear out the lines to set up for the next job.
     self.exelines=[]
