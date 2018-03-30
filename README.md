@@ -9,7 +9,7 @@ Check out the intro folder, which constains a set of jupyter notebooks to help y
 
 Working through all the notebooks should only take ~10 minutes.
 
-#Object definitions
+# Object definitions
 
 ## Level 1: constructing input files and gathering data
 
