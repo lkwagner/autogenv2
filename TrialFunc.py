@@ -46,7 +46,7 @@ class SlaterJastrow(TrialFunction):
     else:
       slater=self.slatman.qwfiles['slater']
       sys=self.slatman.qwfiles['sys']
-    jastrow=self.jastman.qwfiles['jastrow']
+    jastrow=self.jastman.qwfiles['jastrow2']
 
     # There may be a use case for these two to be different, but I want to check the first time this happens. 
     # You can have weird bugs if you use different system files for each wave function term, I think.

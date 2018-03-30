@@ -312,7 +312,7 @@ class PySCFManager:
     if status=="running":
       pass
     elif status=="not_started":
-      self.runner.add_task("/usr/bin/python3 %s &> %s"%(self.driverfn,self.outfile))
+      self.runner.add_task("/usr/bin/python3 %s > %s"%(self.driverfn,self.outfile))
     elif status=="ready_for_analysis":
       status=self.reader.collect(self.outfile,self.chkfile)
       if status=='killed':
@@ -322,7 +322,7 @@ class PySCFManager:
         if os.path.exists(self.chkfile):
           self.writer.dm_generator=PySCF.dm_from_chkfile("%d.%s"%(self.restarts,self.chkfile))
         self.writer.pyscf_input(self.driverfn,self.chkfile)
-        self.runner.add_task("/usr/bin/python3 %s &> %s"%(self.driverfn,self.outfile))
+        self.runner.add_task("/usr/bin/python3 %s > %s"%(self.driverfn,self.outfile))
         self.restarts+=1
       elif status=='ok':
         print(self.__class__.__name__,": %s status= %s, task complete."%(self.name,status))

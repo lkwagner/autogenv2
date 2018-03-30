@@ -410,6 +410,7 @@ def find_basis_cutoff(mol):
   except:
     return 7.5 
 
+###########################################################
 def find_atom_types(mol):
   atom_types=[]
   n_atom  = len(mol.atom_coords())
@@ -419,7 +420,8 @@ def find_atom_types(mol):
 
   return list(set(atom_types))
 
-def print_jastrow(mol,basename='qw',threebody=False):
+###########################################################
+def print_jastrow(mol,jastfile,optbasis=True,threebody=False):
   
   basis_cutoff = find_basis_cutoff(mol)
   atom_types = find_atom_types(mol)
@@ -491,12 +493,9 @@ def print_jastrow(mol,basename='qw',threebody=False):
       "  }",
       "}"
   ]
-  fname=basename+'.jast2'
-  if threebody:
-    fname=basename+'.jast3'
 
-  with open(fname,'w') as outf:
-    outf.write("\n".join(outlines))
+  jastfile.write("\n".join(outlines))
+
   return None
 
 
