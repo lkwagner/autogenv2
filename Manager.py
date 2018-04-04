@@ -390,7 +390,7 @@ class QWalkManager:
       name (str): identifier for this job. This names the files associated with run.
       path (str): directory where this manager is free to store information.
       bundle (bool): False - submit jobs. True - dump job commands into a script for a bundler to run.
-      qwalkbin (str): absolute path to qwalk executible.
+      qwalk (str): absolute path to qwalk executible.
     '''
     self.name=name
     self.pickle="%s.pkl"%(self.name)
@@ -486,7 +486,7 @@ class QWalkManager:
         self.completed=True
       else:
         print(self.__class__.__name__,": %s status= %s, attempting rerun."%(self.name,status))
-        exestr="/home/busemey2/bin/qwalk %s"%' '.join(self.infile)
+        exestr="%s %s"%' '.join(self.qwalk,self.infile)
         exestr+=" &> %s.out"%self.infile[-1]
         self.runner.add_task(exestr)
     elif status=='done':
