@@ -83,45 +83,88 @@ def update_attributes(old,new,skip_keys=[],safe_keys=[]):
 class CrystalManager:
   """ Internal class managing process of running a DFT job though Crystal.
   Has authority over file names associated with this task."""
-  def __init__(self,writer,runner,crys_reader=None,prop_reader=None,trylev=False):
-    ''' convert controls if QWalk input files are produced. None makes a default instance.'''
-    self.writer=writer
+  def __init__(self,writer,runner,name='crystal_run',path=None,crys_reader=None,prop_reader=None,trylev=False,bundle=False):
+    ''' CrystalManager manages the writing of a Crystal input file, it's running, and keeping track of the results.
+    Args:
+      writer (PySCFWriter): writer for input.
+      reader (PySCFReader): to read PySCF output.
+      runner (runner object): to run job.
+      name (str): identifier for this job. This names the files associated with run.
+      path (str): directory where this manager is free to store information.
+      bundle (bool): False - submit jobs. True - dump job commands into a script for a bundler to run.
+    '''
+    # Where to save self.
+    self.name=name
+    self.pickle="%s.pkl"%self.name
 
-    if crys_reader is None:
-      self.creader=Crystal.CrystalReader()
-    else:
-      self.creader=crys_reader
-    if prop_reader is None:
-      self.preader=PropertiesReader.PropertiesReader()
-    else:
-      self.preader=prop_reader
-    self.runner=runner
+    # Ensure path is set up correctly.
+    if path is None:
+      path=os.path.getcwd()
+    if path[-1]!='/': path+='/'
+    self.path=path
+
+    print(self.__class__.__name__,": initializing")
+    print(self.__class__.__name__,": name= %s"%self.name)
+    print(self.__class__.__name__,": path= %s"%self.path)
+
+    self.writer=writer
+    if crys_reader is None: self.creader=Crystal.CrystalReader()
+    else: self.creader=crys_reader
+    if prop_reader is None: self.preader=PropertiesReader.PropertiesReader()
+    else: self.preader=prop_reader
+    if runner is None: self.runner=RunnerPBS()
+    else: self.runner=runner
 
     # Internal.
-    self.scriptfile=None
-    self.crysinpfn='crys.in'
-    self.crysoutfn='crys.in.o'
-    #self.cresinpfn='crys_restart.in'
-    #self.cresoutfn='crys_restart.in.o'
-    self.propinpfn='prop.in'
-    self.propoutfn='prop.in.o'
-    self.restarts=0
+    self.crysinpfn=self.name+'.in'
+    self.propinpfn=self.name+'.prop.in'
+    self.crysoutfn=self.crysinpfn+'.o'
+    self.propoutfn=self.propinpfn+'.o'
     self._runready=False
+    self.scriptfile=None
     self.completed=False
+    self.bundle=bundle
 
     # Smart error detection.
     self.trylev=trylev
     self.savebroy=[]
     self.lev=False
 
+    # Handle old results if present.
+    if os.path.exists(self.path+self.pickle):
+      print(self.__class__.__name__,": rebooting old manager.")
+      old=pkl.load(open(self.path+self.pickle,'rb'))
+      if False: #not self.is_consistent(old): TODO check consistency.
+        raise NotImplementedError("Handling updated input files is not implemented yet.")
+      else:
+        self.__dict__=old.__dict__
+
+    # Update the file.
+    if not os.path.exists(self.path): os.mkdir(self.path)
+    with open(self.path+self.pickle,'wb') as outf:
+      pkl.dump(self,outf)
+
+  #------------------------------------------------
+  def update_options(self,other):
+    ''' Safe copy options from other to self. '''
+
+    updated=update_attributes(old=self.runner,new=other.runner,
+        safe_keys=['queue','walltime','np','nn','jobname'],
+        skip_keys=['queueid','prefix','postfix'])
+
+    updated=update_attributes(old=self.writer,new=other.writer,
+        safe_keys=['maxcycle','edifftol'],
+        skip_keys=['completed','modisymm','restart','guess_fort'])
+    if updated:
+      self.writer.completed=False
+
   #----------------------------------------
   def nextstep(self):
-    """ Check write status, then if it's running. If not running check if
-    finished. If not finished, attempt to run. 
-    
-    Note: this will not submit any jobs to the queue, but updates the runner 
-    object with the ability to start the run. Call either submit() or use a bundler to 
-    actually start the run.""" 
+    ''' Determine and perform the next step in the calculation.'''
+
+    print(self.__class__.__name__,": next step.")
+    cwd=os.getcwd()
+    os.chdir(self.path)
 
     # Generate input files.
     if not self.writer.completed:
@@ -133,19 +176,16 @@ class CrystalManager:
         self.writer.write_prop_input(self.propinpfn)
 
     #Check on the CRYSTAL run
-    # TODO while True is not doing anything anymore.
     status=resolve_status(self.runner,self.creader,self.crysoutfn,method='crystal')
-    print(status)
-  
-    print("Crystal status",status)
+    print(self.__class__.__name__,": %s status= %s"%(self.name,status))
+
     if status=="not_started":
-      sh.copy(self.crysinpfn,'INPUT')
+      self.runner.add_command("cp %s INPUT"%self.crysinpfn)
       self.runner.add_task("Pcrystal &> %s"%self.crysoutfn)
-      self.runner.postfix += ["cp %s INPUT"%self.propinpfn,"mpirun Pproperties &> %s.o"%self.propinpfn]
+
     elif status=="ready_for_analysis":
       #This is where we (eventually) do error correction and resubmits
       status=self.creader.collect(self.crysoutfn)
-      self.preader.collect(self.propoutfn)
       if status=='killed':
         self.writer.restart=True
         if self.trylev:
@@ -180,12 +220,19 @@ class CrystalManager:
       self.runner.add_task("Pcrystal &> %s"%self.crysoutfn)
       self.restarts+=1
 
-    # Sometimes an error puts it in a state where the crystal is done but not properties.
-    elif status=='done' and not self.preader.completed:
-      print("Crystal is done, but properties not...trying to read properties.")
-      self.preader.collect(self.propoutfn)
+    # Ready for bundler or else just submit the jobs as needed.
+    if self.bundle:
+      self.scriptfile="%s.run"%self.name
+      self.bundle_ready=self.runner.script(self.scriptfile,self.driverfn)
+    else:
+      qsubfile=self.runner.submit(self.name)
 
-    self.completed=(self.creader.completed and self.preader.completed)
+    self.completed=self.creader.completed
+
+    # Update the file.
+    with open(self.pickle,'wb') as outf:
+      pkl.dump(self,outf)
+    os.chdir(cwd)
 
   #------------------------------------------------
   def script(self,jobname=None):
@@ -199,20 +246,6 @@ class CrystalManager:
     ''' Submit the runner's job to the queue. '''
     qsubfile=self.runner.submit(jobname)
     return qsubfile
-
-  #------------------------------------------------
-  def update_options(self,other):
-    ''' Safe copy options from other to self. '''
-
-    updated=update_attributes(old=self.runner,new=other.runner,
-        safe_keys=['queue','walltime','np','nn','jobname'],
-        skip_keys=['queueid','prefix','postfix'])
-
-    updated=update_attributes(old=self.writer,new=other.writer,
-        safe_keys=['maxcycle','edifftol'],
-        skip_keys=['completed','modisymm','restart','guess_fort'])
-    if updated:
-      self.writer.completed=False
 
   #----------------------------------------
   def to_json(self):
@@ -232,7 +265,7 @@ class CrystalManager:
 #######################################################################
 class PySCFManager:
   def __init__(self,writer,reader=None,runner=None,name='psycf_run',path=None,bundle=False):
-    ''' PySCFManager managers the writing of a PySCF input file, it's running, and managing the results.
+    ''' PySCFManager manages the writing of a PySCF input file, it's running, and keep track of the results.
     Args:
       writer (PySCFWriter): writer for input.
       reader (PySCFReader): to read PySCF output.
@@ -309,9 +342,8 @@ class PySCFManager:
     
     status=resolve_status(self.runner,self.reader,self.outfile, 'pyscf')
     print(self.__class__.__name__,": %s status= %s"%(self.name,status))
-    if status=="running":
-      pass
-    elif status=="not_started":
+
+    if status=="not_started":
       self.runner.add_task("/usr/bin/python3 %s > %s"%(self.driverfn,self.outfile))
     elif status=="ready_for_analysis":
       status=self.reader.collect(self.outfile,self.chkfile)
@@ -380,7 +412,7 @@ class PySCFManager:
 #######################################################################
 class QWalkManager:
   def __init__(self,writer,reader,runner=None,trialfunc=None,name='qw_run',path=None,bundle=False,qwalk='~/bin/qwalk'):
-    ''' QWalkManager managers the writing of a QWalk input files, it's running, and managing the results.
+    ''' QWalkManager managers the writing of a QWalk input files, it's running, and keeping track of the results.
     Args:
       writer (qwalk writer): writer for input.
       reader (qwalk reader): to read job.
