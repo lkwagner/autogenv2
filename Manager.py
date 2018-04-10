@@ -33,46 +33,46 @@ def resolve_status(runner,reader,outfile, method='not_defined'):
   return "ready_for_analysis"
 
 ######################################################################
-def diff_keys(old,new,skip_keys=[]):
+def diff_keys(replace,keep,skip_keys=[]):
   ''' Check if two objects have different keys, and what those keys are. '''
   issame=True
-  diff={'old':[],'new':[]}
+  diff={'replace':[],'keep':[]}
 
-  for newkey in new.__dict__.keys():
-    if newkey not in old.__dict__.keys():
+  for newkey in keep.__dict__.keys():
+    if newkey not in replace.__dict__.keys():
       issame=False
-      diff['new'].append(newkey)
-  for oldkey in old.__dict__.keys():
-    if oldkey not in new.__dict__.keys():
+      diff['keep'].append(newkey)
+  for oldkey in replace.__dict__.keys():
+    if oldkey not in keep.__dict__.keys():
       issame=False
-      diff['old'].append(oldkey)
-  for key in old.__dict__.keys():
-    if (key not in diff['new']) and (key not in diff['old']) and \
-        (old.__dict__[key]!=new.__dict__[key]) and (key not in skip_keys):
+      diff['replace'].append(oldkey)
+  for key in replace.__dict__.keys():
+    if (key not in diff['keep']) and (key not in diff['replace']) and \
+        (replacreplace.__dict__[key]!=keep.__dict__[key]) and (key not in skip_keys):
       issame=False
-      diff['old'].append(key)
-      diff['new'].append(key)
+      diff['replace'].append(key)
+      diff['keep'].append(key)
   return issame,diff
 
 ######################################################################
-def update_attributes(old,new,skip_keys=[],safe_keys=[]):
+def update_attributes(replace,keep,skip_keys=[],safe_keys=[]):
   ''' Replace attributes that do not affect accuracy. 
   Raise an AssertionError if there's a problematic discrepancy. 
   By default, all keys are not safe, so this mainly checks consistency.
   skip_keys are not checked or replaced.'''
 
-  issame,diff=diff_keys(old,new,skip_keys)
+  issame,diff=diff_keys(replace,keep,skip_keys)
   if not issame:
-    print(old.__class__.__name__,": Key update-- {} from one doesn't match {} from new."\
-        .format(diff['old'],diff['new']))
-    for key in diff['new']:
+    print(replace.__class__.__name__,": Key update-- {} from one doesn't match {} from keep."\
+        .format(diff['replace'],diff['keep']))
+    for key in diff['keep']:
       if key in safe_keys:
         print("Keeping {} from the latter.".format(key))
-        print("old")
-        print(old.__dict__[key])
-        print("new")
-        print(new.__dict__[key])
-        old.__dict__[key]=new.__dict__[key]
+        print("replace")
+        print(replace.__dict__[key])
+        print("keep")
+        print(keep.__dict__[key])
+        replace.__dict__[key]=keep.__dict__[key]
       else:
         raise AssertionError("Unsafe update; new setting affects accuracy.")
   return not issame
@@ -120,6 +120,7 @@ class CrystalManager:
     self.propinpfn=self.name+'.prop.in'
     self.crysoutfn=self.crysinpfn+'.o'
     self.propoutfn=self.propinpfn+'.o'
+    self.restarts=0
     self._runready=False
     self.scriptfile=None
     self.completed=False
@@ -132,12 +133,13 @@ class CrystalManager:
 
     # Handle old results if present.
     if os.path.exists(self.path+self.pickle):
+      print(self.path,self.name)
       print(self.__class__.__name__,": rebooting old manager.")
       old=pkl.load(open(self.path+self.pickle,'rb'))
       if False: #not self.is_consistent(old): TODO check consistency.
         raise NotImplementedError("Handling updated input files is not implemented yet.")
       else:
-        self.__dict__=old.__dict__
+        self.update_options(old)
 
     # Update the file.
     if not os.path.exists(self.path): os.mkdir(self.path)
@@ -148,11 +150,11 @@ class CrystalManager:
   def update_options(self,other):
     ''' Safe copy options from other to self. '''
 
-    updated=update_attributes(old=self.runner,new=other.runner,
+    updated=update_attributes(replace=self.runner,keep=other.runner,
         safe_keys=['queue','walltime','np','nn','jobname'],
         skip_keys=['queueid','prefix','postfix'])
 
-    updated=update_attributes(old=self.writer,new=other.writer,
+    updated=update_attributes(replace=self.writer,keep=other.writer,
         safe_keys=['maxcycle','edifftol'],
         skip_keys=['completed','modisymm','restart','guess_fort'])
     if updated:
@@ -162,6 +164,7 @@ class CrystalManager:
   def nextstep(self):
     ''' Determine and perform the next step in the calculation.'''
 
+    print(self.path,self.name)
     print(self.__class__.__name__,": next step.")
     cwd=os.getcwd()
     os.chdir(self.path)
@@ -225,7 +228,7 @@ class CrystalManager:
       self.scriptfile="%s.run"%self.name
       self.bundle_ready=self.runner.script(self.scriptfile,self.driverfn)
     else:
-      qsubfile=self.runner.submit(self.name)
+      qsubfile=self.runner.submit()
 
     self.completed=self.creader.completed
 
@@ -364,7 +367,7 @@ class PySCFManager:
       self.scriptfile="%s.run"%self.name
       self.bundle_ready=self.runner.script(self.scriptfile,self.driverfn)
     else:
-      qsubfile=self.runner.submit(self.name)
+      qsubfile=self.runner.submit()
 
     self.completed=self.reader.completed
     # Update the file.
@@ -531,7 +534,7 @@ class QWalkManager:
       self.scriptfile="%s.run"%self.name
       self.bundle_ready=self.runner.script(self.scriptfile,self.driverfn)
     else:
-      qsubfile=self.runner.submit(self.name)
+      qsubfile=self.runner.submit()
 
     # Update the file.
     with open(self.pickle,'wb') as outf:

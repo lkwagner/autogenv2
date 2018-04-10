@@ -89,6 +89,7 @@ class CrystalWriter:
   #-----------------------------------------------
 
   def set_options(self, d):
+    # TODO add check for charge vs spin.
     selfdict=self.__dict__
     for k in d.keys():
       if not k in selfdict.keys():
