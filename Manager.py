@@ -52,8 +52,6 @@ def update_attributes(copyto,copyfrom,skip_keys=[],take_keys=[]):
       pass
     elif key not in copyto.__dict__.keys():
       print("Warning: Object update. An attribute (%s) was skipped because it doesn't exist in both objects."%key)
-      copyto.__dict__[key]=copyfrom.__dict__[key]
-      updated=True
     elif copyto.__dict__[key]!=copyfrom.__dict__[key]:
       if key not in take_keys:
         print("Warning: update to attribute (%s) cancelled, because it requires job to be rerun."%key)
@@ -122,7 +120,6 @@ class CrystalManager:
 
     # Handle old results if present.
     if os.path.exists(self.path+self.pickle):
-      print(self.path,self.name)
       print(self.logname,": rebooting old manager.")
       old=pkl.load(open(self.path+self.pickle,'rb'))
       self.recover(old)
@@ -240,6 +237,7 @@ class CrystalManager:
   #----------------------------------------
   def collect(self):
     ''' Call the collect routine for readers.'''
+    print(self.logname,": collecting results.")
     self.creader.collect(self.path+self.crysoutfn)
 
     # Update the file.
