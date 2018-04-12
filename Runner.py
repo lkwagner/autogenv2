@@ -104,6 +104,13 @@ class RunnerPBS:
   def check_status(self):
     return submitter.check_PBS_stati(self.queueid)
 
+  def add_command(self,cmdstr):
+    ''' Accumulate commands that don't get an MPI command.
+    Args: 
+      cmdstr (str): executible statement. Will be prepended with appropriate mpirun. 
+    '''
+    self.exelines.append(cmdstr)
+
   #-------------------------------------
   def add_task(self,exestr):
     ''' Accumulate executable commands.
@@ -142,7 +149,7 @@ class RunnerPBS:
       return
     
     if self.np=='allprocs':
-      ppnstr='flags=allprocs'
+      ppnstr=',flags=allprocs'
     else:
       ppnstr=':ppn=%d'%self.np
 

@@ -12,8 +12,12 @@ from xml.etree.ElementTree import ElementTree
 import numpy as np
 import os
 
+# TODO the code revolving around _elements is bad and should be replaced.
+# * _elements is a hidden dependency between geom and basis_section
+# * new geom functions must include this dependency, but its not really documented how.
 
-class CrystalWriter:
+
+class CrystalWriter: 
   def __init__(self,options):
     #Geometry input.
     self.struct=None
@@ -30,6 +34,7 @@ class CrystalWriter:
     self.functional={'exchange':'PBE','correlation':'PBE','hybrid':0,'predefined':None}
     self.total_spin=0
     self.modisymm=None
+    self.symmremo=False # Remove all symmetries for SCF.
 
     # Initial guess.
     self.initial_spins=[]
@@ -66,6 +71,9 @@ class CrystalWriter:
     self.completed=False
 
     self.set_options(options)
+
+    # Internal.
+    self._elements=[] # List of elements set by geometry reading. 
     
   #-----------------------------------------------
     
@@ -89,6 +97,7 @@ class CrystalWriter:
   #-----------------------------------------------
 
   def set_options(self, d):
+    # TODO add check for charge vs spin.
     selfdict=self.__dict__
     for k in d.keys():
       if not k in selfdict.keys():
@@ -102,7 +111,9 @@ class CrystalWriter:
     geomlines=self.geom()
     basislines=self.basis_section()
 
-    if self.modisymm is None:
+    if self.symmremo:
+      modisymm=["SYMMREMO"]
+    elif self.modisymm is None:
       zro=[i for i,s in enumerate(self.initial_spins) if s== 0]
       ups=[i for i,s in enumerate(self.initial_spins) if s== 1]
       dns=[i for i,s in enumerate(self.initial_spins) if s==-1]
@@ -231,34 +242,6 @@ class CrystalWriter:
       status='not_started'
     return status
 
-  #-----------------------------------------------
-  def is_consistent(self,other):
-    skipkeys = ['completed','biposize','exchsize']
-    
-    for otherkey in other.__dict__.keys():
-      if otherkey not in self.__dict__.keys():
-        print('other is missing a key.')
-        return False
-
-    for selfkey in self.__dict__.keys():
-      if selfkey not in other.__dict__.keys():
-        print('self is missing a key.')
-        return False
-
-    #Compare the 
-    for key in self.__dict__.keys():
-      if key in skipkeys:
-        equal=True
-      else: 
-        equal=self.__dict__[key]==other.__dict__[key] 
-
-      if not equal:
-        print("Different keys [{}] = \n{}\n or \n{}"\
-            .format(key,self.__dict__[key],other.__dict__[key]))
-        return False
-      
-    return True
-
 ########################################################
   def geom(self):
     """Generate the geometry section for CRYSTAL"""
@@ -336,10 +319,13 @@ class CrystalWriter:
   def geom0d(self):
     geomlines=["MOLECULE",str(self.group_number)]
     geomlines+=["%i"%len(self.struct['sites'])]
+    self._elements=set()
     for v in self.struct['sites']:
       nm=v['species'][0]['element']
+      self._elements.add(nm)
       nm=str(Element(nm).Z+200)
       geomlines+=[nm+" %g %g %g"%(v['xyz'][0],v['xyz'][1],v['xyz'][2])]
+    self._elements = sorted(list(self._elements)) # Standardize ordering.
 
     return geomlines
 
@@ -542,11 +528,11 @@ import os
 
 class CrystalReader:
   """ Extract properties of crystal run. 
-  output values are stored in self.out dictionary when collect() is run. 
+  output values are stored in self.output dictionary when collect() is run. 
   """
   def __init__(self):
     self.completed=False
-    self.out={}
+    self.output={}
 
     
 #-------------------------------------------------      
@@ -561,8 +547,8 @@ class CrystalReader:
       lines = f.readlines()
       for li,line in enumerate(lines):
         if 'SCF ENDED - CONVERGENCE ON ENERGY' in line:
-          self.out['total_energy']=float(line.split()[8])    
-          print("SCF ended converging on %f"%self.out['total_energy'])
+          self.output['total_energy']=float(line.split()[8])    
+          print("SCF ended converging on %f"%self.output['total_energy'])
           status='completed'
           self.completed=True
         elif 'SCF ENDED - TOO MANY CYCLES' in line:
@@ -577,7 +563,7 @@ class CrystalReader:
           while "TTT" not in lines[li+shift]:
             moms += map(float,lines[li+shift].split())
             shift += 1
-          self.out['mag_moments']=moms
+          self.output['mag_moments']=moms
 
         elif 'TOTAL ATOMIC CHARGES' in line:
           chgs = []
@@ -585,7 +571,7 @@ class CrystalReader:
           while "SUMMED" not in lines[li+shift]:
             chgs += map(float,lines[li+shift].split())
             shift += 1
-          self.out['atomic_charges']=chgs
+          self.output['atomic_charges']=chgs
     else:
       # Just to be sure/clear...
       self.completed=False
@@ -594,13 +580,13 @@ class CrystalReader:
 
 #-------------------------------------------------      
   def write_summary(self):
-    print("Crystal total energy",self.out['total_energy'])
+    print("Crystal total energy",self.output['total_energy'])
 
 
 #-------------------------------------------------      
   # This can be made more efficient if it's a problem: searches whole file for
   # each query.
-  def check_outputfile(self,outfilename,acceptable_scf=10.0):
+  def check_outputfile(outfilename,acceptable_scf=10.0):
     """ Check output file. 
 
     Return values:
