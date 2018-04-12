@@ -33,49 +33,38 @@ def resolve_status(runner,reader,outfile, method='not_defined'):
   return "ready_for_analysis"
 
 ######################################################################
-def diff_keys(replace,keep,skip_keys=[]):
-  ''' Check if two objects have different keys, and what those keys are. '''
-  issame=True
-  diff={'replace':[],'keep':[]}
+def update_attributes(copyto,copyfrom,skip_keys=[],take_keys=[]):
+  ''' Save update of class attributes. If copyfrom has additional attributes, they are ignored.
 
-  for newkey in keep.__dict__.keys():
-    if newkey not in replace.__dict__.keys():
-      issame=False
-      diff['keep'].append(newkey)
-  for oldkey in replace.__dict__.keys():
-    if oldkey not in keep.__dict__.keys():
-      issame=False
-      diff['replace'].append(oldkey)
-  for key in replace.__dict__.keys():
-    if (key not in diff['keep']) and (key not in diff['replace']) and \
-        (replacreplace.__dict__[key]!=keep.__dict__[key]) and (key not in skip_keys):
-      issame=False
-      diff['replace'].append(key)
-      diff['keep'].append(key)
-  return issame,diff
-
-######################################################################
-def update_attributes(replace,keep,skip_keys=[],safe_keys=[]):
-  ''' Replace attributes that do not affect accuracy. 
-  Raise an AssertionError if there's a problematic discrepancy. 
-  By default, all keys are not safe, so this mainly checks consistency.
-  skip_keys are not checked or replaced.'''
-
-  issame,diff=diff_keys(replace,keep,skip_keys)
-  if not issame:
-    print(replace.__class__.__name__,": Key update-- {} from one doesn't match {} from keep."\
-        .format(diff['replace'],diff['keep']))
-    for key in diff['keep']:
-      if key in safe_keys:
-        print("Keeping {} from the latter.".format(key))
-        print("replace")
-        print(replace.__dict__[key])
-        print("keep")
-        print(keep.__dict__[key])
-        replace.__dict__[key]=keep.__dict__[key]
+  Args:
+    copyto (obj): class who's attributes are being updated.
+    copyfrom (obj): class who's attributes will be copied from.
+    skip_keys (list): list of attributes (str) not to update. 
+    take_keys (list): list of attributes (str) that are ok to update. Others will raise warning and be skipped.
+  Returns:
+    bool: Whether any changes were made.
+  '''
+  updated=False
+  for key in copyfrom.__dict__.keys():
+    #print("key",key)
+    if key in skip_keys: 
+      #print("Skipping key (%s)"%key)
+      pass
+    elif key not in copyto.__dict__.keys():
+      print("Warning: Object update. An attribute (%s) was skipped because it doesn't exist in both objects."%key)
+      copyto.__dict__[key]=copyfrom.__dict__[key]
+      updated=True
+    elif copyto.__dict__[key]!=copyfrom.__dict__[key]:
+      if key not in take_keys:
+        print("Warning: update to attribute (%s) cancelled, because it requires job to be rerun."%key)
       else:
-        raise AssertionError("Unsafe update; new setting affects accuracy.")
-  return not issame
+        #print("Copy",key)
+        copyto.__dict__[key]=copyfrom.__dict__[key]
+        updated=True
+    else:
+      #print("Keys match (%s)"%key)
+      pass
+  return updated
 
 ######################################################################
 # Manager classes.
@@ -103,9 +92,9 @@ class CrystalManager:
     if path[-1]!='/': path+='/'
     self.path=path
 
-    print(self.__class__.__name__,": initializing")
-    print(self.__class__.__name__,": name= %s"%self.name)
-    print(self.__class__.__name__,": path= %s"%self.path)
+    self.logname="%s@%s"%(self.__class__.__name__,self.path+self.name)
+
+    print(self.logname,": initializing")
 
     self.writer=writer
     if crys_reader is None: self.creader=Crystal.CrystalReader()
@@ -134,12 +123,9 @@ class CrystalManager:
     # Handle old results if present.
     if os.path.exists(self.path+self.pickle):
       print(self.path,self.name)
-      print(self.__class__.__name__,": rebooting old manager.")
+      print(self.logname,": rebooting old manager.")
       old=pkl.load(open(self.path+self.pickle,'rb'))
-      if False: #not self.is_consistent(old): TODO check consistency.
-        raise NotImplementedError("Handling updated input files is not implemented yet.")
-      else:
-        self.update_options(old)
+      self.recover(old)
 
     # Update the file.
     if not os.path.exists(self.path): os.mkdir(self.path)
@@ -147,16 +133,29 @@ class CrystalManager:
       pkl.dump(self,outf)
 
   #------------------------------------------------
-  def update_options(self,other):
-    ''' Safe copy options from other to self. '''
+  def recover(self,other):
+    ''' Recover old class by copying over data. Retain variables from old that may change final answer.'''
 
-    updated=update_attributes(replace=self.runner,keep=other.runner,
-        safe_keys=['queue','walltime','np','nn','jobname'],
-        skip_keys=['queueid','prefix','postfix'])
+    update_attributes(copyto=self,copyfrom=other,
+        skip_keys=['writer','runner','creader','preader','bundle','lev','savebroy','trylev'],
+        take_keys=['restarts','completed'])
 
-    updated=update_attributes(replace=self.writer,keep=other.writer,
-        safe_keys=['maxcycle','edifftol'],
-        skip_keys=['completed','modisymm','restart','guess_fort'])
+    # Update queue settings, but save queue information.
+    update_attributes(copyto=self.runner,copyfrom=other.runner,
+        skip_keys=['queue','walltime','np','nn','jobname'],
+        take_keys=['queueid'])
+
+    update_attributes(copyto=self.creader,copyfrom=other.creader,
+        skip_keys=[],
+        take_keys=['completed','output'])
+
+    update_attributes(copyto=self.preader,copyfrom=other.preader,
+        skip_keys=[],
+        take_keys=['completed','output'])
+
+    updated=update_attributes(copyto=self.writer,copyfrom=other.writer,
+        skip_keys=['maxcycle','edifftol'],
+        take_keys=['completed','modisymm','restart','guess_fort','_elements'])
     if updated:
       self.writer.completed=False
 
@@ -164,8 +163,7 @@ class CrystalManager:
   def nextstep(self):
     ''' Determine and perform the next step in the calculation.'''
 
-    print(self.path,self.name)
-    print(self.__class__.__name__,": next step.")
+    print(self.logname,": next step.")
     cwd=os.getcwd()
     os.chdir(self.path)
 
@@ -178,9 +176,9 @@ class CrystalManager:
       with open(self.propinpfn,'w') as f:
         self.writer.write_prop_input(self.propinpfn)
 
-    #Check on the CRYSTAL run
+    # Check on the CRYSTAL run
     status=resolve_status(self.runner,self.creader,self.crysoutfn,method='crystal')
-    print(self.__class__.__name__,": %s status= %s"%(self.name,status))
+    print(self.logname,": status= %s"%(status))
 
     if status=="not_started":
       self.runner.add_command("cp %s INPUT"%self.crysinpfn)
@@ -189,10 +187,12 @@ class CrystalManager:
     elif status=="ready_for_analysis":
       #This is where we (eventually) do error correction and resubmits
       status=self.creader.collect(self.crysoutfn)
+      print(self.logname,": status %s"%status)
       if status=='killed':
+        print(self.logname,": attempting restart (%d previous restarts)"%self.restarts)
         self.writer.restart=True
         if self.trylev:
-          print("Trying LEVSHIFT.")
+          print(self.logname,": trying LEVSHIFT.")
           self.writer.levshift=[10,1] # No mercy.
           self.savebroy=deepcopy(self.writer.broyden)
           self.writer.broyden=[]
@@ -236,6 +236,15 @@ class CrystalManager:
     with open(self.pickle,'wb') as outf:
       pkl.dump(self,outf)
     os.chdir(cwd)
+
+  #----------------------------------------
+  def collect(self):
+    ''' Call the collect routine for readers.'''
+    self.creader.collect(self.path+self.crysoutfn)
+
+    # Update the file.
+    with open(self.path+self.pickle,'wb') as outf:
+      pkl.dump(self,outf)
 
   #------------------------------------------------
   def script(self,jobname=None):
@@ -287,9 +296,9 @@ class PySCFManager:
     if path[-1]!='/': path+='/'
     self.path=path
 
-    print(self.__class__.__name__,": initializing")
-    print(self.__class__.__name__,": name= %s"%self.name)
-    print(self.__class__.__name__,": path= %s"%self.path)
+    print(self.logname,": initializing")
+    print(self.logname,": name= %s"%self.name)
+    print(self.logname,": path= %s"%self.path)
 
     self.writer=writer
     if reader is not None: self.reader=reader
@@ -308,7 +317,7 @@ class PySCFManager:
 
     # Handle old results if present.
     if os.path.exists(self.path+self.pickle):
-      print(self.__class__.__name__,": rebooting old manager.")
+      print(self.logname,": rebooting old manager.")
       old=pkl.load(open(self.path+self.pickle,'rb'))
       if False: #not self.is_consistent(old): TODO check consistency.
         raise NotImplementedError("Handling updated input files is not implemented yet.")
@@ -336,7 +345,7 @@ class PySCFManager:
   #------------------------------------------------
   def nextstep(self):
     ''' Determine and perform the next step in the calculation.'''
-    print(self.__class__.__name__,": next step.")
+    print(self.logname,": next step.")
     cwd=os.getcwd()
     os.chdir(self.path)
 
@@ -344,7 +353,7 @@ class PySCFManager:
       self.writer.pyscf_input(self.driverfn,self.chkfile)
     
     status=resolve_status(self.runner,self.reader,self.outfile, 'pyscf')
-    print(self.__class__.__name__,": %s status= %s"%(self.name,status))
+    print(self.logname,": %s status= %s"%(self.name,status))
 
     if status=="not_started":
       self.runner.add_task("/usr/bin/python3 %s > %s"%(self.driverfn,self.outfile))
@@ -360,7 +369,7 @@ class PySCFManager:
         self.runner.add_task("/usr/bin/python3 %s > %s"%(self.driverfn,self.outfile))
         self.restarts+=1
       elif status=='ok':
-        print(self.__class__.__name__,": %s status= %s, task complete."%(self.name,status))
+        print(self.logname,": %s status= %s, task complete."%(self.name,status))
 
     # Ready for bundler or else just submit the jobs as needed.
     if self.bundle:
@@ -392,7 +401,7 @@ class PySCFManager:
       if not self.completed:
         return False
       else:
-        print(self.__class__.__name__,": %s generating QWalk files."%self.name)
+        print(self.logname,": %s generating QWalk files."%self.name)
         cwd=os.getcwd()
         os.chdir(self.path)
         self.qwfiles=pyscf2qwalk.print_qwalk_chkfile(self.chkfile)
@@ -436,9 +445,9 @@ class QWalkManager:
     if path[-1]!='/': path+='/'
     self.path=path
 
-    print(self.__class__.__name__,": initializing")
-    print(self.__class__.__name__,": name= %s"%self.name)
-    print(self.__class__.__name__,": path= %s"%self.path)
+    print(self.logname,": initializing")
+    print(self.logname,": name= %s"%self.name)
+    print(self.logname,": path= %s"%self.path)
 
     self.writer=writer
     self.reader=reader
@@ -457,7 +466,7 @@ class QWalkManager:
 
     # Handle old results if present.
     if os.path.exists(self.path+self.pickle):
-      print(self.__class__.__name__,": Recovering old manager.")
+      print(self.logname,": Recovering old manager.")
       old=pkl.load(open(self.path+self.pickle,'rb'))
       old.update_options(self)
       self=old
@@ -491,7 +500,7 @@ class QWalkManager:
   def nextstep(self):
     ''' Perform next step in calculation. trialfunc managers are updated if they aren't completed yet.'''
 
-    print(self.__class__.__name__,": next step.")
+    print(self.logname,": next step.")
 
     # Check dependency is completed first.
     if self.writer.trialfunc=='':
@@ -508,26 +517,26 @@ class QWalkManager:
       self.writer.qwalk_input(self.infile)
     
     status=resolve_status(self.runner,self.reader,self.outfile)
-    print(self.__class__.__name__,": %s status= %s"%(self.name,status))
+    print(self.logname,": %s status= %s"%(self.name,status))
     if status=="not_started" and self.writer.completed:
       exestr="%s %s &> %s"%(self.qwalk,self.infile,self.stdout)
       self.runner.add_task(exestr)
-      print(self.__class__.__name__,": %s status= submitted"%(self.name))
+      print(self.logname,": %s status= submitted"%(self.name))
     elif status=="ready_for_analysis":
       #This is where we (eventually) do error correction and resubmits
       status=self.reader.collect(self.outfile)
       if status=='ok':
-        print(self.__class__.__name__,": %s status= %s, task complete."%(self.name,status))
+        print(self.logname,": %s status= %s, task complete."%(self.name,status))
         self.completed=True
       else:
-        print(self.__class__.__name__,": %s status= %s, attempting rerun."%(self.name,status))
+        print(self.logname,": %s status= %s, attempting rerun."%(self.name,status))
         exestr="%s %s"%' '.join(self.qwalk,self.infile)
         exestr+=" &> %s.out"%self.infile[-1]
         self.runner.add_task(exestr)
     elif status=='done':
       self.completed=True
     else:
-      print(self.__class__.__name__,": %s status= %s"%(self.name,status))
+      print(self.logname,": %s status= %s"%(self.name,status))
 
     # Ready for bundler or else just submit the jobs as needed.
     if self.bundle:
