@@ -548,7 +548,7 @@ class CrystalReader:
       for li,line in enumerate(lines):
         if 'SCF ENDED - CONVERGENCE ON ENERGY' in line:
           self.output['total_energy']=float(line.split()[8])    
-          print("SCF ended converging on %f"%self.output['total_energy'])
+          print(self.__class__.__name__,": SCF ended converging on %f"%self.output['total_energy'])
           status='completed'
           self.completed=True
         elif 'SCF ENDED - TOO MANY CYCLES' in line:
