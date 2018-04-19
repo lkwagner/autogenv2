@@ -568,7 +568,7 @@ class CrystalReader:
         elif 'TOTAL ATOMIC CHARGES' in line:
           chgs = []
           shift = 1
-          while "SUMMED" not in lines[li+shift]:
+          while ("SUMMED" not in lines[li+shift]) and ("TTT" not in lines[li+shift]):
             chgs += map(float,lines[li+shift].split())
             shift += 1
           self.output['atomic_charges']=chgs
