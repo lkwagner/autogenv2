@@ -111,23 +111,23 @@ class CrystalWriter:
     geomlines=self.geom()
     basislines=self.basis_section()
 
+    modisymm=[]
     if self.symmremo:
       modisymm=["SYMMREMO"]
     elif self.modisymm is None:
-      zro=[i for i,s in enumerate(self.initial_spins) if s== 0]
-      ups=[i for i,s in enumerate(self.initial_spins) if s== 1]
-      dns=[i for i,s in enumerate(self.initial_spins) if s==-1]
-      self.modisymm=[]
-      self.modisymm+=[(i,0) for i in zro]
-      self.modisymm+=[(i,1) for i in ups]
-      self.modisymm+=[(i,2) for i in dns]
-      modisymm=[]
-      if len(self.modisymm)>0:
+      if len(self.initial_spins)>0: # auto-MODISYMM
+        zro=[i for i,s in enumerate(self.initial_spins) if s== 0]
+        ups=[i for i,s in enumerate(self.initial_spins) if s== 1]
+        dns=[i for i,s in enumerate(self.initial_spins) if s==-1]
+        self.modisymm=[]
+        self.modisymm+=[(i,0) for i in zro]
+        self.modisymm+=[(i,1) for i in ups]
+        self.modisymm+=[(i,2) for i in dns]
+
         modisymm+=['MODISYMM']
         modisymm+=[str(len(self.modisymm))]
         modisymm+=["%d %d"%(a+1,i+1) for a,i in self.modisymm]
-    else:
-      modisymm=[]
+    else: # Manual MODISYMM
       modisymm+=['MODISYMM']
       modisymm+=[str(len(self.modisymm))]
       modisymm+=["%d %d"%(at+1,lab+1) for at,lab in self.modisymm]

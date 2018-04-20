@@ -134,7 +134,8 @@ class CrystalManager:
     ''' Recover old class by copying over data. Retain variables from old that may change final answer.'''
 
     update_attributes(copyto=self,copyfrom=other,
-        skip_keys=['writer','runner','creader','preader','bundle','lev','savebroy','trylev'],
+        skip_keys=['writer','runner','creader','preader','bundle','lev','savebroy','trylev',
+                   'path','logname','name'],
         take_keys=['restarts','completed'])
 
     # Update queue settings, but save queue information.
