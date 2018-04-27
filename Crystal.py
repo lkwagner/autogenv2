@@ -101,8 +101,7 @@ class CrystalWriter:
     selfdict=self.__dict__
     for k in d.keys():
       if not k in selfdict.keys():
-        print("Error:",k,"not a keyword for CrystalWriter")
-        raise AssertionError
+        raise AssertionError("Error: %s not a keyword for CrystalWriter"%k)
       selfdict[k]=d[k]
 
   #-----------------------------------------------
@@ -544,7 +543,12 @@ class CrystalReader:
     self.completed=False
     if os.path.isfile(outfilename):
       f = open(outfilename, 'r')
-      lines = f.readlines()
+      try:
+        lines = f.readlines()
+      except UnicodeDecodeError:
+        self.completed=False
+        lines = []
+        print(self.__class__.__name__,": Crystal output is unreadable, this usually happens when the process as been killed.")
       for li,line in enumerate(lines):
         if 'SCF ENDED - CONVERGENCE ON ENERGY' in line:
           self.output['total_energy']=float(line.split()[8])    
