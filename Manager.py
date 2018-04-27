@@ -7,9 +7,11 @@ import numpy as np
 import pyscf2qwalk
 import pickle as pkl
 import Runner
+
 from copy import deepcopy
 
 #TODO These should all probably be subclasses, if not just for logical purposes. 
+#TODO slow queue checking might be made more efficient by saving the qstat results somewhere.
 
 ######################################################################
 # Misc functions. 
@@ -70,15 +72,17 @@ def update_attributes(copyto,copyfrom,skip_keys=[],take_keys=[]):
 class CrystalManager:
   """ Internal class managing process of running a DFT job though Crystal.
   Has authority over file names associated with this task."""
-  def __init__(self,writer,runner,name='crystal_run',path=None,crys_reader=None,prop_reader=None,trylev=False,bundle=False):
+  def __init__(self,writer,runner,name='crystal_run',path=None,crys_reader=None,prop_reader=None,
+      trylev=False,bundle=False,max_restarts=5):
     ''' CrystalManager manages the writing of a Crystal input file, it's running, and keeping track of the results.
     Args:
       writer (PySCFWriter): writer for input.
       reader (PySCFReader): to read PySCF output.
       runner (runner object): to run job.
       name (str): identifier for this job. This names the files associated with run.
-      path (str): directory where this manager is free to store information.
-      bundle (bool): False - submit jobs. True - dump job commands into a script for a bundler to run.
+      trylev (bool): When restarting use LEVSHIFT option to encourage convergence, then do a rerun without LEVSHIFT.
+      bundle (bool): Whether you'll use a bundling tool to run these jobs.
+      max_restarts (int): maximum number of times you'll allow restarting before giving up (and manually intervening).
     '''
     # Where to save self.
     self.name=name
@@ -115,6 +119,7 @@ class CrystalManager:
 
     # Smart error detection.
     self.trylev=trylev
+    self.max_restarts=max_restarts
     self.savebroy=[]
     self.lev=False
 
@@ -132,10 +137,13 @@ class CrystalManager:
   #------------------------------------------------
   def recover(self,other):
     ''' Recover old class by copying over data. Retain variables from old that may change final answer.'''
+    # Practically speaking, the run will preserve old `take_keys` and allow new changes to `skip_keys`.
+    # This is because you are taking the attributes from the older instance, and copying into the new instance.
 
     update_attributes(copyto=self,copyfrom=other,
-        skip_keys=['writer','runner','creader','preader','bundle','lev','savebroy','trylev',
-                   'path','logname','name'],
+        skip_keys=['writer','runner','creader','preader','lev','savebroy',
+                   'path','logname','name',
+                   'trylev','max_restarts','bundle'],
         take_keys=['restarts','completed'])
 
     # Update queue settings, but save queue information.
@@ -187,23 +195,26 @@ class CrystalManager:
       status=self.creader.collect(self.crysoutfn)
       print(self.logname,": status %s"%status)
       if status=='killed':
-        print(self.logname,": attempting restart (%d previous restarts)"%self.restarts)
-        self.writer.restart=True
-        if self.trylev:
-          print(self.logname,": trying LEVSHIFT.")
-          self.writer.levshift=[10,1] # No mercy.
-          self.savebroy=deepcopy(self.writer.broyden)
-          self.writer.broyden=[]
-          self.lev=True
-        sh.copy(self.crysinpfn,"%d.%s"%(self.restarts,self.crysinpfn))
-        sh.copy(self.crysoutfn,"%d.%s"%(self.restarts,self.crysoutfn))
-        sh.copy('fort.79',"%d.fort.79"%(self.restarts))
-        self.writer.guess_fort='./fort.79'
-        sh.copy(self.writer.guess_fort,'fort.20')
-        self.writer.write_crys_input(self.crysinpfn)
-        sh.copy(self.crysinpfn,'INPUT')
-        self.runner.add_task("Pcrystal &> %s"%self.crysoutfn)
-        self.restarts+=1
+        if self.restarts >= self.max_restarts:
+          print(self.logname,": restarts exhausted (%d previous restarts). Human intervention required."%self.restarts)
+        else:
+          print(self.logname,": attempting restart (%d previous restarts)."%self.restarts)
+          self.writer.restart=True
+          if self.trylev:
+            print(self.logname,": trying LEVSHIFT.")
+            self.writer.levshift=[10,1] # No mercy.
+            self.savebroy=deepcopy(self.writer.broyden)
+            self.writer.broyden=[]
+            self.lev=True
+          sh.copy(self.crysinpfn,"%d.%s"%(self.restarts,self.crysinpfn))
+          sh.copy(self.crysoutfn,"%d.%s"%(self.restarts,self.crysoutfn))
+          sh.copy('fort.79',"%d.fort.79"%(self.restarts))
+          self.writer.guess_fort='./fort.79'
+          sh.copy(self.writer.guess_fort,'fort.20')
+          self.writer.write_crys_input(self.crysinpfn)
+          sh.copy(self.crysinpfn,'INPUT')
+          self.runner.add_task("Pcrystal &> %s"%self.crysoutfn)
+          self.restarts+=1
     elif status=='done' and self.lev:
       # We used levshift to converge. Now let's restart to be sure.
       print("Recovering from LEVSHIFTer.")
