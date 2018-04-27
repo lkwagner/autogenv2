@@ -179,6 +179,41 @@ class RunnerPBS:
     return qsubfile
 
 ####################################################
+class FakeRunner:
+  ''' Object that can be used as a runner, but will ignore run commands.
+  Useful for debugging.'''
+  def __init__(self):
+    self.exelines=[]
+    self.np=0
+    self.nn=0
+    self.jobname='FAKERUNNER'
+    self.queue='FAKEQUEUE'
+    self.walltime='0:00:00'
+    self.prefix=[]
+    self.postfix=[]
+    self.queueid=[]
+
+  #-------------------------------------
+  def check_status(self):
+    return 'unknown'
+
+  def add_command(self,cmdstr):
+    pass
+
+  #-------------------------------------
+  def add_task(self,exestr):
+    pass
+
+  #-------------------------------------
+  def script(self,scriptfile):
+    return False
+
+  #-------------------------------------
+  def submit(self,jobname=None):
+    ''' Submit series of commands.'''
+    return ''
+
+####################################################
 class PySCFRunnerLocal:
   ''' Object that can accumulate jobs to run and run them together locally.'''
   def __init__(self,np='allprocs'):
