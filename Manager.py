@@ -433,7 +433,8 @@ class PySCFManager:
 
 #######################################################################
 class QWalkManager:
-  def __init__(self,writer,reader,runner=None,trialfunc=None,name='qw_run',path=None,bundle=False,qwalk='~/bin/qwalk'):
+  def __init__(self,writer,reader,runner=None,trialfunc=None,
+      name='qw_run',path=None,bundle=False,qwalk='~/bin/qwalk'):
     ''' QWalkManager managers the writing of a QWalk input files, it's running, and keeping track of the results.
     Args:
       writer (qwalk writer): writer for input.
@@ -454,6 +455,8 @@ class QWalkManager:
       path=os.path.getcwd()
     if path[-1]!='/': path+='/'
     self.path=path
+
+    self.logname="%s@%s"%(self.__class__.__name__,self.path+self.name)
 
     print(self.logname,": initializing")
     print(self.logname,": name= %s"%self.name)
@@ -476,15 +479,39 @@ class QWalkManager:
 
     # Handle old results if present.
     if os.path.exists(self.path+self.pickle):
-      print(self.logname,": Recovering old manager.")
+      print(self.logname,": rebooting old manager.")
       old=pkl.load(open(self.path+self.pickle,'rb'))
-      old.update_options(self)
-      self=old
+      self.recover(old)
 
     # Update the file.
     if not os.path.exists(self.path): os.mkdir(self.path)
     with open(self.path+self.pickle,'wb') as outf:
       pkl.dump(self,outf)
+
+  #------------------------------------------------
+  def recover(self,other):
+    ''' Recover old class by copying over data. Retain variables from old that may change final answer.'''
+    # Practically speaking, the run will preserve old `take_keys` and allow new changes to `skip_keys`.
+    # This is because you are taking the attributes from the older instance, and copying into the new instance.
+
+    update_attributes(copyto=self,copyfrom=other,
+        skip_keys=['writer','runner','reader','path','logname','name','bundle'],
+        take_keys=['restarts','completed','trialfunc'])
+
+    # Update queue settings, but save queue information.
+    update_attributes(copyto=self.runner,copyfrom=other.runner,
+        skip_keys=['queue','walltime','np','nn','jobname'],
+        take_keys=['queueid'])
+
+    update_attributes(copyto=self.reader,copyfrom=other.reader,
+        skip_keys=[],
+        take_keys=['completed','output'])
+
+    updated=update_attributes(copyto=self.writer,copyfrom=other.writer,
+        skip_keys=['maxcycle','errtol','minblocks','nblock','savetrace'],
+        take_keys=['completed','tmoves','extra_observables','timestep','trialfunc'])
+    if updated:
+      self.writer.completed=False
 
   #------------------------------------------------
   def update_options(self,other):
@@ -584,3 +611,14 @@ class QWalkManager:
       return 'ok'
     else:
       return 'not_finished'
+
+  #----------------------------------------
+  def collect(self):
+    ''' Call the collect routine for readers.'''
+    print(self.logname,": collecting results.")
+    self.reader.collect(self.path+self.outfile)
+
+    # Update the file.
+    with open(self.path+self.pickle,'wb') as outf:
+      pkl.dump(self,outf)
+

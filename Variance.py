@@ -19,8 +19,8 @@ class VarianceWriter:
     self.macro_iterations=3
 
     self.qmc_type='Variance optimization'
-    self.completed=False
     self.qmc_abr='variance'
+    self.completed=False
     self.set_options(options)
     
   #-----------------------------------------------
@@ -28,7 +28,7 @@ class VarianceWriter:
     selfdict=self.__dict__
     for k in d.keys():
       if not k in selfdict.keys():
-        raise AssertionError("Error:",k,"not a keyword for VarianceWriter")
+        raise AssertionError("Error:",k,"not a keyword for VarianceWriter.")
       selfdict[k]=d[k]
     
   #-----------------------------------------------
@@ -48,6 +48,7 @@ class VarianceReader:
   def __init__(self,vartol=10,vardifftol=0.1,minsteps=2):
     self.output={}
     self.completed=False
+
     self.vartol=vartol
     self.vardifftol=vardifftol
     self.minsteps=minsteps
