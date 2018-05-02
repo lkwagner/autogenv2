@@ -215,9 +215,8 @@ class PySCFRunnerLocal:
 
   #-------------------------------------
   def submit(self,jobname=None):
-    ''' Submit series of commands.'''
-    if jobname is None:
-      jobname=self.jobname
+    ''' Submit series of commands.
+    Note: jobname is not used because it doesn't submit anything.'''
 
     if len(self.exelines)==0:
       #print(self.__class__.__name__,": All tasks completed or queued.")
