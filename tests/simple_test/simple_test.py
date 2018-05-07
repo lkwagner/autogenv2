@@ -1,11 +1,14 @@
 '''
 Some simple tests to check that autogen runs without erroring out.
+
+Run repeatedly to check if runner is also checking queued items correctly.
 '''
 
-from autogenv2 import manager,autopyscf,autorunner
-from autopyscf import PySCFWriter
+from autogenv2 import manager,autopyscf,autorunner,crystal
+from crystal import CrystalWriter
+from autopyscf import PySCFWriter,PySCFPBCWriter
 from manager import PySCFManager,CrystalManager
-from autorunner import PySCFRunnerLocal,PySCFRunnerPBS
+from autorunner import PySCFRunnerLocal,PySCFRunnerPBS,RunnerPBS
 import sys
 
 h2='\n'.join([
@@ -44,10 +47,49 @@ def h2_tests():
 
   return [eqman,stman]
 
+def si_tests():
+  ''' Simple tests that check PBC is working Crystal, and perform a QMC calculation.''' 
+  # Most basic possible job.
+  cwriter=CrystalWriter({
+      'xml_name':'../BFD_Library.xml',
+      'kmesh':(4,4,4),
+    })
+  cwriter.set_struct_fromcif(open('si.cif','r').read(),primitive=True)
+  cwriter.set_options({'symmetry':True})
+
+  cman=CrystalManager(
+      name='crys',
+      path='sicrys',
+      writer=cwriter,
+      runner=RunnerPBS(
+          queue='secondary',
+          np=1,
+          walltime='0:10:00'
+        )
+    )
+
+  pwriter=PySCFPBCWriter({
+      'cif':open('si.cif','r').read()
+    })
+  pman=PySCFManager(
+      name='scf',
+      path='sipyscf',
+      writer=pwriter,
+      runner=PySCFRunnerPBS(
+          queue='secondary',
+          np=1,
+          walltime='0:20:00',
+          ppath=sys.path
+        )
+    )
+
+  return [cman,pman]
+
 def run_tests():
   ''' Choose which tests to run and execute `nextstep()`.'''
   jobs=[]
-  jobs+=h2_tests()
+  #jobs+=h2_tests()
+  jobs+=si_tests()
 
   for job in jobs:
     job.nextstep()
