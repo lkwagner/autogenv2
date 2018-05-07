@@ -1,12 +1,12 @@
-import Crystal
-import PropertiesReader
+import crystal
+import propertiesreader
 import os
-import PySCF 
+import autopyscf 
 import shutil as sh
 import numpy as np
 import pyscf2qwalk
 import pickle as pkl
-import Runner
+import autorunner
 
 from copy import deepcopy
 
@@ -70,7 +70,7 @@ def update_attributes(copyto,copyfrom,skip_keys=[],take_keys=[]):
 # Manager classes.
 #######################################################################
 class CrystalManager:
-  """ Internal class managing process of running a DFT job though Crystal.
+  """ Internal class managing process of running a DFT job though crystal.
   Has authority over file names associated with this task."""
   def __init__(self,writer,runner,name='crystal_run',path=None,crys_reader=None,prop_reader=None,
       trylev=False,bundle=False,max_restarts=5):
@@ -99,7 +99,7 @@ class CrystalManager:
     print(self.logname,": initializing")
 
     self.writer=writer
-    if crys_reader is None: self.creader=Crystal.CrystalReader()
+    if crys_reader is None: self.creader=crystal.CrystalReader()
     else: self.creader=crys_reader
     if prop_reader is None: self.preader=PropertiesReader.PropertiesReader()
     else: self.preader=prop_reader
@@ -291,7 +291,7 @@ class PySCFManager:
     Args:
       writer (PySCFWriter): writer for input.
       reader (PySCFReader): to read PySCF output.
-      runner (runner object): to run job.
+      runner (Runner object): to run job.
       name (str): identifier for this job. This names the files associated with run.
       path (str): directory where this manager is free to store information.
       bundle (bool): False - submit jobs. True - dump job commands into a script for a bundler to run.
@@ -306,15 +306,15 @@ class PySCFManager:
     if path[-1]!='/': path+='/'
     self.path=path
 
+    self.logname="%s@%s"%(self.__class__.__name__,self.path+self.name)
+
     print(self.logname,": initializing")
-    print(self.logname,": name= %s"%self.name)
-    print(self.logname,": path= %s"%self.path)
 
     self.writer=writer
     if reader is not None: self.reader=reader
-    else: self.reader=PySCF.PySCFReader()
+    else: self.reader=autopyscf.PySCFReader()
     if runner is not None: self.runner=runner
-    else: self.runner=PySCFRunnerPBS()
+    else: self.runner=autorunner.PySCFRunnerPBS()
     self.bundle=bundle
 
     self.driverfn="%s.py"%name
@@ -439,7 +439,7 @@ class QWalkManager:
     Args:
       writer (qwalk writer): writer for input.
       reader (qwalk reader): to read job.
-      runner (runner object): to run job.
+      runner (Runner object): to run job.
       trialfunc (TrialFunction): TrialFunction object for generating trail function input. 
         Note: This is only used if write.trailfunc arguement==''. 
       name (str): identifier for this job. This names the files associated with run.
@@ -459,15 +459,13 @@ class QWalkManager:
     self.logname="%s@%s"%(self.__class__.__name__,self.path+self.name)
 
     print(self.logname,": initializing")
-    print(self.logname,": name= %s"%self.name)
-    print(self.logname,": path= %s"%self.path)
 
     self.writer=writer
     self.reader=reader
     self.trialfunc=trialfunc
     self.qwalk=qwalk
     if runner is not None: self.runner=runner
-    else: self.runner=Runner.RunnerPBS()
+    else: self.runner=autorunner.RunnerPBS()
     self.bundle=bundle
 
     self.completed=False
