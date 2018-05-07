@@ -101,7 +101,7 @@ class CrystalManager:
     self.writer=writer
     if crys_reader is None: self.creader=crystal.CrystalReader()
     else: self.creader=crys_reader
-    if prop_reader is None: self.preader=PropertiesReader.PropertiesReader()
+    if prop_reader is None: self.preader=propertiesreader.PropertiesReader()
     else: self.preader=prop_reader
     if runner is None: self.runner=RunnerPBS()
     else: self.runner=runner
@@ -366,7 +366,7 @@ class PySCFManager:
     print(self.logname,": %s status= %s"%(self.name,status))
 
     if status=="not_started":
-      self.runner.add_task("/usr/bin/python3 %s > %s"%(self.driverfn,self.outfile))
+      self.runner.add_task("python3 %s > %s"%(self.driverfn,self.outfile))
     elif status=="ready_for_analysis":
       status=self.reader.collect(self.outfile,self.chkfile)
       if status=='killed':
