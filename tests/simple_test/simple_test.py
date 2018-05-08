@@ -7,8 +7,10 @@ Run repeatedly to check if runner is also checking queued items correctly.
 from autogenv2 import manager,autopyscf,autorunner,crystal
 from crystal import CrystalWriter
 from autopyscf import PySCFWriter,PySCFPBCWriter
-from manager import PySCFManager,CrystalManager
+from manager import PySCFManager,CrystalManager,QWalkManager
 from autorunner import PySCFRunnerLocal,PySCFRunnerPBS,RunnerPBS
+from variance import VarianceWriter,VarianceReader
+from trialfunc import SlaterJastrow
 import sys
 
 h2='\n'.join([
@@ -48,7 +50,7 @@ def h2_tests():
   return [eqman,stman]
 
 def si_tests():
-  ''' Simple tests that check PBC is working Crystal, and perform a QMC calculation.''' 
+  ''' Simple tests that check PBC is working Crystal and PySCF.'''
   # Most basic possible job.
   cwriter=CrystalWriter({
       'xml_name':'../BFD_Library.xml',
@@ -85,11 +87,32 @@ def si_tests():
 
   return [cman,pman]
 
+def si_qmc():
+  ''' Do QMC on the trial functions from `si_tests`. '''
+  scfjobs=si_tests()
+  qmcjobs=[]
+
+  for scfman in scfjobs:
+    var=QWalkManager(
+        name='var',
+        path=scfman.path.replace('/','')+'_qmc',
+        writer=VarianceWriter(),
+        reader=VarianceReader(),
+        runner=RunnerPBS(
+            np=1,queue='secondary',walltime='0:10:00'
+          ),
+        trialfunc=SlaterJastrow(scfman)
+      )
+    qmcjobs.append(var)
+
+  return qmcjobs
+
 def run_tests():
   ''' Choose which tests to run and execute `nextstep()`.'''
   jobs=[]
   #jobs+=h2_tests()
-  jobs+=si_tests()
+  #jobs+=si_tests()
+  jobs+=si_qmc()
 
   for job in jobs:
     job.nextstep()

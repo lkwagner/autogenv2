@@ -10,16 +10,18 @@ class TrialFunction:
 
 #######################################################################
 class SlaterJastrow(TrialFunction):
-  def __init__(self,slatman,jastman=None):
+  def __init__(self,slatman,jastman=None,kpoint=0):
     ''' Generate a Slater-Jastrow wave function from a manager that generates a Slater determinant and
       a manager that generates a Jastrow factor.
 
     Args: 
       slatman (Manager): Manager with a Slater-determinant-generating result.
       jastman (Manager): Manager with a Jastrow-generating result. 
+      kpoint (int): kpoint number (as determined by the slatman converter).
     Returns:
       str or None: None if managers are not ready, QWalk section (str) if they are.
     '''
+    # TODO more transparent kpoint selection.
     self.slatman=slatman
     if jastman is None:
       self.jastman=slatman
@@ -27,7 +29,7 @@ class SlaterJastrow(TrialFunction):
       self.jastman=jastman
 
   #------------------------------------------------
-  def export(self,qmcpath,kpoint=0):
+  def export(self,qmcpath):
     ''' Export the wavefunction section for this trial wave function.
     Args: 
       path (str): QWalkManager.path

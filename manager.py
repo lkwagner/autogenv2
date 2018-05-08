@@ -5,6 +5,7 @@ import autopyscf
 import shutil as sh
 import numpy as np
 import pyscf2qwalk
+import crystal2qmc
 import pickle as pkl
 import autorunner
 
@@ -116,6 +117,7 @@ class CrystalManager:
     self.scriptfile=None
     self.completed=False
     self.bundle=bundle
+    self.qwfiles={} 
 
     # Smart error detection.
     self.trylev=trylev
@@ -276,6 +278,23 @@ class CrystalManager:
   #----------------------------------------
   def write_summary(self):
     self.creader.write_summary()
+    
+  #------------------------------------------------
+  def export_qwalk(self):
+    ''' Export QWalk input files into current directory.'''
+    if len(self.qwfiles)==0:
+      self.nextstep()
+      if not self.completed:
+        return False
+      else:
+        print(self.logname,": %s generating QWalk files."%self.name)
+        cwd=os.getcwd()
+        os.chdir(self.path)
+        self.qwfiles=crystal2qmc.convert_crystal(base=self.name)
+        os.chdir(cwd)
+    with open(self.path+self.pickle,'wb') as outf:
+      pkl.dump(self,outf)
+    return True
     
   #----------------------------------------
   def status(self):

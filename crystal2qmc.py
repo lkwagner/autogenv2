@@ -331,9 +331,7 @@ def find_basis_cutoff(lat_parm):
     return 7.5
 
 ###############################################################################
-def write_slater(basis,eigsys,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
-  if kfmt == 'int': kbase = base + '_' + "{}".format(eigsys['kpt_index'][kpt])
-  else:             kbase = base + '_' + "{}{}{}".format(*kpt)
+def write_slater(basis,eigsys,kpt,outfn,orbfn,basisfn,maxmo_spin=-1):
   ntot = basis['ntot']
   nmo  = basis['nmo']
   nup  = eigsys['nup']
@@ -359,8 +357,8 @@ def write_slater(basis,eigsys,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
       "cutoff_mo",
       "  magnify 1",
       "  nmo {0}".format(dnorbs[-1]),
-      "  orbfile {0}.orb".format(kbase),
-      "  include {0}.basis".format(base),
+      "  orbfile {0}".format(orbfn),
+      "  include {0}".format(basisfn),
       "  centers { useglobal }",
       "}",
       "detwt { 1.0 }",
@@ -371,14 +369,12 @@ def write_slater(basis,eigsys,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
       "  " + " ".join(dnorblines),
       "}"
     ]
-  with open(kbase+".slater",'w') as outf:
+  with open(outfn) as outf:
     outf.write("\n".join(outlines))
-  return outlines # Might be confusing.
 
 ###############################################################################
-def write_orbplot(basis,eigsys,kpt,base="qwalk",kfmt='coord'):
-  if kfmt == 'int': kbase = base + '_' + "{}".format(eigsys['kpt_index'][kpt])
-  else:             kbase = base + '_' + "{}{}{}".format(*kpt)
+def write_orbplot(basis,eigsys,kpt,outfn,orbfn,basisfn,sysfn):
+  # Warning: the orbfn naming convention is different because there are two files that get produced.
   ntot = basis['ntot']
   nmo  = basis['nmo']
   nup  = eigsys['nup']
@@ -403,16 +399,16 @@ def write_orbplot(basis,eigsys,kpt,base="qwalk",kfmt='coord'):
       "cutoff_mo",
       "  magnify 1",
       "  nmo {0}".format(dnorbs[-1]),
-      "  orbfile {0}.orb".format(kbase),
-      "  include {0}.basis".format(base),
+      "  orbfile {0}".format(orbfn),
+      "  include {0}".format(basisfn),
       "  centers { useglobal }",
       "}",
       "plotorbitals {",
     ]
-  outlines_postfix= ["}","}","include "+kbase+".sys"]
-  with open(kbase+".up.plot",'w') as outf:
+  outlines_postfix= ["}","}","include "+sysfn]
+  with open(outfn+".up.plot",'w') as outf:
     outf.write("\n".join(outlines_prefix+ [" ".join(uporblines)] + outlines_postfix))
-  with open(kbase+".dn.plot",'w') as outf:
+  with open(outfn+".dn.plot",'w') as outf:
     outf.write("\n".join(outlines_prefix+ [" ".join(dnorblines)] + outlines_postfix))
   
 
@@ -470,11 +466,8 @@ def normalize_eigvec(eigsys,basis,kpt):
       
 ###############################################################################
 # This assumes you have called normalize_eigvec first! TODO better coding style?
-def write_orb(eigsys,basis,ions,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
-  if kfmt == 'int':
-    outf = open(base + '_' + "{}".format(eigsys['kpt_index'][kpt]) + ".orb",'w')
-  else:
-    outf = open(base + '_' + "{}{}{}".format(*kpt) + ".orb",'w')
+def write_orb(eigsys,basis,ions,kpt,outfn,maxmo_spin=-1):
+  outf=open(outfn,'w')
   if maxmo_spin < 0:
     maxmo_spin=basis['nmo']
 
@@ -510,18 +503,16 @@ def write_orb(eigsys,basis,ions,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
         outf.write("{:< 15.12e} ".format(r))
         print_cnt+=1
         if print_cnt%5==0: outf.write("\n")
-  return None
 
 ###############################################################################
 # TODO Generalize to no pseudopotential.
-def write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,base="qwalk",kfmt='coord'):
+def write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,outfn):
   outlines = []
   min_exp = min(basis['prim_gaus'])
   cutoff_length = (-np.log(1e-8)/min_exp)**.5
   basis_cutoff = find_basis_cutoff(lat_parm)
   cutoff_divider = basis_cutoff*2.0 / cutoff_length
-  if kfmt == 'int': kbase = base + '_' + "{}".format(eigsys['kpt_index'][kpt])
-  else:             kbase = base + '_' + "{}{}{}".format(*kpt)
+
   if lat_parm['struct_dim'] != 0:
     outlines += [
         "system { periodic",
@@ -593,12 +584,11 @@ def write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,base="qwalk",kfmt='coord'):
       ))
       cnt += 1
     outlines += ["    }","  }","}"]
-  with open(kbase+".sys",'w') as outf:
+  with open(outfn,'w') as outf:
     outf.write("\n".join(outlines))
-  return None
 
 ###############################################################################
-def write_jast2(lat_parm,ions,base="qwalk"):
+def write_jast2(lat_parm,ions,outfn):
   basis_cutoff = find_basis_cutoff(lat_parm)
   atom_types = [periodic_table[eidx-200-1] for eidx in ions['atom_nums']]
   atom_types=set(atom_types)
@@ -660,12 +650,11 @@ def write_jast2(lat_parm,ions,base="qwalk"):
       "  }",
       "}"
     ]
-  with open(base+".jast2",'w') as outf:
+  with open(outfn,'w') as outf:
     outf.write("\n".join(outlines))
-  return None
 
 ###############################################################################
-def write_basis(basis,ions,base="qwalk"):
+def write_basis(basis,ions,outfn):
   hybridized_check = 0.0
   hybridized_check += sum(abs(basis['coef_s'] * basis['coef_p']))
   hybridized_check += sum(abs(basis['coef_p'] * basis['coef_dfg']))
@@ -723,9 +712,8 @@ def write_basis(basis,ions,base="qwalk"):
       ))
       cnt += 1
   outlines += ["  }","}"]
-  with open(base+".basis",'w') as outf:
+  with open(outfn,'w') as outf:
     outf.write("\n".join(outlines))
-  return None
 
 ###############################################################################
 def write_moanalysis():
@@ -737,17 +725,17 @@ def write_moanalysis():
 def convert_crystal(
     base="qwalk",
     propoutfn="prop.in.o",
-    kfmt='coord',
     kset='complex',
     nvirtual=50):
   """
-  Files are named by [base]_[kfmt option].sys etc.
-  kfmt either 'int' or 'coord'.
-  kfmt = 'int' interates up from zero to name kpoints.
-  kfmt = 'coord' uses integer coordinate of kpoint and is more readable, but
-    doesn't work for SHRINK > 10 because it assumes one-digit coordinates.
-    kfmt will fall back on 'int' if it find this problem.
+  Files are named by [base]_[kindex].sys etc.
   """
+  # kfmt='coord' is probably a bad thing because it doesn't always work and can 
+  # lead to unexpected changes in file name conventions.
+
+  # keeps track of the files that get produced.
+  files={}
+
   info, lat_parm, ions, basis, pseudo = read_gred()
   eigsys = read_kred(info,basis)
 
@@ -767,18 +755,40 @@ def convert_crystal(
     print("Cannot use coord kpoint format when SHRINK > 10.")
     print("Falling back on int format (old style).")
     kfmt = 'int'
+
+  #  All the files that will get produced.
+  files={
+      'kpts':[],
+      'basis':basename+".basis",
+      'jastrow':basename+".jast2",
+      'orb':{},
+      'sys':{},
+      'slater':{}
+    }
+  write_basis(basis,ions,files['basis'])
+  write_jast2(lat_parm,ions,files['jast2'])
  
   for kpt in eigsys['kpt_coords']:
     if eigsys['ikpt_iscmpx'][kpt] and kset=='real': continue
-    write_slater(basis,eigsys,kpt,base,kfmt,maxmo_spin)
-    write_orbplot(basis,eigsys,kpt,base,kfmt)
+    files['kpts'].append(kpt)
+    files['slater'][kpt]="%s_%d.slater"%(basename,eigsys['kpt_index'][kpt])
+    files['orb'][kpt]="%s_%d.orb"%(basename,eigsys['kpt_index'][kpt])
+    files['sys'][kpt]="%s_%d.sys"%(basename,eigsys['kpt_index'][kpt])
+    write_slater(basis,eigsys,kpt,
+        outfn=files['slater'][kpt],
+        orbfn=files['orb'][kpt],
+        basisfn=files['basis'],
+        maxmo_spin=maxmo_spin)
+    write_orbplot(basis,eigsys,kpt,
+        outfn=files['orbplot'][kpt],
+        orbfn=files['orb'][kpt],
+        basisfn=files['basis'],
+        sysfn=files['sys'][kpt])
     normalize_eigvec(eigsys,basis,kpt)
-    write_orb(eigsys,basis,ions,kpt,base,kfmt,maxmo_spin)
-    write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,base,kfmt)
-    write_basis(basis,ions,base)
-    write_jast2(lat_parm,ions,base)
+    write_orb(eigsys,basis,ions,kpt,files['orb'][kpt],maxmo_spin)
+    write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,files['sys'][kpt])
 
-  return eigsys['kpt_weights'] # Useful for autogen.
+  return files
 
 if __name__ == "__main__":
   if len(sys.argv) > 1:
