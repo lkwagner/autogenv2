@@ -50,12 +50,10 @@ def h2_tests():
 
   return [eqman,stman]
 
-def si_tests():
-  ''' Simple tests that check PBC is working Crystal and PySCF.'''
+def si_crystal_test():
+  ''' Simple tests that check PBC is working Crystal, and that QMC can be performed on the result.'''
   jobs=[]
 
-
-  # Most basic possible job.
   cwriter=CrystalWriter({
       'xml_name':'../BFD_Library.xml',
       'kmesh':(4,4,4),
@@ -75,21 +73,6 @@ def si_tests():
     )
   jobs.append(cman)
 
-  #pwriter=PySCFPBCWriter({
-  #    'cif':open('si.cif','r').read()
-  #  })
-  #pman=PySCFManager(
-  #    name='scf',
-  #    path='sipyscf',
-  #    writer=pwriter,
-  #    runner=PySCFRunnerPBS(
-  #        queue='secondary',
-  #        np=1,
-  #        walltime='0:20:00',
-  #        ppath=sys.path
-  #      )
-  #  )
-
   var=QWalkManager(
       name='var',
       path=cman.path,
@@ -100,6 +83,8 @@ def si_tests():
         ),
       trialfunc=SlaterJastrow(cman,kpoint=(0,0,0))
     )
+
+  jobs.append(var)
 
   lin=QWalkManager(
       name='linear',
@@ -112,15 +97,38 @@ def si_tests():
       trialfunc=SlaterJastrow(slatman=cman,jastman=var,kpoint=(0,0,0))
     )
 
-  jobs.append(var)
+  jobs.append(lin)
 
-  return [cman,var,lin]
+
+  return jobs
+
+def si_pyscf_test():
+  ''' Simple tests that check PBC is working Crystal, and that QMC can be performed on the result.'''
+  jobs=[]
+
+  pwriter=PySCFPBCWriter({
+      'cif':open('si.cif','r').read()
+    })
+  pman=PySCFManager(
+      name='scf',
+      path='sipyscf',
+      writer=pwriter,
+      runner=PySCFRunnerPBS(
+          queue='secondary',
+          np=1,
+          walltime='0:20:00',
+          ppath=sys.path
+        )
+    )
+  jobs.append(pman)
+
+  return jobs
 
 def run_tests():
   ''' Choose which tests to run and execute `nextstep()`.'''
   jobs=[]
   #jobs+=h2_tests()
-  jobs+=si_tests()
+  jobs+=si_crystal_test()
 
   for job in jobs:
     job.nextstep()
