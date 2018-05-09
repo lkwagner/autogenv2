@@ -369,7 +369,7 @@ def write_slater(basis,eigsys,kpt,outfn,orbfn,basisfn,maxmo_spin=-1):
       "  " + " ".join(dnorblines),
       "}"
     ]
-  with open(outfn) as outf:
+  with open(outfn,'w') as outf:
     outf.write("\n".join(outlines))
 
 ###############################################################################
@@ -759,21 +759,23 @@ def convert_crystal(
   #  All the files that will get produced.
   files={
       'kpts':[],
-      'basis':basename+".basis",
-      'jastrow':basename+".jast2",
+      'basis':base+".basis",
+      'jastrow2':base+".jast2",
+      'orbplot':{},
       'orb':{},
       'sys':{},
       'slater':{}
     }
   write_basis(basis,ions,files['basis'])
-  write_jast2(lat_parm,ions,files['jast2'])
+  write_jast2(lat_parm,ions,files['jastrow2'])
  
   for kpt in eigsys['kpt_coords']:
     if eigsys['ikpt_iscmpx'][kpt] and kset=='real': continue
     files['kpts'].append(kpt)
-    files['slater'][kpt]="%s_%d.slater"%(basename,eigsys['kpt_index'][kpt])
-    files['orb'][kpt]="%s_%d.orb"%(basename,eigsys['kpt_index'][kpt])
-    files['sys'][kpt]="%s_%d.sys"%(basename,eigsys['kpt_index'][kpt])
+    files['orbplot'][kpt]="%s_%d.plot"%(base,eigsys['kpt_index'][kpt])
+    files['slater'][kpt]="%s_%d.slater"%(base,eigsys['kpt_index'][kpt])
+    files['orb'][kpt]="%s_%d.orb"%(base,eigsys['kpt_index'][kpt])
+    files['sys'][kpt]="%s_%d.sys"%(base,eigsys['kpt_index'][kpt])
     write_slater(basis,eigsys,kpt,
         outfn=files['slater'][kpt],
         orbfn=files['orb'][kpt],

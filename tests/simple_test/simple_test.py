@@ -10,6 +10,7 @@ from autopyscf import PySCFWriter,PySCFPBCWriter
 from manager import PySCFManager,CrystalManager,QWalkManager
 from autorunner import PySCFRunnerLocal,PySCFRunnerPBS,RunnerPBS
 from variance import VarianceWriter,VarianceReader
+from linear import LinearWriter,LinearReader
 from trialfunc import SlaterJastrow
 import sys
 
@@ -51,6 +52,9 @@ def h2_tests():
 
 def si_tests():
   ''' Simple tests that check PBC is working Crystal and PySCF.'''
+  jobs=[]
+
+
   # Most basic possible job.
   cwriter=CrystalWriter({
       'xml_name':'../BFD_Library.xml',
@@ -69,50 +73,54 @@ def si_tests():
           walltime='0:10:00'
         )
     )
+  jobs.append(cman)
 
-  pwriter=PySCFPBCWriter({
-      'cif':open('si.cif','r').read()
-    })
-  pman=PySCFManager(
-      name='scf',
-      path='sipyscf',
-      writer=pwriter,
-      runner=PySCFRunnerPBS(
-          queue='secondary',
-          np=1,
-          walltime='0:20:00',
-          ppath=sys.path
-        )
+  #pwriter=PySCFPBCWriter({
+  #    'cif':open('si.cif','r').read()
+  #  })
+  #pman=PySCFManager(
+  #    name='scf',
+  #    path='sipyscf',
+  #    writer=pwriter,
+  #    runner=PySCFRunnerPBS(
+  #        queue='secondary',
+  #        np=1,
+  #        walltime='0:20:00',
+  #        ppath=sys.path
+  #      )
+  #  )
+
+  var=QWalkManager(
+      name='var',
+      path=cman.path,
+      writer=VarianceWriter(),
+      reader=VarianceReader(),
+      runner=RunnerPBS(
+          np=1,queue='secondary',walltime='0:10:00'
+        ),
+      trialfunc=SlaterJastrow(cman,kpoint=(0,0,0))
     )
 
-  return [cman,pman]
+  lin=QWalkManager(
+      name='linear',
+      path=cman.path,
+      writer=LinearWriter(),
+      reader=LinearReader(),
+      runner=RunnerPBS(
+          np=1,queue='secondary',walltime='1:00:00'
+        ),
+      trialfunc=SlaterJastrow(slatman=cman,jastman=var,kpoint=(0,0,0))
+    )
 
-def si_qmc():
-  ''' Do QMC on the trial functions from `si_tests`. '''
-  scfjobs=si_tests()
-  qmcjobs=[]
+  jobs.append(var)
 
-  for scfman in scfjobs:
-    var=QWalkManager(
-        name='var',
-        path=scfman.path.replace('/','')+'_qmc',
-        writer=VarianceWriter(),
-        reader=VarianceReader(),
-        runner=RunnerPBS(
-            np=1,queue='secondary',walltime='0:10:00'
-          ),
-        trialfunc=SlaterJastrow(scfman)
-      )
-    qmcjobs.append(var)
-
-  return qmcjobs
+  return [cman,var,lin]
 
 def run_tests():
   ''' Choose which tests to run and execute `nextstep()`.'''
   jobs=[]
   #jobs+=h2_tests()
-  #jobs+=si_tests()
-  jobs+=si_qmc()
+  jobs+=si_tests()
 
   for job in jobs:
     job.nextstep()

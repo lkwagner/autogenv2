@@ -17,7 +17,7 @@ from copy import deepcopy
 ######################################################################
 # Misc functions. 
 ######################################################################
-def resolve_status(runner,reader,outfile, method='not_defined'):
+def resolve_status(runner,reader,outfile):
   #Check if the reader is done
   if reader.completed:
     return 'done'
@@ -67,19 +67,44 @@ def update_attributes(copyto,copyfrom,skip_keys=[],take_keys=[]):
       pass
   return updated
 
+def seperate_jastrow(wffile,optimizebasis=False):
+  ''' Seperate the jastrow section of a QWalk wave function file.'''
+  # Copied from utils/seperate_jastrow TODO: no copy, bad
+  wff=open(wffile,'r')
+  tokens=wff.read().split('\n')
+  in_jastrow=False
+  nopen=0
+  nclose=0
+  jastlines=[]
+  for line in tokens:
+    if 'jastrow2' in line.lower():
+      in_jastrow=True
+    if in_jastrow:
+      if not optimizebasis and 'optimizebasis' in line.lower():
+        continue
+      nopen+=line.count("{")
+      nclose+=line.count("}")
+    if in_jastrow and nopen >= nclose:
+      jastlines.append(line)
+  return '\n'.join(jastlines)
+
 ######################################################################
 # Manager classes.
 #######################################################################
 class CrystalManager:
   """ Internal class managing process of running a DFT job though crystal.
   Has authority over file names associated with this task."""
-  def __init__(self,writer,runner,name='crystal_run',path=None,crys_reader=None,prop_reader=None,
+  def __init__(self,writer,runner,creader=None,name='crystal_run',path=None,
+      preader=None,prunner=None,
       trylev=False,bundle=False,max_restarts=5):
     ''' CrystalManager manages the writing of a Crystal input file, it's running, and keeping track of the results.
     Args:
       writer (PySCFWriter): writer for input.
       reader (PySCFReader): to read PySCF output.
       runner (runner object): to run job.
+      creader (CrystalReader): Reads the crystal results, (None implies use default reader).
+      preader (PropertiesReader): Reads properties results, if any (None implies use default reader).
+      prunner (runner object): run properties if needed (None implies use same runner as crystal).
       name (str): identifier for this job. This names the files associated with run.
       trylev (bool): When restarting use LEVSHIFT option to encourage convergence, then do a rerun without LEVSHIFT.
       bundle (bool): Whether you'll use a bundling tool to run these jobs.
@@ -99,11 +124,14 @@ class CrystalManager:
 
     print(self.logname,": initializing")
 
+    # Handle reader and runner defaults.
     self.writer=writer
-    if crys_reader is None: self.creader=crystal.CrystalReader()
-    else: self.creader=crys_reader
-    if prop_reader is None: self.preader=propertiesreader.PropertiesReader()
-    else: self.preader=prop_reader
+    if creader is None: self.creader=crystal.CrystalReader()
+    else: self.creader=creader
+    if preader is None: self.preader=propertiesreader.PropertiesReader()
+    else: self.preader=preader
+    if prunner is None: self.prunner=runner
+    else: self.prunner=prunner
     if runner is None: self.runner=RunnerPBS()
     else: self.runner=runner
 
@@ -143,12 +171,15 @@ class CrystalManager:
     # This is because you are taking the attributes from the older instance, and copying into the new instance.
 
     update_attributes(copyto=self,copyfrom=other,
-        skip_keys=['writer','runner','creader','preader','lev','savebroy',
+        skip_keys=['writer','runner','creader','preader','prunner','lev','savebroy',
                    'path','logname','name',
                    'trylev','max_restarts','bundle'],
-        take_keys=['restarts','completed'])
+        take_keys=['restarts','completed','qwfiles'])
 
     # Update queue settings, but save queue information.
+    update_attributes(copyto=self.runner,copyfrom=other.runner,
+        skip_keys=['queue','walltime','np','nn','jobname'],
+        take_keys=['queueid'])
     update_attributes(copyto=self.runner,copyfrom=other.runner,
         skip_keys=['queue','walltime','np','nn','jobname'],
         take_keys=['queueid'])
@@ -185,7 +216,7 @@ class CrystalManager:
         self.writer.write_prop_input(self.propinpfn)
 
     # Check on the CRYSTAL run
-    status=resolve_status(self.runner,self.creader,self.crysoutfn,method='crystal')
+    status=resolve_status(self.runner,self.creader,self.crysoutfn)
     print(self.logname,": status= %s"%(status))
 
     if status=="not_started":
@@ -237,7 +268,7 @@ class CrystalManager:
     # Ready for bundler or else just submit the jobs as needed.
     if self.bundle:
       self.scriptfile="%s.run"%self.name
-      self.bundle_ready=self.runner.script(self.scriptfile,self.driverfn)
+      self.bundle_ready=self.runner.script(self.scriptfile)
     else:
       qsubfile=self.runner.submit()
 
@@ -284,16 +315,38 @@ class CrystalManager:
     ''' Export QWalk input files into current directory.'''
     if len(self.qwfiles)==0:
       self.nextstep()
+
       if not self.completed:
         return False
-      else:
-        print(self.logname,": %s generating QWalk files."%self.name)
-        cwd=os.getcwd()
-        os.chdir(self.path)
-        self.qwfiles=crystal2qmc.convert_crystal(base=self.name)
-        os.chdir(cwd)
+
+      cwd=os.getcwd()
+      os.chdir(self.path)
+
+      print(self.logname,": %s attempting to generate QWalk files."%self.name)
+
+      # Check on the properties run
+      status=resolve_status(self.prunner,self.preader,self.propoutfn)
+      print(self.logname,": properties status= %s"%(status))
+      if status=='not_started':
+        self.prunner.add_command("cp %s INPUT"%self.propinpfn)
+        self.prunner.add_task("Pproperties &> %s"%self.propoutfn)
+
+        if self.bundle:
+          self.scriptfile="%s.run"%self.name
+          self.bundle_ready=self.prunner.script(self.scriptfile,self.driverfn)
+        else:
+          qsubfile=self.runner.submit()
+      elif status=='ready_for_analysis':
+        self.preader.collect(self.propoutfn)
+
+      if self.preader.completed:
+        self.qwfiles=crystal2qmc.convert_crystal(base=self.name,propoutfn=self.propoutfn)
+        print(self.logname,": crystal converted to QWalk input.")
+
+      os.chdir(cwd)
     with open(self.path+self.pickle,'wb') as outf:
       pkl.dump(self,outf)
+
     return True
     
   #----------------------------------------
@@ -381,7 +434,7 @@ class PySCFManager:
     if not self.writer.completed:
       self.writer.pyscf_input(self.driverfn,self.chkfile)
     
-    status=resolve_status(self.runner,self.reader,self.outfile, 'pyscf')
+    status=resolve_status(self.runner,self.reader,self.outfile)
     print(self.logname,": %s status= %s"%(self.name,status))
 
     if status=="not_started":
@@ -429,12 +482,11 @@ class PySCFManager:
       self.nextstep()
       if not self.completed:
         return False
-      else:
-        print(self.logname,": %s generating QWalk files."%self.name)
-        cwd=os.getcwd()
-        os.chdir(self.path)
-        self.qwfiles=pyscf2qwalk.print_qwalk_chkfile(self.chkfile)
-        os.chdir(cwd)
+      print(self.logname,": %s generating QWalk files."%self.name)
+      cwd=os.getcwd()
+      os.chdir(self.path)
+      self.qwfiles=pyscf2qwalk.print_qwalk_chkfile(self.chkfile)
+      os.chdir(cwd)
     with open(self.path+self.pickle,'wb') as outf:
       pkl.dump(self,outf)
     return True
@@ -442,7 +494,7 @@ class PySCFManager:
   #----------------------------------------
   def status(self):
     ''' Determine the course of action based on info from reader and runner.'''
-    current_status = resolve_status(self.runner,self.reader,self.outfile, 'pyscf')
+    current_status = resolve_status(self.runner,self.reader,self.outfile)
     if current_status == 'done':
       return 'ok'
     elif current_status == 'retry':
@@ -492,6 +544,7 @@ class QWalkManager:
     self.bundle_ready=False
     self.infile="%s.%s"%(name,writer.qmc_abr)
     self.outfile="%s.o"%self.infile
+    self.qwfiles={}
     self.stdout="%s.out"%self.infile
 
     # Handle old results if present.
@@ -584,7 +637,7 @@ class QWalkManager:
         self.completed=True
       else:
         print(self.logname,": %s status= %s, attempting rerun."%(self.name,status))
-        exestr="%s %s"%' '.join(self.qwalk,self.infile)
+        exestr="%s %s"%' '.join((self.qwalk,self.infile))
         exestr+=" &> %s.out"%self.infile[-1]
         self.runner.add_task(exestr)
     elif status=='done':
@@ -595,7 +648,7 @@ class QWalkManager:
     # Ready for bundler or else just submit the jobs as needed.
     if self.bundle:
       self.scriptfile="%s.run"%self.name
-      self.bundle_ready=self.runner.script(self.scriptfile,self.driverfn)
+      self.bundle_ready=self.runner.script(self.scriptfile)
     else:
       qsubfile=self.runner.submit()
 
@@ -639,3 +692,27 @@ class QWalkManager:
     with open(self.path+self.pickle,'wb') as outf:
       pkl.dump(self,outf)
 
+  #----------------------------------------
+  def export_qwalk(self):
+    ''' Extract jastrow from the optimization run and return that file name.'''
+    # Theoretically more than just Jastrow can be provided, but practically that's the only type of wavefunction we tend to export.
+
+    assert self.writer.qmc_abr!='dmc',"DMC doesn't provide a wave function."
+
+    if len(self.qwfiles)==0:
+      self.nextstep()
+      if not self.completed:
+        return False
+      print(self.logname,": %s generating QWalk files."%self.name)
+      cwd=os.getcwd()
+      os.chdir(self.path)
+      self.qwfiles['wfout']="%s.wfout"%self.infile
+      newjast=seperate_jastrow(self.qwfiles['wfout'])
+      self.qwfiles['jastrow2']="%s.jast"%self.infile
+      with open(self.qwfiles['jastrow2'],'w') as outf:
+        outf.write(newjast)
+      os.chdir(cwd)
+
+    with open(self.path+self.pickle,'wb') as outf:
+      pkl.dump(self,outf)
+    return True
