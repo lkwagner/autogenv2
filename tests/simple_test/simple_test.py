@@ -11,6 +11,7 @@ from manager import PySCFManager,CrystalManager,QWalkManager
 from autorunner import PySCFRunnerLocal,PySCFRunnerPBS,RunnerPBS
 from variance import VarianceWriter,VarianceReader
 from linear import LinearWriter,LinearReader
+from dmc import DMCWriter,DMCReader
 from trialfunc import SlaterJastrow
 import sys
 
@@ -67,7 +68,7 @@ def si_crystal_test():
       writer=cwriter,
       runner=RunnerPBS(
           queue='secondary',
-          np=1,
+          nn=1,
           walltime='0:10:00'
         )
     )
@@ -79,7 +80,7 @@ def si_crystal_test():
       writer=VarianceWriter(),
       reader=VarianceReader(),
       runner=RunnerPBS(
-          np=1,queue='secondary',walltime='0:10:00'
+          nn=1,queue='secondary',walltime='0:10:00'
         ),
       trialfunc=SlaterJastrow(cman,kpoint=(0,0,0))
     )
@@ -92,13 +93,25 @@ def si_crystal_test():
       writer=LinearWriter(),
       reader=LinearReader(),
       runner=RunnerPBS(
-          np=1,queue='secondary',walltime='1:00:00'
+          nn=1,queue='secondary',walltime='1:00:00'
         ),
       trialfunc=SlaterJastrow(slatman=cman,jastman=var,kpoint=(0,0,0))
     )
 
   jobs.append(lin)
 
+  for kpt in cman.qwfiles['kpts']:
+    dmc=QWalkManager(
+        name='dmc_%d%d%d'%kpt,
+        path=cman.path,
+        writer=DMCWriter(),
+        reader=DMCReader(),
+        runner=RunnerPBS(
+            nn=1,queue='secondary',walltime='1:00:00',
+          ),
+        trialfunc=SlaterJastrow(slatman=cman,jastman=lin,kpoint=kpt)
+      )
+    jobs.append(dmc)
 
   return jobs
 
@@ -115,12 +128,36 @@ def si_pyscf_test():
       writer=pwriter,
       runner=PySCFRunnerPBS(
           queue='secondary',
-          np=1,
+          nn=1,
           walltime='0:20:00',
           ppath=sys.path
         )
     )
   jobs.append(pman)
+
+  var=QWalkManager(
+      name='var',
+      path=pman.path,
+      writer=VarianceWriter(),
+      reader=VarianceReader(),
+      runner=RunnerPBS(
+          nn=1,queue='secondary',walltime='0:10:00'
+        ),
+      trialfunc=SlaterJastrow(pman,kpoint=0)
+    )
+  jobs.append(var)
+
+  lin=QWalkManager(
+      name='lin',
+      path=pman.path,
+      writer=LinearWriter(),
+      reader=LinearReader(),
+      runner=RunnerPBS(
+          nn=1,queue='secondary',walltime='0:30:00'
+        ),
+      trialfunc=SlaterJastrow(slatman=pman,jastman=var,kpoint=0)
+    )
+  jobs.append(lin)
 
   return jobs
 
@@ -129,6 +166,7 @@ def run_tests():
   jobs=[]
   #jobs+=h2_tests()
   jobs+=si_crystal_test()
+  jobs+=si_pyscf_test()
 
   for job in jobs:
     job.nextstep()

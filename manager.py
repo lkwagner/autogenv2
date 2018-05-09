@@ -442,6 +442,7 @@ class PySCFManager:
     elif status=="ready_for_analysis":
       status=self.reader.collect(self.outfile,self.chkfile)
       if status=='killed':
+        print(self.logname,": attempting restart (%d previous restarts)."%self.restarts)
         sh.copy(self.driverfn,"%d.%s"%(self.restarts,self.driverfn))
         sh.copy(self.outfile,"%d.%s"%(self.restarts,self.outfile))
         sh.copy(self.chkfile,"%d.%s"%(self.restarts,self.chkfile))
@@ -450,7 +451,7 @@ class PySCFManager:
         self.writer.pyscf_input(self.driverfn,self.chkfile)
         self.runner.add_task("/usr/bin/python3 %s > %s"%(self.driverfn,self.outfile))
         self.restarts+=1
-      elif status=='ok':
+      elif status=='done':
         print(self.logname,": %s status= %s, task complete."%(self.name,status))
 
     # Ready for bundler or else just submit the jobs as needed.
@@ -566,7 +567,7 @@ class QWalkManager:
 
     update_attributes(copyto=self,copyfrom=other,
         skip_keys=['writer','runner','reader','path','logname','name','bundle'],
-        take_keys=['restarts','completed','trialfunc'])
+        take_keys=['restarts','completed','trialfunc','qwfiles'])
 
     # Update queue settings, but save queue information.
     update_attributes(copyto=self.runner,copyfrom=other.runner,
@@ -637,8 +638,7 @@ class QWalkManager:
         self.completed=True
       else:
         print(self.logname,": %s status= %s, attempting rerun."%(self.name,status))
-        exestr="%s %s"%' '.join((self.qwalk,self.infile))
-        exestr+=" &> %s.out"%self.infile[-1]
+        exestr="%s %s &> %s"%(self.qwalk,self.infile,self.stdout)
         self.runner.add_task(exestr)
     elif status=='done':
       self.completed=True

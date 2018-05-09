@@ -58,14 +58,14 @@ class DMCWriter:
       if self.tmoves:
         outlines+=['tmoves']
       if self.savetrace:
-        tracename = "%s.trace"%inp
+        tracename = "%s.trace"%infile
         outlines+=['save_trace %s'%tracename]
       for avg_opts in self.extra_observables:
         outlines+=avg.average_section(avg_opts)
       outlines+=["}"]
-      outlines+=trialfunc.split('\n')
+      outlines+=self.trialfunc.split('\n')
 
-      with open(inp,'w') as f:
+      with open(infile,'w') as f:
         f.write('\n'.join(outlines))
     self.completed=True
 

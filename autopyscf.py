@@ -387,7 +387,7 @@ class PySCFReader:
     # I don't think those results are saved in the chkfile.
     uhf=UHF(mol)
     dm=uhf.from_chk(chkfile)
-    ret['basis_labels']=mol.sph_labels(fmt=False)
+    ret['basis_labels']=mol.spheric_labels(fmt=False)
     ret['density_matrix']=dm
 
     for key in ('scf','mcscf'):

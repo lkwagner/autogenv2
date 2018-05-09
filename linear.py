@@ -106,42 +106,36 @@ class LinearReader:
     Returns:
       bool: If self.results are within error tolerances.
     '''
-    complete={}
-    for fname,results in self.output.items():
-      complete[fname]=True
-      print(results['energy'])
-      if len(results['energy']) < self.minsteps:
-        print("Linear optimize incomplete: number of steps (%f) less than minimum (%f)"%\
-            (len(results['energy']),self.minsteps))
-        complete[fname]=False
-      else:
-        ediff=results['energy'][-1]-results['energy'][-2]
-        ediff_err=(results['energy_err'][-1]**2 + results['energy_err'][-2]**2)**0.5
-        if ediff > self.sigtol*ediff_err:
-          print("Linear optimize incomplete: change in energy (%.5f) less than tolerance (%.2f*%.2f=%.5f)"%\
-              (ediff,self.sigtol,ediff_err,self.sigtol*ediff_err))
-          complete[fname]=False
-    return complete
+    if len(self.output['energy']) < self.minsteps:
+      print(self.__class__.__name__,"Linear optimize incomplete: number of steps (%f) less than minimum (%f)"%\
+          (len(self.output['energy']),self.minsteps))
+      return False
+    else:
+      ediff=self.output['energy'][-1]-self.output['energy'][-2]
+      ediff_err=(self.output['energy_err'][-1]**2 + self.output['energy_err'][-2]**2)**0.5
+      if ediff > self.sigtol*ediff_err:
+        print(self.__class__.__name__,"Linear optimize incomplete: change in energy (%.5f) less than tolerance (%.2f*%.2f=%.5f)"%\
+            (ediff,self.sigtol,ediff_err,self.sigtol*ediff_err))
+        return False
+    return True
           
   #------------------------------------------------
-  def collect(self,outfiles,errtol=None,minblocks=None):
+  def collect(self,outfile,errtol=None,minblocks=None):
     ''' Collect results for each output file and resolve if the run needs to be resumed. 
 
     Args: 
-      outfiles (list): list of output file names to open and read.
+      outfile (str): output file to read.
     Returns:
       str: status of run = {'ok','restart'}
     '''
     # Gather output from files.
-    self.completed=True
     status='unknown'
-    for f in outfiles:
-      if os.path.exists(f):
-        self.output[f]=self.read_outputfile(f)
+    if os.path.exists(outfile):
+      self.output=self.read_outputfile(outfile)
+      self.output['file']=outfile
 
     # Check files.
-    file_complete=self.check_complete()
-    self.completed=all([c for f,c in file_complete.items()])
+    self.completed=self.check_complete()
     if not self.completed:
       status='restart'
     else:
