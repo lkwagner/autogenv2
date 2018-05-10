@@ -145,7 +145,15 @@ class CrystalManager:
     self.scriptfile=None
     self.completed=False
     self.bundle=bundle
-    self.qwfiles={} 
+    self.qwfiles={ 
+        'kpoints':[],
+        'basis':'',
+        'jastrow2':'',
+        'orbplot':{},
+        'orb':{},
+        'sys':{},
+        'slater':{}
+      }
 
     # Smart error detection.
     self.trylev=trylev
@@ -392,7 +400,15 @@ class PySCFManager:
     self.driverfn="%s.py"%name
     self.outfile=self.driverfn+'.o'
     self.chkfile=self.driverfn+'.chkfile'
-    self.qwfiles={}
+    self.qwfiles={ 
+        'kpoints':[],
+        'basis':'',
+        'jastrow2':'',
+        'orbplot':{},
+        'orb':{},
+        'sys':{},
+        'slater':{}
+      }
     self.completed=False
     self.bundle_ready=False
     self.restarts=0
@@ -545,7 +561,11 @@ class QWalkManager:
     self.bundle_ready=False
     self.infile="%s.%s"%(name,writer.qmc_abr)
     self.outfile="%s.o"%self.infile
-    self.qwfiles={}
+    # Note: qwfiles stores file names of results, used for exporting trial wave functions.
+    self.qwfiles={ 
+        'jastrow2':'',
+        'wfout':''
+      }
     self.stdout="%s.out"%self.infile
 
     # Handle old results if present.

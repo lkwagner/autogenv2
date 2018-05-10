@@ -161,12 +161,74 @@ def si_pyscf_test():
 
   return jobs
 
+def mno_test():
+  ''' Test spinful calculations in PBC and real kpoint sampling. Also test trialfunc dependency. '''
+  jobs=[]
+  cwriter=CrystalWriter({
+      'xml_name':'../BFD_Library.xml',
+      'kmesh':(4,4,4),
+    })
+  cwriter.set_struct_fromcif(open('mno.cif','r').read(),primitive=True)
+  cwriter.set_options({'symmetry':True})
+
+  cman=CrystalManager(
+      name='crys',
+      path='mnocrys',
+      writer=cwriter,
+      runner=RunnerPBS(
+          queue='secondary',
+          nn=1,
+          walltime='1:00:00'
+        )
+    )
+  jobs+=[cman]
+
+  var=QWalkManager(
+      name='var',
+      path=cman.path,
+      writer=VarianceWriter(),
+      reader=VarianceReader(),
+      runner=RunnerPBS(
+          nn=1,queue='secondary',walltime='0:10:00'
+        ),
+      trialfunc=SlaterJastrow(cman,kpoint=(0,0,0))
+    )
+
+  lin=QWalkManager(
+      name='linear',
+      path=cman.path,
+      writer=LinearWriter(),
+      reader=LinearReader(),
+      runner=RunnerPBS(
+          nn=1,queue='secondary',walltime='1:00:00'
+        ),
+      trialfunc=SlaterJastrow(slatman=cman,jastman=var,kpoint=(0,0,0))
+    )
+
+  for ki,kpt in enumerate(cman.qwfiles['kpoints']):
+    if not sum(np.array(kpt)%(np.array(cman.kmesh)/2))<1e-14:
+      print("complex kpt %d%d%d skipped"%kpt)
+      continue
+    dmc=QWalkManager(
+        name='dmc_%d%d%d'%kpt,
+        path=cman.path,
+        writer=DMCWriter(),
+        reader=DMCReader(),
+        runner=RunnerPBS(
+            nn=1,queue='secondary',walltime='1:00:00',
+          ),
+        trialfunc=SlaterJastrow(slatman=cman,jastman=lin,kpoint=kpt)
+      )
+    jobs.append(dmc)
+  return jobs
+
 def run_tests():
   ''' Choose which tests to run and execute `nextstep()`.'''
   jobs=[]
   #jobs+=h2_tests()
-  jobs+=si_crystal_test()
-  jobs+=si_pyscf_test()
+  #jobs+=si_crystal_test()
+  #jobs+=si_pyscf_test()
+  jobs+=mno_test()
 
   for job in jobs:
     job.nextstep()
