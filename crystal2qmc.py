@@ -771,24 +771,25 @@ def convert_crystal(
  
   for kpt in eigsys['kpt_coords']:
     if eigsys['ikpt_iscmpx'][kpt] and kset=='real': continue
+    kidx=eigsys['kpt_index'][kpt]
     files['kpoints'].append(kpt)
-    files['orbplot'][kpt]="%s_%d.plot"%(base,eigsys['kpt_index'][kpt])
-    files['slater'][kpt]="%s_%d.slater"%(base,eigsys['kpt_index'][kpt])
-    files['orb'][kpt]="%s_%d.orb"%(base,eigsys['kpt_index'][kpt])
-    files['sys'][kpt]="%s_%d.sys"%(base,eigsys['kpt_index'][kpt])
+    files['orbplot'][kidx]="%s_%d.plot"%(base,kidx)
+    files['slater'][kidx]="%s_%d.slater"%(base,kidx)
+    files['orb'][kidx]="%s_%d.orb"%(base,kidx)
+    files['sys'][kidx]="%s_%d.sys"%(base,kidx)
     write_slater(basis,eigsys,kpt,
-        outfn=files['slater'][kpt],
-        orbfn=files['orb'][kpt],
+        outfn=files['slater'][kidx],
+        orbfn=files['orb'][kidx],
         basisfn=files['basis'],
         maxmo_spin=maxmo_spin)
     write_orbplot(basis,eigsys,kpt,
-        outfn=files['orbplot'][kpt],
-        orbfn=files['orb'][kpt],
+        outfn=files['orbplot'][kidx],
+        orbfn=files['orb'][kidx],
         basisfn=files['basis'],
-        sysfn=files['sys'][kpt])
+        sysfn=files['sys'][kidx])
     normalize_eigvec(eigsys,basis,kpt)
-    write_orb(eigsys,basis,ions,kpt,files['orb'][kpt],maxmo_spin)
-    write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,files['sys'][kpt])
+    write_orb(eigsys,basis,ions,kpt,files['orb'][kidx],maxmo_spin)
+    write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,files['sys'][kidx])
 
   return files
 

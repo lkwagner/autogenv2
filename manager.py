@@ -321,7 +321,7 @@ class CrystalManager:
   #------------------------------------------------
   def export_qwalk(self):
     ''' Export QWalk input files into current directory.'''
-    if len(self.qwfiles)==0:
+    if len(self.qwfiles['slater'])==0:
       self.nextstep()
 
       if not self.completed:
@@ -495,7 +495,7 @@ class PySCFManager:
   #------------------------------------------------
   def export_qwalk(self):
     ''' Export QWalk input files into current directory.'''
-    if len(self.qwfiles)==0:
+    if len(self.qwfiles['slater'])==0:
       self.nextstep()
       if not self.completed:
         return False
@@ -719,7 +719,7 @@ class QWalkManager:
 
     assert self.writer.qmc_abr!='dmc',"DMC doesn't provide a wave function."
 
-    if len(self.qwfiles)==0:
+    if self.qwfiles['wfout']=='':
       self.nextstep()
       if not self.completed:
         return False

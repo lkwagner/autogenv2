@@ -17,6 +17,7 @@ class RunnerLocal:
     self.exelines=[]
     self.np=np
     self.nn=nn
+    self.jobname='none, this runs with out queueing.'
 
   #-------------------------------------
   def check_status(self):

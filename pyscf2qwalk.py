@@ -503,26 +503,27 @@ def print_jastrow(mol,jastfile,optbasis=True,threebody=False):
 ###########################################################
 
 def print_qwalk_mol(mol, mf, method='scf', tol=0.01, basename='qw'):
+  # Some are one-element lists to be compatible with PBC routines.
   files={
       'basis':basename+".basis",
       'jastrow2':basename+".jast2",
       'jastrow3':basename+".jast3",
-      'sys':basename+".sys",
-      'slater':basename+".slater",
-      'orb':basename+".orb"
+      'sys':[basename+".sys"],
+      'slater':[basename+".slater"],
+      'orb':[basename+".orb"]
     }
 
-  print_orb(mol,mf,open(files['orb'],'w'))
+  print_orb(mol,mf,open(files['orb'][0],'w'))
   print_basis(mol,open(files['basis'],'w'))
-  print_sys(mol,open(files['sys'],'w'))
+  print_sys(mol,open(files['sys'][0],'w'))
   print_jastrow(mol,open(files['jastrow2'],'w'))
   print_jastrow(mol,open(files['jastrow3'],'w'),threebody=True)
 
   if method == 'scf':
-    print_slater(mol,mf,files['orb'],files['basis'],open(files['slater'],'w'))
+    print_slater(mol,mf,files['orb'][0],files['basis'],open(files['slater'][0],'w'))
   elif method == 'mcscf':
     files['ci']=basename+".ci.json"
-    print_cas_slater(mf,files['orb'], files['basis'],open(files['slater'],'w'), 
+    print_cas_slater(mf,files['orb'][0], files['basis'],open(files['slater'][0],'w'), 
                      tol,open(files['ci'],'w'))
   else:
     raise NotImplementedError("Conversion not available yet.")

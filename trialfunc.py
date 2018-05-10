@@ -17,12 +17,10 @@ class SlaterJastrow(TrialFunction):
     Args: 
       slatman (Manager): Manager with a Slater-determinant-generating result.
       jastman (Manager): Manager with a Jastrow-generating result. 
-      kpoint (int): kpoint number (as determined by the slatman converter).
+      kpoint (int): kpoint number (as determined by the slatman converter). None implies its a finite system.
     Returns:
       str or None: None if managers are not ready, QWalk section (str) if they are.
     '''
-    # Idea: kpoint=None means its not PBC.
-    # TODO more transparent kpoint selection.
     self.slatman=slatman
     if jastman is None:
       self.jastman=slatman
