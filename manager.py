@@ -50,6 +50,24 @@ def resolve_status(runner,reader,outfile):
   return "ready_for_analysis"
 
 ######################################################################
+def deep_compare(d1,d2):
+  '''I have to redo dict comparison because numpy will return a bool array when comparing.'''
+  if type(d1)!=type(d2):
+    return False
+  if type(d1)==dict:
+    if d1.keys()!=d2.keys():
+      return False
+    allsame=True
+    for key in d1.keys():
+      allsame=allsame and deep_compare(d1[key],d2[key])
+    return allsame
+  else:
+    try:
+      return np.array_equal(d1,d2)
+    except TypeError:
+      return d1==d2
+
+######################################################################
 def update_attributes(copyto,copyfrom,skip_keys=[],take_keys=[]):
   ''' Save update of class attributes. If copyfrom has additional attributes, they are ignored.
 
@@ -63,13 +81,12 @@ def update_attributes(copyto,copyfrom,skip_keys=[],take_keys=[]):
   '''
   updated=False
   for key in copyfrom.__dict__.keys():
-    #print("key",key)
     if key in skip_keys: 
       #print("Skipping key (%s)"%key)
       pass
     elif key not in copyto.__dict__.keys():
       print("Warning: Object update. An attribute (%s) was skipped because it doesn't exist in both objects."%key)
-    elif copyto.__dict__[key]!=copyfrom.__dict__[key]:
+    elif not deep_compare(copyto.__dict__[key],copyfrom.__dict__[key]):
       if key not in take_keys:
         print("Warning: update to attribute (%s) cancelled, because it requires job to be rerun."%key)
       else:

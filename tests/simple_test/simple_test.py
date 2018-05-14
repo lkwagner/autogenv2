@@ -169,6 +169,7 @@ def mno_test():
   cwriter=CrystalWriter({
       'xml_name':'../BFD_Library.xml',
       'kmesh':(4,4,4),
+      'total_spin':4
     })
   cwriter.set_struct_fromcif(open('mno.cif','r').read(),primitive=True)
   cwriter.set_options({'symmetry':True})
