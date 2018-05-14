@@ -1,3 +1,17 @@
+''' Manager classes handle the file maintainance of various runs.
+
+They:
+  - Call write, run, and read in the appropriate order.
+  - Keep a record of progress on disk.
+  - Hold a list of all file paths together in one place.
+  - Report progress to the user.
+
+All choices revolving around file names should be handled here.
+
+Tips on avoiding bugs with the write/run/read cycle:
+  - Every time data is updated, write the updates to the disk.
+  - Every time the data is used, update the Manager from the disk.
+'''
 import crystal
 import propertiesreader
 import os
@@ -122,7 +136,7 @@ class CrystalManager:
 
     self.logname="%s@%s"%(self.__class__.__name__,self.path+self.name)
 
-    print(self.logname,": initializing")
+    #print(self.logname,": initializing")
 
     # Handle reader and runner defaults.
     self.writer=writer
@@ -163,7 +177,7 @@ class CrystalManager:
 
     # Handle old results if present.
     if os.path.exists(self.path+self.pickle):
-      print(self.logname,": rebooting old manager.")
+      #print(self.logname,": rebooting old manager.")
       old=pkl.load(open(self.path+self.pickle,'rb'))
       self.recover(old)
 
@@ -188,7 +202,7 @@ class CrystalManager:
     update_attributes(copyto=self.runner,copyfrom=other.runner,
         skip_keys=['queue','walltime','np','nn','jobname'],
         take_keys=['queueid'])
-    update_attributes(copyto=self.runner,copyfrom=other.runner,
+    update_attributes(copyto=self.prunner,copyfrom=other.prunner,
         skip_keys=['queue','walltime','np','nn','jobname'],
         take_keys=['queueid'])
 
@@ -209,6 +223,7 @@ class CrystalManager:
   #----------------------------------------
   def nextstep(self):
     ''' Determine and perform the next step in the calculation.'''
+    self.recover(pkl.load(open(self.path+self.pickle,'rb')))
 
     print(self.logname,": next step.")
     cwd=os.getcwd()
@@ -321,6 +336,9 @@ class CrystalManager:
   #------------------------------------------------
   def export_qwalk(self):
     ''' Export QWalk input files into current directory.'''
+    self.recover(pkl.load(open(self.path+self.pickle,'rb')))
+
+    ready=False
     if len(self.qwfiles['slater'])==0:
       self.nextstep()
 
@@ -336,6 +354,7 @@ class CrystalManager:
       status=resolve_status(self.prunner,self.preader,self.propoutfn)
       print(self.logname,": properties status= %s"%(status))
       if status=='not_started':
+        ready=False
         self.prunner.add_command("cp %s INPUT"%self.propinpfn)
         self.prunner.add_task("Pproperties &> %s"%self.propoutfn)
 
@@ -348,14 +367,18 @@ class CrystalManager:
         self.preader.collect(self.propoutfn)
 
       if self.preader.completed:
+        ready=True
         self.qwfiles=crystal2qmc.convert_crystal(base=self.name,propoutfn=self.propoutfn)
         print(self.logname,": crystal converted to QWalk input.")
 
       os.chdir(cwd)
+    else:
+      ready=True
+
     with open(self.path+self.pickle,'wb') as outf:
       pkl.dump(self,outf)
 
-    return True
+    return ready
     
   #----------------------------------------
   def status(self):
@@ -388,7 +411,7 @@ class PySCFManager:
 
     self.logname="%s@%s"%(self.__class__.__name__,self.path+self.name)
 
-    print(self.logname,": initializing")
+    #print(self.logname,": initializing")
 
     self.writer=writer
     if reader is not None: self.reader=reader
@@ -417,10 +440,7 @@ class PySCFManager:
     if os.path.exists(self.path+self.pickle):
       print(self.logname,": rebooting old manager.")
       old=pkl.load(open(self.path+self.pickle,'rb'))
-      if False: #not self.is_consistent(old): TODO check consistency.
-        raise NotImplementedError("Handling updated input files is not implemented yet.")
-      else:
-        self.__dict__=old.__dict__
+      self.recover(old)
 
     # Update the file.
     if not os.path.exists(self.path): os.mkdir(self.path)
@@ -428,13 +448,25 @@ class PySCFManager:
       pkl.dump(self,outf)
 
   #------------------------------------------------
-  def update_options(self,other):
+  def recover(self,other):
     ''' Safe copy options from other to self. '''
-    updated=update_attributes(old=self.writer,new=other.writer,
-        safe_keys=['max_cycle'],
-        skip_keys=['completed','chkfile','dm_generator'])
-    if updated:
-      self.writer.completed=False
+    # Practically speaking, the run will preserve old `take_keys` and allow new changes to `skip_keys`.
+    # This is because you are taking the attributes from the older instance, and copying into the new instance.
+    updated=update_attributes(copyto=self,copyfrom=other,
+        skip_keys=['writer','runner','reader', 'path','logname','name','max_restarts','bundle'],
+        take_keys=['restarts','completed','qwfiles'])
+
+    update_attributes(copyto=self.runner,copyfrom=other.runner,
+        skip_keys=['queue','walltime','np','nn','jobname'],
+        take_keys=['queueid'])
+
+    update_attributes(copyto=self.reader,copyfrom=other.reader,
+        skip_keys=[],
+        take_keys=['completed','output'])
+
+    updated=update_attributes(copyto=self.writer,copyfrom=other.writer,
+        skip_keys=['max_cycle'],
+        take_keys=['completed','dm_generator'])
 
     # Update the file.
     with open(self.path+self.pickle,'wb') as outf:
@@ -443,6 +475,9 @@ class PySCFManager:
   #------------------------------------------------
   def nextstep(self):
     ''' Determine and perform the next step in the calculation.'''
+    # Recover old data.
+    self.recover(pkl.load(open(self.path+self.pickle,'rb')))
+
     print(self.logname,": next step.")
     cwd=os.getcwd()
     os.chdir(self.path)
@@ -495,6 +530,9 @@ class PySCFManager:
   #------------------------------------------------
   def export_qwalk(self):
     ''' Export QWalk input files into current directory.'''
+    # Recover old data.
+    self.recover(pkl.load(open(self.path+self.pickle,'rb')))
+
     if len(self.qwfiles['slater'])==0:
       self.nextstep()
       if not self.completed:
@@ -546,7 +584,7 @@ class QWalkManager:
 
     self.logname="%s@%s"%(self.__class__.__name__,self.path+self.name)
 
-    print(self.logname,": initializing")
+    #print(self.logname,": initializing")
 
     self.writer=writer
     self.reader=reader
@@ -605,40 +643,21 @@ class QWalkManager:
       self.writer.completed=False
 
   #------------------------------------------------
-  def update_options(self,other):
-    ''' Safe copy options from other to self. 
-    
-    Args: 
-      other (QWRunManager): New object to copy attributes from.
-    '''
-
-    update_attributes(old=self.runner,new=other.runner,
-        safe_keys=['queue','walltime','np','nn','jobname','prefix','postfix'],
-        skip_keys=['queueid'])
-
-    # trialfunc gets updated as the manager generating it finishes its calculation.
-    update_attributes(old=self.writer,new=other.writer,
-        skip_keys=['completed','trialfunc'])
-
-    # Update the file.
-    with open(self.path+self.pickle,'wb') as outf:
-      pkl.dump(self,outf)
-    
-  #------------------------------------------------
   def nextstep(self):
     ''' Perform next step in calculation. trialfunc managers are updated if they aren't completed yet.'''
+    # Recover old data.
+    self.recover(pkl.load(open(self.path+self.pickle,'rb')))
 
     print(self.logname,": next step.")
 
     # Check dependency is completed first.
     if self.writer.trialfunc=='':
+      print(self.logname,": checking trial function.")
       self.writer.trialfunc=self.trialfunc.export(self.path)
 
     # Work on this job.
     cwd=os.getcwd()
     os.chdir(self.path)
-
-    dir(self.reader)
 
     # Write the input file.
     if not self.writer.completed:
@@ -662,8 +681,6 @@ class QWalkManager:
         self.runner.add_task(exestr)
     elif status=='done':
       self.completed=True
-    else:
-      print(self.logname,": %s status= %s"%(self.name,status))
 
     # Ready for bundler or else just submit the jobs as needed.
     if self.bundle:
@@ -716,6 +733,9 @@ class QWalkManager:
   def export_qwalk(self):
     ''' Extract jastrow from the optimization run and return that file name.'''
     # Theoretically more than just Jastrow can be provided, but practically that's the only type of wavefunction we tend to export.
+
+    # Recover old data.
+    self.recover(pkl.load(open(self.path+self.pickle,'rb')))
 
     assert self.writer.qmc_abr!='dmc',"DMC doesn't provide a wave function."
 

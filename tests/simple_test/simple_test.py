@@ -46,7 +46,7 @@ def h2_tests():
       name='scf',
       path='h2stretch',
       writer=stwriter,
-      runner=PySCFRunnerPBS(nn=1,np=2,ppath=sys.path),
+      runner=PySCFRunnerPBS(nn=1,walltime='0:05:00',np=16,queue='secondary',ppath=sys.path),
     )
 
   return [eqman,stman]
@@ -82,7 +82,7 @@ def si_crystal_test():
       runner=RunnerPBS(
           nn=1,queue='secondary',walltime='0:10:00'
         ),
-      trialfunc=SlaterJastrow(cman,kpoint=(0,0,0))
+      trialfunc=SlaterJastrow(cman,kpoint=0)
     )
 
   jobs.append(var)
@@ -95,21 +95,22 @@ def si_crystal_test():
       runner=RunnerPBS(
           nn=1,queue='secondary',walltime='1:00:00'
         ),
-      trialfunc=SlaterJastrow(slatman=cman,jastman=var,kpoint=(0,0,0))
+      trialfunc=SlaterJastrow(slatman=cman,jastman=var,kpoint=0)
     )
 
   jobs.append(lin)
 
-  for kpt in cman.qwfiles['kpts']:
+  for kidx in cman.qwfiles['kpoints']:
+    kpt=cman.qwfiles['kpoints'][kidx]
     dmc=QWalkManager(
-        name='dmc_%d%d%d'%kpt,
+        name='dmc_%d'%kidx,
         path=cman.path,
         writer=DMCWriter(),
         reader=DMCReader(),
         runner=RunnerPBS(
             nn=1,queue='secondary',walltime='1:00:00',
           ),
-        trialfunc=SlaterJastrow(slatman=cman,jastman=lin,kpoint=kpt)
+        trialfunc=SlaterJastrow(slatman=cman,jastman=lin,kpoint=kidx)
       )
     jobs.append(dmc)
 
@@ -129,7 +130,8 @@ def si_pyscf_test():
       runner=PySCFRunnerPBS(
           queue='secondary',
           nn=1,
-          walltime='0:20:00',
+          np=16,
+          walltime='4:00:00',
           ppath=sys.path
         )
     )
@@ -205,19 +207,20 @@ def mno_test():
       trialfunc=SlaterJastrow(slatman=cman,jastman=var,kpoint=(0,0,0))
     )
 
-  for ki,kpt in enumerate(cman.qwfiles['kpoints']):
+  for kidx in cman.qwfiles['kpoints']:
+    kpt=cman.qwfiles['kpoints'][kidx]
     if not sum(np.array(kpt)%(np.array(cman.kmesh)/2))<1e-14:
       print("complex kpt %d%d%d skipped"%kpt)
       continue
     dmc=QWalkManager(
-        name='dmc_%d%d%d'%kpt,
+        name='dmc_%d'%kidx,
         path=cman.path,
         writer=DMCWriter(),
         reader=DMCReader(),
         runner=RunnerPBS(
             nn=1,queue='secondary',walltime='1:00:00',
           ),
-        trialfunc=SlaterJastrow(slatman=cman,jastman=lin,kpoint=kpt)
+        trialfunc=SlaterJastrow(slatman=cman,jastman=lin,kpoint=kidx)
       )
     jobs.append(dmc)
   return jobs
@@ -225,9 +228,9 @@ def mno_test():
 def run_tests():
   ''' Choose which tests to run and execute `nextstep()`.'''
   jobs=[]
-  #jobs+=h2_tests()
-  #jobs+=si_crystal_test()
-  #jobs+=si_pyscf_test()
+  jobs+=h2_tests()
+  jobs+=si_crystal_test()
+  jobs+=si_pyscf_test()
   jobs+=mno_test()
 
   for job in jobs:

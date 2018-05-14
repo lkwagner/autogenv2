@@ -758,7 +758,7 @@ def convert_crystal(
 
   #  All the files that will get produced.
   files={
-      'kpoints':[],
+      'kpoints':{},
       'basis':base+".basis",
       'jastrow2':base+".jast2",
       'orbplot':{},
@@ -772,7 +772,7 @@ def convert_crystal(
   for kpt in eigsys['kpt_coords']:
     if eigsys['ikpt_iscmpx'][kpt] and kset=='real': continue
     kidx=eigsys['kpt_index'][kpt]
-    files['kpoints'].append(kpt)
+    files['kpoints'][kidx]=kpt
     files['orbplot'][kidx]="%s_%d.plot"%(base,kidx)
     files['slater'][kidx]="%s_%d.slater"%(base,kidx)
     files['orb'][kidx]="%s_%d.orb"%(base,kidx)

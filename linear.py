@@ -66,8 +66,7 @@ class LinearWriter:
         f.write("total_fit %i \n"%self.total_fit)
         f.write("}\n")
         f.write(self.trialfunc)
-
-    self.completed=True
+      self.completed=True
 
      
 ####################################################

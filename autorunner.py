@@ -360,7 +360,7 @@ class PySCFRunnerPBS(RunnerPBS):
       f.write('\n'.join(qsublines))
     try: 
       result = sub.check_output("qsub %s"%(qsubfile),shell=True)
-      self.queueid.append(result.decode().split()[0])
+      self.queueid.append(result.decode().split()[0].split('.')[0])
       print(self.__class__.__name__,": Submitted as %s"%self.queueid)
     except sub.CalledProcessError:
       print(self.__class__.__name__,": Error submitting job. Check queue settings.")

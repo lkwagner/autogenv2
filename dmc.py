@@ -67,7 +67,8 @@ class DMCWriter:
 
       with open(infile,'w') as f:
         f.write('\n'.join(outlines))
-    self.completed=True
+
+      self.completed=True
 
      
 ####################################################
