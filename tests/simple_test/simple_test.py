@@ -121,6 +121,7 @@ def si_pyscf_test():
   jobs=[]
 
   pwriter=PySCFPBCWriter({
+      'gmesh':[16,16,16],
       'cif':open('si.cif','r').read()
     })
   pman=PySCFManager(
