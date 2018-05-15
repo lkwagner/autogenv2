@@ -46,7 +46,7 @@ def h2_tests():
       name='scf',
       path='h2stretch',
       writer=stwriter,
-      runner=PySCFRunnerPBS(nn=1,walltime='0:05:00',np=16,queue='secondary',ppath=sys.path),
+      runner=PySCFRunnerPBS(nn=1,walltime='0:05:00',np=16,queue='secondary'),
     )
 
   return [eqman,stman]
@@ -132,8 +132,7 @@ def si_pyscf_test():
           queue='secondary',
           nn=1,
           np=16,
-          walltime='4:00:00',
-          ppath=sys.path
+          walltime='4:00:00'
         )
     )
   jobs.append(pman)
