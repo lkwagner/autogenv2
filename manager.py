@@ -310,7 +310,7 @@ class CrystalManager:
       self.scriptfile="%s.run"%self.name
       self.bundle_ready=self.runner.script(self.scriptfile)
     else:
-      qsubfile=self.runner.submit()
+      qsubfile=self.runner.submit(self.name)
 
     self.completed=self.creader.completed
 
@@ -379,7 +379,7 @@ class CrystalManager:
           self.scriptfile="%s.run"%self.name
           self.bundle_ready=self.prunner.script(self.scriptfile,self.driverfn)
         else:
-          qsubfile=self.runner.submit()
+          qsubfile=self.runner.submit(self.name)
       elif status=='ready_for_analysis':
         self.preader.collect(self.propoutfn)
 
@@ -529,7 +529,7 @@ class PySCFManager:
       self.scriptfile="%s.run"%self.name
       self.bundle_ready=self.runner.script(self.scriptfile,self.driverfn)
     else:
-      qsubfile=self.runner.submit()
+      qsubfile=self.runner.submit(self.name)
 
     self.completed=self.reader.completed
     # Update the file.
@@ -706,7 +706,7 @@ class QWalkManager:
       self.scriptfile="%s.run"%self.name
       self.bundle_ready=self.runner.script(self.scriptfile)
     else:
-      qsubfile=self.runner.submit()
+      qsubfile=self.runner.submit(self.name)
 
     # Update the file.
     with open(self.pickle,'wb') as outf:
