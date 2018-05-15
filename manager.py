@@ -311,7 +311,7 @@ class CrystalManager:
       self.scriptfile="%s.run"%self.name
       self.bundle_ready=self.runner.script(self.scriptfile)
     else:
-      qsubfile=self.runner.submit()
+      qsubfile=self.runner.submit(self.name)
 
     self.completed=self.creader.completed
 
@@ -380,14 +380,16 @@ class CrystalManager:
           self.scriptfile="%s.run"%self.name
           self.bundle_ready=self.prunner.script(self.scriptfile,self.driverfn)
         else:
-          qsubfile=self.runner.submit()
+          qsubfile=self.runner.submit(self.name)
       elif status=='ready_for_analysis':
         self.preader.collect(self.propoutfn)
 
       if self.preader.completed:
         ready=True
+        print(self.logname,": converting crystal to QWalk input now.")
         self.qwfiles=crystal2qmc.convert_crystal(base=self.name,propoutfn=self.propoutfn)
-        print(self.logname,": crystal converted to QWalk input.")
+      else:
+        print(self.logname,": conversion failed due to problem with properties run. Check for GRED.DAT and KRED.DAT.")
 
       os.chdir(cwd)
     else:
@@ -704,7 +706,7 @@ class QWalkManager:
       self.scriptfile="%s.run"%self.name
       self.bundle_ready=self.runner.script(self.scriptfile)
     else:
-      qsubfile=self.runner.submit()
+      qsubfile=self.runner.submit(self.name)
 
     # Update the file.
     with open(self.pickle,'wb') as outf:

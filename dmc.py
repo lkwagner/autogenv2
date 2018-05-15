@@ -102,15 +102,15 @@ class DMCReader:
     Returns:
       bool: If self.results are within error tolerances.
     '''
-    complete=True
+    completed=True
     if self.output['properties']['total_energy']['error'][0] > self.errtol:
       print("DMC incomplete: (%f) does not meet tolerance (%f)"%\
           (self.output['properties']['total_energy']['error'][0],self.errtol))
-      complete=False
+      completed=False
     if self.output['total blocks']-self.output['warmup blocks'] < self.minblocks:
       print("DMC incomplete: Run completed %d blocks, but requires %d."%\
           (self.output['total blocks']-self.output['warmup blocks'],self.minblocks))
-      complete=False
+      completed=False
     return complete
           
   #------------------------------------------------
@@ -130,7 +130,7 @@ class DMCReader:
       self.output['file']=outfile
 
     # Check files.
-    self.complete=self.check_complete()
+    self.completed=self.check_complete()
     if not self.completed:
       status='restart'
     else:
