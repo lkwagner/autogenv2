@@ -27,7 +27,6 @@ pyscf_runner = PySCFRunnerPBS(
     queue='batch',        # This is the default queue for most PBS queues.
     walltime='1:00:00',
     jobname='03-queuing', # what the queue will report.
-    ppath=sys.path,       # To run, we need to know the path to PySCF. I'm assuming its in your python path.
     nn=1,np=4
 )
 
