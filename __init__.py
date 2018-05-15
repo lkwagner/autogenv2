@@ -15,7 +15,8 @@ __all__=[
     "pyscf2qwalk",
     "qwalkrunner",
     "runner",
+    "paths",
     "submitter",
     "trialfunc",
-    "variance"
+    "variance",
   ]

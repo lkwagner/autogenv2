@@ -275,7 +275,6 @@ class PySCFRunnerPBS(RunnerPBS):
   def __init__(self,queue='batch',
                     walltime='12:00:00',
                     np='allprocs',
-                    ppath=None,
                     nn=1,
                     jobname=os.getcwd().split('/')[-1]+'_pyscf',
                     prefix=None,
@@ -290,8 +289,6 @@ class PySCFRunnerPBS(RunnerPBS):
     self.prefix=prefix
     self.postfix=postfix
     self.exelines=[]
-    if ppath is None: self.ppath=[]
-    else:             self.ppath=ppath
     if prefix is None: self.prefix=[]
     else:              self.prefix=prefix
     if postfix is None: self.postfix=[]
@@ -327,7 +324,16 @@ class PySCFRunnerPBS(RunnerPBS):
     return True
 
   #-------------------------------------
-  def submit(self,jobname=None):
+  def submit(self,jobname=None,ppath=None):
+    ''' Submit any accumulated tasks.
+
+    Args:
+      jobname (str): name to appear in the queue.
+      ppath (list): python path needed for the run (default: current path).
+    '''
+      
+    if ppath is None: ppath=sys.path
+
     if len(self.exelines)==0: 
       #print(self.__class__.__name__,": All tasks completed or queued.")
       return
@@ -352,7 +358,7 @@ class PySCFRunnerPBS(RunnerPBS):
          "#PBS -o %s"%jobout,
          "cd ${PBS_O_WORKDIR}",
          "export OMP_NUM_THREADS=%d"%(self.nn*self.np),
-         "export PYTHONPATH=%s"%(':'.join(self.ppath)),
+         "export PYTHONPATH=%s"%(':'.join(ppath)),
          "cwd=`pwd`"
        ] + self.prefix + self.exelines + self.postfix
     qsubfile=jobname+".qsub"

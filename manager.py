@@ -22,6 +22,7 @@ import pyscf2qwalk
 import crystal2qmc
 import pickle as pkl
 import autorunner
+from autopaths import paths
 
 from copy import deepcopy
 
@@ -261,7 +262,7 @@ class CrystalManager:
 
     if status=="not_started":
       self.runner.add_command("cp %s INPUT"%self.crysinpfn)
-      self.runner.add_task("Pcrystal &> %s"%self.crysoutfn)
+      self.runner.add_task("%s &> %s"%(paths['Pcrystal'],self.crysoutfn))
 
     elif status=="ready_for_analysis":
       #This is where we (eventually) do error correction and resubmits
@@ -286,7 +287,7 @@ class CrystalManager:
           sh.copy(self.writer.guess_fort,'fort.20')
           self.writer.write_crys_input(self.crysinpfn)
           sh.copy(self.crysinpfn,'INPUT')
-          self.runner.add_task("Pcrystal &> %s"%self.crysoutfn)
+          self.runner.add_task("%s &> %s"%(paths['Pcrystal'],self.crysoutfn))
           self.restarts+=1
     elif status=='done' and self.lev:
       # We used levshift to converge. Now let's restart to be sure.
@@ -302,7 +303,7 @@ class CrystalManager:
       sh.copy(self.writer.guess_fort,'fort.20')
       self.writer.write_crys_input(self.crysinpfn)
       sh.copy(self.crysinpfn,'INPUT')
-      self.runner.add_task("Pcrystal &> %s"%self.crysoutfn)
+      self.runner.add_task("%s &> %s"%(paths['Pcrystal'],self.crysoutfn))
       self.restarts+=1
 
     # Ready for bundler or else just submit the jobs as needed.
@@ -373,7 +374,7 @@ class CrystalManager:
       if status=='not_started':
         ready=False
         self.prunner.add_command("cp %s INPUT"%self.propinpfn)
-        self.prunner.add_task("Pproperties &> %s"%self.propoutfn)
+        self.prunner.add_task("%s &> %s"%(paths['Pproperties'],self.propoutfn))
 
         if self.bundle:
           self.scriptfile="%s.run"%self.name
@@ -527,7 +528,7 @@ class PySCFManager:
       self.scriptfile="%s.run"%self.name
       self.bundle_ready=self.runner.script(self.scriptfile,self.driverfn)
     else:
-      qsubfile=self.runner.submit()
+      qsubfile=self.runner.submit(jobname=self.name,ppath=[paths['pyscf']])
 
     self.completed=self.reader.completed
     # Update the file.
@@ -577,7 +578,7 @@ class PySCFManager:
 #######################################################################
 class QWalkManager:
   def __init__(self,writer,reader,runner=None,trialfunc=None,
-      name='qw_run',path=None,bundle=False,qwalk='~/bin/qwalk'):
+      name='qw_run',path=None,bundle=False):
     ''' QWalkManager managers the writing of a QWalk input files, it's running, and keeping track of the results.
     Args:
       writer (qwalk writer): writer for input.
@@ -606,7 +607,6 @@ class QWalkManager:
     self.writer=writer
     self.reader=reader
     self.trialfunc=trialfunc
-    self.qwalk=qwalk
     if runner is not None: self.runner=runner
     else: self.runner=autorunner.RunnerPBS()
     self.bundle=bundle
@@ -683,7 +683,7 @@ class QWalkManager:
     status=resolve_status(self.runner,self.reader,self.outfile)
     print(self.logname,": %s status= %s"%(self.name,status))
     if status=="not_started" and self.writer.completed:
-      exestr="%s %s &> %s"%(self.qwalk,self.infile,self.stdout)
+      exestr="%s %s &> %s"%(paths['qwalk'],self.infile,self.stdout)
       self.runner.add_task(exestr)
       print(self.logname,": %s status= submitted"%(self.name))
     elif status=="ready_for_analysis":
@@ -694,7 +694,7 @@ class QWalkManager:
         self.completed=True
       else:
         print(self.logname,": %s status= %s, attempting rerun."%(self.name,status))
-        exestr="%s %s &> %s"%(self.qwalk,self.infile,self.stdout)
+        exestr="%s %s &> %s"%(paths['qwalk'],self.infile,self.stdout)
         self.runner.add_task(exestr)
     elif status=='done':
       self.completed=True

@@ -1,6 +1,0 @@
-# null should be replaced by the location of the executible or library for each package you'll use in autogen.
-# You can edit this here or use setup.py to help you.
-crystal: null
-properties: null
-pyscf: null
-qwalk: null
