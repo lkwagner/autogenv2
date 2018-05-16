@@ -9,6 +9,52 @@ class TrialFunction:
     raise NotImplementedError("All trial functions must have export function defined.")
 
 #######################################################################
+class Slater(TrialFunction):
+  def __init__(self,slatman,kpoint=0):
+    ''' Generate a Slater-Jastrow wave function from a manager that generates a Slater determinant and
+      a manager that generates a Jastrow factor.
+
+    Args: 
+      slatman (Manager): Manager with a Slater-determinant-generating result.
+      jastman (Manager): Manager with a Jastrow-generating result. 
+      kpoint (int): kpoint number (as determined by the slatman converter). None implies its a finite system.
+    Returns:
+      str or None: None if managers are not ready, QWalk section (str) if they are.
+    '''
+    self.slatman=slatman
+    self.kpoint=kpoint
+
+  #------------------------------------------------
+  def export(self,qmcpath):
+    ''' Export the wavefunction section for this trial wave function.
+    Args: 
+      path (str): QWalkManager.path
+      kpoint: the kpoint to choose for exporting. 
+    Returns:
+      str: system and wave fumction section for QWalk. Empty string if not ready.
+    '''
+    # This assumes you're using 2-body, should be easy to make a new object or maybe an arg for 3body.
+
+    # Ensure files are correctly generated.
+    if not (self.slatman.export_qwalk()):
+      return ''
+
+    if type(self.slatman.qwfiles['slater'])==str:
+      slater=self.slatman.qwfiles['slater']
+      sys=self.slatman.qwfiles['sys']
+    else:
+      slater=self.slatman.qwfiles['slater'][self.kpoint]
+      sys=self.slatman.qwfiles['sys'][self.kpoint]
+
+    outlines=[
+        'include %s'%os.path.relpath(self.slatman.path+sys,qmcpath),
+        'trialfunc { ',
+        '  include %s '%os.path.relpath(self.slatman.path+slater,qmcpath),
+        '}'
+      ]
+    return '\n'.join(outlines)
+
+#######################################################################
 class SlaterJastrow(TrialFunction):
   def __init__(self,slatman,jastman=None,kpoint=0):
     ''' Generate a Slater-Jastrow wave function from a manager that generates a Slater determinant and
