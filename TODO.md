@@ -1,3 +1,6 @@
+- [ ] Model fitting example.
+- [ ] How to handle qwfiles better? Interaction between manager and trialfunc is currently not too flexible. For example it depends on kpoints being a list.
+  - Possible to move the `export_qwalk` into `trialfunc`?
 - [ ] Bad use case: accidentally putting the same writer for multiple managers
       will screw up the process because the first time the writer writes, it delares itself 'done'
 - [ ] Comparable defaults between PySCF and Crystal are not the same.
