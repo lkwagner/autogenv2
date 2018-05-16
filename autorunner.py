@@ -250,9 +250,10 @@ class PySCFRunnerLocal:
     return True
 
   #-------------------------------------
-  def submit(self,jobname=None):
+  def submit(self,jobname=None,ppath=None):
     ''' Submit series of commands.
     Note: jobname is not used because it doesn't submit anything.'''
+    sys.path=ppath+sys.path
 
     if len(self.exelines)==0:
       #print(self.__class__.__name__,": All tasks completed or queued.")
