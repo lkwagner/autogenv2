@@ -168,8 +168,8 @@ class CrystalManager:
     else: self.runner=runner
 
     # Internal.
-    self.crysinpfn=self.name+'.in'
-    self.propinpfn=self.name+'.prop.in'
+    self.crysinpfn=self.name
+    self.propinpfn=self.name+'.prop'
     self.crysoutfn=self.crysinpfn+'.o'
     self.propoutfn=self.propinpfn+'.o'
     self.restarts=0
@@ -617,7 +617,7 @@ class QWalkManager:
     self.completed=False
     self.scriptfile=None
     self.bundle_ready=False
-    self.infile="%s.%s"%(name,writer.qmc_abr)
+    self.infile=name
     self.outfile="%s.o"%self.infile
     # Note: qwfiles stores file names of results, used for exporting trial wave functions.
     self.qwfiles={ 

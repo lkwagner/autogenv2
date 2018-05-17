@@ -111,7 +111,7 @@ class DMCReader:
       print("DMC incomplete: Run completed %d blocks, but requires %d."%\
           (self.output['total blocks']-self.output['warmup blocks'],self.minblocks))
       completed=False
-    return complete
+    return completed
           
   #------------------------------------------------
   def collect(self,outfile):
