@@ -389,7 +389,8 @@ class CrystalManager:
         print(self.logname,": converting crystal to QWalk input now.")
         self.qwfiles=crystal2qmc.convert_crystal(base=self.name,propoutfn=self.propoutfn)
       else:
-        print(self.logname,": conversion failed due to problem with properties run. Check for GRED.DAT and KRED.DAT.")
+        ready=False
+        print(self.logname,": conversion postponed because properties is not finished.")
 
       os.chdir(cwd)
     else:
