@@ -2,8 +2,9 @@ from __future__ import print_function
 import os
 import shutil as sh
 from pymatgen.io.cif import CifParser
-from pyscf import lib
+import pyscf
 from pyscf.scf.uhf import UHF,mulliken_meta
+from copy import deepcopy
 
 
 ####################################################
@@ -32,6 +33,7 @@ class PySCFWriter:
     # method: %s    -- CASSCF or CASCI.
     self.cas={}
 
+    # Used to name functions from conversion.
     self.basename ='qw'
 
     # Default chosen by method at runtime.
@@ -42,19 +44,22 @@ class PySCFWriter:
   #-----------------------------------------------
     
   def set_options(self, d):
+    saved=deepcopy(self.__dict__)
     selfdict=self.__dict__
 
     # Check important keys are set. 
     for k in d.keys():
       if not k in selfdict.keys():
-        print("Error:",k,"not a keyword for PySCFWriter")
-        raise AssertionError
+        raise AssertionError("Invalid option. %s not a keyword for PySCFWriter"%k)
       selfdict[k]=d[k]
 
     # If charge and spin should have same parity.
-    assert selfdict['charge']%2==selfdict['spin']%2,"""
-      Spin and charge should both be even or both be odd.
-      Charge=%d, spin=%d."""%(selfdict['charge'],selfdict['spin'])
+    if selfdict['charge']%2!=selfdict['spin']%2:
+      reason='Spin and charge should both be even or both be odd. Charge=%d, spin=%d.'\
+          %(selfdict['charge'],selfdict['spin'])
+      selfdict['charge']=saved['charge']
+      selfdict['spin']=saved['spin']
+      raise AssertionError("Invalid option. "+reason)
 
     # If postHF got set, new options are required input.
     if self.postHF==True:
@@ -67,25 +72,24 @@ class PySCFWriter:
     skipkeys = ['completed','chkfile','dm_generator']
     for otherkey in other.__dict__.keys():
       if otherkey not in self.__dict__.keys():
-        print('other is missing a key.')
+        print(self.__class__.__name__,': other is missing a key.')
         return False
     for selfkey in self.__dict__.keys():
       if selfkey not in other.__dict__.keys():
-        print('self is missing a key.')
+        print(self.__class__.__name__,': self is missing a key.')
         return False
     for key in self.__dict__.keys():
       if self.__dict__[key]!=other.__dict__[key] and key not in skipkeys:
-        print("Different keys [{}] = \n{}\n or \n {}"\
+        print(self.__class__.__name__,": Different keys [{}] = \n{}\n or \n {}"\
             .format(key,self.__dict__[key],other.__dict__[key]))
         return False
     return True
     
   #-----------------------------------------------
-  def pyscf_input(self,fname):
+  def pyscf_input(self,fname,chkfile):
     f=open(fname,'w')
     restart_fname = 'restart_'+fname
     re_f = open(restart_fname, 'w')
-    chkfile=fname+".chkfile"
     add_paths=[]
 
     # Figure out correct default initial guess (if not set).
@@ -95,7 +99,7 @@ class PySCFWriter:
       elif self.method in ['UKS','UHF']:
         self.dm_generator=dm_from_uhf_minao()
       else:
-        print("Warning: default guess not set for method=%s.\n Trying UHF."%self.method)
+        print(self.__class__.__name__,": Warning--default guess not set for method=%s.\n Trying UHF."%self.method)
         self.dm_generator=dm_from_uhf_minao()
 
     for i in self.pyscf_path:
@@ -109,7 +113,6 @@ class PySCFWriter:
         "from pyscf.dft.rks import RKS",
         "from pyscf.dft.roks import ROKS",
         "from pyscf.dft.uks import UKS",
-        "from pyscf2qwalk import print_qwalk",
         "mol=gto.Mole(verbose=4)",
         "mol.build(atom='''"+self.xyz+"''',",
         "basis='%s',"%self.basis,
@@ -138,14 +141,8 @@ class PySCFWriter:
                    self.cas['method'], self.cas['ncas'], self.cas['nelec'][0], 
                    self.cas['nelec'][1], self.cas['ncore']), 
                    "mc.direct_scf_tol=%f"%self.direct_scf_tol,
-
                    "mc.kernel()",
-                   'print ("PostHF_done")',
-
-                   "print_qwalk(mol, mc, method= 'mcscf', tol = %g , basename = '%s')"%(
-                    self.cas['tol'], self.basename)]
-    else:
-      outlines +=[ "print_qwalk(mol,m)"]
+                   'print ("PostHF_done")']
     outlines += ['print ("All_done")']
 
     restart_outlines=[] 
@@ -158,11 +155,10 @@ class PySCFWriter:
     re_f.write('\n'.join(restart_outlines))
 
     self.completed=True
-    return [fname],[restart_fname], [fname+".o"],[chkfile]
+    #return fname,restart_fname, fname+".o",chkfile
      
 
-##n#################################################
-
+####################################################
 
 from xml.etree.ElementTree import ElementTree
 
@@ -211,14 +207,9 @@ def generate_pbc_basis(xml_name,symbol,min_exp=0.2,naug=2,alpha=3,
   #print(" ".join(allbasis))
   return " ".join(allbasis)
   
-
-    
-           
-  
 ####################################################
 class PySCFPBCWriter:
   def __init__(self,options={}):
-    self.basis='bfd_vtz'
     self.charge=0
     self.cif=''
     self.completed=False
@@ -232,7 +223,7 @@ class PySCFPBCWriter:
     self.direct_scf_tol=1e-7
     self.pyscf_path=[]
     self.spin=0
-    self.gs=[4,4,4]
+    self.gmesh=[4,4,4]
     self.xyz=""
     self.latticevec=""
     self.kpts=[2,2,2]
@@ -280,8 +271,7 @@ class PySCFPBCWriter:
     # Check important keys are set. 
     for k in d.keys():
       if not k in selfdict.keys():
-        print("Error:",k,"not a keyword for PySCFWriter")
-        raise AssertionError
+        raise AssertionError("Error:",k,"not a keyword for PySCFWriter")
       selfdict[k]=d[k]
 
     # Must be done after bdf_library is set.
@@ -301,11 +291,10 @@ class PySCFPBCWriter:
 
   #-----------------------------------------------
       
-  def pyscf_input(self,fname):
+  def pyscf_input(self,fname,chkfile):
     f=open(fname,'w')
     restart_fname = 'restart_'+fname
     re_f = open(restart_fname, 'w')
-    chkfile=fname+".chkfile"
     add_paths=[]
 
     # Figure out correct default initial guess (if not set).
@@ -318,7 +307,7 @@ class PySCFPBCWriter:
         print("Warning: default guess not set for method=%s.\n Trying UHF."%self.method)
         self.dm_generator=dm_from_uhf_minao()
 
-    print(self.dm_generator)
+    #print(self.dm_generator)
     for i in self.pyscf_path:
       add_paths.append("sys.path.append('"+i+"')")
     outlines=[
@@ -330,8 +319,8 @@ class PySCFPBCWriter:
         "from pyscf.pbc.scf import KRHF as RHF",
         "from pyscf.pbc.scf import KUHF as UHF",
         "from pyscf.pbc.dft import KRKS as RKS",
-        "from pyscf.pbc.dft import KUKS as UKS",
-        "from pyscf2qwalk import print_qwalk"]
+        "from pyscf.pbc.dft import KUKS as UKS"
+      ]
 
     #The basis
     outlines+=["basis={"]
@@ -342,7 +331,7 @@ class PySCFPBCWriter:
     # The cell/molecule
     outlines+=[
         "mol=gto.M(verbose=4,",
-        "gs="+str(self.gs)+",",
+        "mesh="+str(self.gmesh)+",",
         "atom='''"+self.xyz+"''',",
         "a='''"+str(self.latticevec) +"''',",
         "basis=basis,",
@@ -376,23 +365,11 @@ class PySCFPBCWriter:
     if self.dft!="":
       outlines+=['m.xc="%s"'%self.dft]
 
-    outlines+=["print('E(HF) =',m.kernel(dm_kpts))"]
-    
-    outlines +=[ "print_qwalk(mol,m)"]
+    outlines+=["print('E(HF) =',m.kernel(numpy.array(dm_kpts)))"]
     outlines += ['print ("All_done")']
-
-    restart_outlines=[] 
-    for line in  outlines: 
-      if 'mc.kernel(' in line:
-        restart_outlines += ["mc.__dict__.update(pbc.lib.chkfile.load('%s', 'mcscf'))\n"%chkfile]
-      restart_outlines += [line]  
-
     f.write('\n'.join(outlines))
-    re_f.write('\n'.join(restart_outlines))
 
     self.completed=True
-    return [fname],[restart_fname],[fname+".o"],[chkfile]
-    
     
 ####################################################
 class PySCFReader:
@@ -404,46 +381,58 @@ class PySCFReader:
   def read_chkfile(self,chkfile):
     ''' Read all data from the chkfile.'''
     ret={}
-    mol=lib.chkfile.load_mol(chkfile)
+    mol=pyscf.lib.chkfile.load_mol(chkfile)
 
     # TODO density matrix for mcscf parts.
-    # I don't think those results are saved in the chkfile, necessarily,
-    # unfortunately.
+    # I don't think those results are saved in the chkfile.
     uhf=UHF(mol)
-    dm=uhf.from_chk('pyscf_driver.py.chkfile')
-    ret['basis_labels']=mol.spherical_labels()
+    dm=uhf.from_chk(chkfile)
+    ret['basis_labels']=mol.spheric_labels(fmt=False)
     ret['density_matrix']=dm
 
     for key in ('scf','mcscf'):
-      ret[key]=lib.chkfile.load(chkfile,key)
+      ret[key]=pyscf.lib.chkfile.load(chkfile,key)
     return ret
           
-  #------------------------------------------------
-  def check_restart(self, outfiles):
-    for outf in  outfiles:
-      lines = open(outf,'r').read().split('\n')
-      if ('HF_done' in lines) and  ('All_done' not in lines):
-        return True
-    return False
+  ##------------------------------------------------
+  # This restart check only works for MCSCF. I don't need that.
+  #def check_restart(self, outfile):
+  #  lines = open(outfile,'r').read().split('\n')
+  #  if ('HF_done' in lines) and  ('All_done' not in lines):
+  #    return True
+  #  if 'SCF not converged.' in lines:
+  #    return True
+  #  return False
 
   #------------------------------------------------
-     
-  def collect(self,outfiles,chkfiles):
-    problem=False
-    for outf,chkf in zip(outfiles,chkfiles):
-      if outf not in self.output.keys():
-        self.output[outf]={}
-      lines = open(outf,'r').read().split()
-      if 'All_done' not in lines:
-         problem= True
-      else: # Only read in properties if self-consistent.
-        self.output[outf] = self.read_chkfile(chkf)
-      self.output[outf]['chkfile']=chkf
-    if not problem:
+  def check_restart(self,outfile):
+    ''' Check if a restart is needed to complete. '''
+    # Note: this only checks the restart an SCF run.
+    restart=True
+    for line in open(outfile,'r'):
+      if "converged SCF energy" in line: restart=False
+    return restart
+
+  #------------------------------------------------
+  def collect(self,outfile,chkfile):
+    self.output={}
+    self.output['file']=outfile
+
+    converged=False
+    lines = open(outfile,'r').read().split('\n')
+    for line in reversed(lines):
+      if "converged SCF energy" in line: 
+        converged=True
+        self.output.update(self.read_chkfile(chkfile))
+        self.output['chkfile']=chkfile
+        self.output['conversion']=[]
+        break
+    if converged:
       self.completed=True
+      return 'done'
     else:
-      print('Problem detected in PySCF run.')
- 
+      return 'killed'
+
   #------------------------------------------------
   def write_summary(self):
     print("#### Variance optimization")

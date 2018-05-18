@@ -1,4 +1,5 @@
 import os 
+from crystal2qmc import read_gred,read_kred,read_outputfile
 
 class PropertiesReader:
   """ Gets results of a properties run. """
@@ -7,9 +8,8 @@ class PropertiesReader:
     self.out={}
 #-------------------------------------------------      
   def collect(self,outfilename):
-    """ Collect results from output."""
-    # TODO actually gather results and check if run is successful
-    if os.path.isfile(outfilename):
+    """ Just check that results are there. The actual data is too large to want to store."""
+    if os.path.isfile("GRED.DAT") and os.path.isfile("KRED.DAT"):
       self.completed=True
     else:
       self.completed=False

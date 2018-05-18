@@ -17,7 +17,7 @@ def find_label(sph_label):
 
 #----------------------------------------------
 def print_orb(mol,m,f,k=0):
-  coeff=m.mo_coeff
+  coeff=np.array(m.mo_coeff)
   print_orb_coeff(mol,coeff,f,k)
     
 
@@ -25,7 +25,7 @@ def mocoeff_project(coeff):
   if not np.iscomplexobj(coeff):
     return coeff
   avgimag=np.mean(np.abs(coeff.imag))
-  print(avgimag)
+  #print(avgimag)
   if avgimag < 1e-8:
     return coeff.real
   return coeff
@@ -263,16 +263,16 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
 ###########################################################
 
 def print_slater(mol, mf, orbfile, basisfile, f,k=0,occ=None):
-  if occ==None:
-    occ=mf.mo_occ 
-  corb = mf.mo_coeff.flatten()[0]
+  if occ is None:
+    occ=np.array(mf.mo_occ)
+  corb = np.array(mf.mo_coeff).flatten()[0]
   if isinstance(mol,pbc.gto.Cell):
     if len(occ.shape)==3:
       occ=occ[:,k,:]
-      corb=mf.mo_coeff[0,k,:,:]
+      corb=np.array(mf.mo_coeff)[0,k,:,:]
     else:
       occ=occ[k,:]
-      corb=mf.mo_coeff[k,:,:]
+      corb=np.array(mf.mo_coeff)[k,:,:]
       
   corb=mocoeff_project(corb)
   
@@ -307,7 +307,7 @@ def print_slater(mol, mf, orbfile, basisfile, f,k=0,occ=None):
     for i, c in enumerate(occ):
       if(c>0):
         us_orb.append(i+1)
-        c-=1 
+        c-=1
       if(c>0):
         ds_orb.append(i+1)
   max_orb = np.max(us_orb +ds_orb)
@@ -410,6 +410,7 @@ def find_basis_cutoff(mol):
   except:
     return 7.5 
 
+###########################################################
 def find_atom_types(mol):
   atom_types=[]
   n_atom  = len(mol.atom_coords())
@@ -419,7 +420,8 @@ def find_atom_types(mol):
 
   return list(set(atom_types))
 
-def print_jastrow(mol,basename='qw',threebody=False):
+###########################################################
+def print_jastrow(mol,jastfile,optbasis=True,threebody=False):
   
   basis_cutoff = find_basis_cutoff(mol)
   atom_types = find_atom_types(mol)
@@ -427,7 +429,10 @@ def print_jastrow(mol,basename='qw',threebody=False):
   outlines = [
       "jastrow2",
       "group {",
-      "  optimizebasis",
+      ]
+  if optbasis: 
+    outlines += ['  optimizebasis']
+  outlines += [
       "  eebasis {",
       "    ee",
       "    cutoff_cusp",
@@ -449,8 +454,9 @@ def print_jastrow(mol,basename='qw',threebody=False):
       "  }",
       "}",
       "group {",
-      "  optimizebasis",
       ]
+  if optbasis: 
+    outlines += ['  optimizebasis']
   for atom_type in atom_types:
     outlines += [
       "  eibasis {",
@@ -487,12 +493,9 @@ def print_jastrow(mol,basename='qw',threebody=False):
       "  }",
       "}"
   ]
-  fname=basename+'.jast2'
-  if threebody:
-    fname=basename+'.jast3'
 
-  with open(fname,'w') as outf:
-    outf.write("\n".join(outlines))
+  jastfile.write("\n".join(outlines))
+
   return None
 
 
@@ -500,75 +503,96 @@ def print_jastrow(mol,basename='qw',threebody=False):
 ###########################################################
 
 def print_qwalk_mol(mol, mf, method='scf', tol=0.01, basename='qw'):
+  # Some are one-element lists to be compatible with PBC routines.
+  files={
+      'basis':basename+".basis",
+      'jastrow2':basename+".jast2",
+      'jastrow3':basename+".jast3",
+      'sys':[basename+".sys"],
+      'slater':[basename+".slater"],
+      'orb':[basename+".orb"]
+    }
 
-  orbfile=basename+".orb"
-  basisfile=basename+".basis"
-   
-  print_orb(mol,mf,open(orbfile,'w'))
-  print_basis(mol,open(basisfile,'w'))
-  print_sys(mol,open(basename+".sys",'w'))
-  print_jastrow(mol,basename)
-  print_jastrow(mol,basename,threebody=True)
-  
+  print_orb(mol,mf,open(files['orb'][0],'w'))
+  print_basis(mol,open(files['basis'],'w'))
+  print_sys(mol,open(files['sys'][0],'w'))
+  print_jastrow(mol,open(files['jastrow2'],'w'))
+  print_jastrow(mol,open(files['jastrow3'],'w'),threebody=True)
+
   if method == 'scf':
-    print_slater(mol,mf,orbfile,basisfile,open(basename+".slater",'w'))
+    print_slater(mol,mf,files['orb'][0],files['basis'],open(files['slater'][0],'w'))
   elif method == 'mcscf':
-    print_cas_slater(mf,orbfile, basisfile,open(basename+".slater",'w'), 
-                     tol,open(basename+".ci.json",'w'))
+    files['ci']=basename+".ci.json"
+    print_cas_slater(mf,files['orb'][0], files['basis'],open(files['slater'][0],'w'), 
+                     tol,open(files['ci'],'w'))
   else:
-    print ("Can't convert to qw.slater. Wait to be updated") 
-  return 
+    raise NotImplementedError("Conversion not available yet.")
+
+  return files
 ###########################################################
 
 def print_qwalk_pbc(cell,mf,method='scf',tol=0.01,basename='qw'):
-  basisfile=basename+".basis"
-  print_basis(cell,open(basisfile,'w'))
-  print_jastrow(cell,basename)
+  files={
+      'basis':basename+".basis",
+      'jastrow2':basename+".jast2",
+      'orb':["%s_%i.orb"%(basename,nk) for nk in range(mf.kpts.shape[0])],
+      'sys':["%s_%i.sys"%(basename,nk) for nk in range(mf.kpts.shape[0])],
+      'slater':["%s_%i.slater"%(basename,nk) for nk in range(mf.kpts.shape[0])]
+    }
+
+  print_basis(cell,open(files['basis'],'w'))
+  print_jastrow(cell,open(files['jastrow2'],'w'))
   
-  nk=mf.kpts.shape[0]
   kpoints=cell.get_scaled_kpts(mf.kpts)
-  for i in range(nk):
-    bask=basename+"_%i"%i
-    orbfile=bask+".orb"
-    print_slater(cell,mf,orbfile,basisfile,
-                 open(bask+".slater",'w'),k=i)
-    print_sys(cell,open(bask+".sys",'w'),kpoint=2.*kpoints[i,:])
-    print_orb(cell,mf,open(orbfile,'w'),k=i)
-    
+  for i in range(mf.kpts.shape[0]):
+    print_slater(cell,mf,files['orb'][i],files['basis'],
+                 open(files['slater'][i],'w'),k=i)
+    print_sys(cell,open(files['sys'][i],'w'),kpoint=2.*kpoints[i,:])
+    print_orb(cell,mf,open(files['orb'][i],'w'),k=i)
+
+  return files
   
 ###########################################################
 
-
 def print_qwalk(mol,mf,method='scf',tol=0.01,basename='qw'):
+  ''' Convenience function for converting any PySCF object. '''
   if isinstance(mol,pbc.gto.Cell):
-    print_qwalk_pbc(mol,mf,method,tol,basename)
+    return print_qwalk_pbc(mol,mf,method,tol,basename)
   else:
-    print_qwalk_mol(mol,mf,method,tol,basename)
+    return print_qwalk_mol(mol,mf,method,tol,basename)
   
-       
-if __name__=='__main__':
-  import sys
+###########################################################
+
+def print_qwalk_chkfile(chkfile,method='scf',tol=0.01,basename='qw'):
+  ''' Convenience function for converting using only the chkfile.'''
   from pyscf import lib
   import pyscf
-  import h5py
-  assert len(sys.argv)>=2,"""
-  Usage: python pyscf2qwalk.py chkfile <basename>"""
 
-  chkfile=sys.argv[1]
-  basename='qw'
-  if len(sys.argv)>2:
-    basename=sys.argv[2]
-
-  # The Mole object is saved as a string
+  # The Mole object is saved as a string.
   try:
     mol=pbc.gto.cell.loads(lib.chkfile.load(chkfile,'mol'))
   except:
     mol=pyscf.gto.loads(lib.chkfile.load(chkfile,'mol'))
 
+  # This ensures that no extra stuff is enabled by using a proper SCF object.
   class FakeMF:
     def __init__(self,chkfile):
       self.__dict__=lib.chkfile.load(chkfile,'scf')
 
   mf=FakeMF(chkfile)  
-  print_qwalk(mol,mf,basename=basename)
+  return print_qwalk(mol,mf,basename=basename)
+  
+###########################################################
 
+if __name__=='__main__':
+  import sys
+  assert len(sys.argv)>=2,"""
+  Usage: python pyscf2qwalk.py chkfile <basename>"""
+  chkfile=sys.argv[1]
+
+  basename='qw'
+  if len(sys.argv)>2:
+    basename=sys.argv[2]
+
+  print("Files produced:")
+  print( print_qwalk_chkfile(chkfile,basename=basename) )

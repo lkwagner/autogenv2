@@ -53,6 +53,7 @@ def kaverage(name,data):
     raise NotImplementedError("""
     '%s' is not implemented in autogen yet: 
     You should implement it, it should be easy!"""%name)
+
 ################################################
 def _kaverage_tbdm(data):
   nkpt=len(data)

@@ -1,4 +1,5 @@
 from __future__ import print_function
+from mython import fix_duped_json
 import average_tools as avg
 ####################################################
 class PostprocessWriter:
@@ -7,9 +8,8 @@ class PostprocessWriter:
     self.sysfiles=['qw_000.sys']
     self.wffiles=[]
     self.nskip=0
-    self.timesteps=[] # Set in DMC but need for keeping track of filenames.
     self.tracefiles=[]
-    self.basenames=['qw_000']
+    self.qmc_abr='post'
     self.completed=False
     # For Docs:
     # nmo: (int) number of orbitals needed from orbital file.
@@ -27,7 +27,7 @@ class PostprocessWriter:
     selfdict=self.__dict__
     for k in d.keys():
       if not k in selfdict.keys():
-        raise ValueError("Error:",k,"not a keyword for DMCWriter")
+        raise ValueError("Error:",k,"not a keyword for PostprocessWriter")
       selfdict[k]=d[k]
 
     # Check completeness of average generator options.
@@ -40,7 +40,7 @@ class PostprocessWriter:
     #In principle we should check for the files, but 
     #they are often determined *after* the plan has been 
     #written so it's not currently practical to check them.
-    skipkeys = ['completed','sysfiles','wffiles','basenames','tracefiles']
+    skipkeys = ['completed','sysfiles','wffiles','tracefiles']
     for otherkey in other.__dict__.keys():
       if otherkey not in self.__dict__.keys():
         print('other is missing a key.')
@@ -58,37 +58,31 @@ class PostprocessWriter:
 
   #-----------------------------------------------
 
-  def qwalk_input(self):
-    nfiles=len(self.sysfiles)
-    infiles=[]
-    for i in range(nfiles):
-      sys=self.sysfiles[i]
+  def qwalk_input(self,infiles):
+    nfiles=len(infiles)
+    assert nfiles==len(self.sysfiles), "Check sysfiles"
+    assert nfiles==len(self.wffiles), "Check wffiles"
+    assert nfiles==len(self.tracefiles), "Check tracefiles"
 
-      base=self.basenames[i]
-      
-      for trace in self.tracefiles:
-        fname=trace.replace('trace','post')
-        infiles.append(fname)
-        # TODO calculation skip.
-        outlines=[
-            "method { postprocess",
-            "  noenergy",
-            "  readconfig %s"%self.tracefiles[i],
-            "  nskip %s"%self.nskip
-          ]
-        for avg_opts in self.extra_observables:
-          outlines+=avg.average_section(avg_opts)
-        outlines+=[
-            "}",
-            "include %s"%sys,
-            "trialfunc { include %s }"%self.wffiles[i]
-          ]
+    for inp,sys,wf,trace in zip(infiles,self.sysfiles,self.wffiles,self.tracefiles):
+      # TODO calculation skip.
+      outlines=[
+          "method { postprocess",
+          "  noenergy",
+          "  readconfig %s"%trace,
+          "  nskip %s"%self.nskip
+        ]
+      for avg_opts in self.extra_observables:
+        outlines+=avg.average_section(avg_opts)
+      outlines+=[
+          "}",
+          "include %s"%sys,
+          "trialfunc { include %s }"%wf
+        ]
 
-        with open(fname,'w') as f:
-          f.write('\n'.join(outlines))
-    outfiles=[x+".json" for x in infiles]        
+      with open(inp,'w') as f:
+        f.write('\n'.join(outlines))
     self.completed=True
-    return infiles,outfiles
      
 ####################################################
 import subprocess as sub
@@ -104,9 +98,10 @@ class PostprocessReader:
           
   #------------------------------------------------
   def collect(self,outfiles):
-    print("DEBUG")
     for f in outfiles:
-      self.output[f]=self.read_outputfile(f)
+      # Hack to fix JSONS when there are multiple tbdm_basis runs.
+      fix_duped_json(f.replace('.o','.json'),newfn='fixed.json')
+      self.output[f]=self.read_outputfile('fixed.json')
     self.completed=True
       
   #------------------------------------------------
