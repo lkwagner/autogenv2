@@ -354,7 +354,6 @@ def write_slater(basis,eigsys,kpt,outfn,orbfn,basisfn,maxmo_spin=-1):
   outlines = [
       "slater",
       "{0} {{".format(orbstr),
-      "cutoff_mo",
       "  magnify 1",
       "  nmo {0}".format(dnorbs[-1]),
       "  orbfile {0}".format(orbfn),
@@ -373,16 +372,17 @@ def write_slater(basis,eigsys,kpt,outfn,orbfn,basisfn,maxmo_spin=-1):
     outf.write("\n".join(outlines))
 
 ###############################################################################
-def write_orbplot(basis,eigsys,kpt,outfn,orbfn,basisfn,sysfn):
-  # Warning: the orbfn naming convention is different because there are two files that get produced.
+def write_orbplot(basis,eigsys,kpt,outfn,orbfn,basisfn,sysfn,maxmo_spin=-1):
   ntot = basis['ntot']
   nmo  = basis['nmo']
   nup  = eigsys['nup']
   ndn  = eigsys['ndn']
   uporbs = np.arange(nup)+1
   dnorbs = np.arange(ndn)+1
-  if eigsys['nspin'] > 1:
+  if maxmo_spin <0 and eigsys['nspin'] > 1:
     dnorbs += nmo
+  else:
+    dnorbs += maxmo_spin
   if eigsys['ikpt_iscmpx'][kpt]: orbstr = "corbitals"
   else:                          orbstr = "orbitals"
   uporblines = ["{:5d}".format(orb) for orb in uporbs]
@@ -396,7 +396,6 @@ def write_orbplot(basis,eigsys,kpt,outfn,orbfn,basisfn,sysfn):
       "method { ",
       "plot",
       "{0} {{".format(orbstr),
-      "cutoff_mo",
       "  magnify 1",
       "  nmo {0}".format(dnorbs[-1]),
       "  orbfile {0}".format(orbfn),
@@ -786,7 +785,8 @@ def convert_crystal(
         outfn=files['orbplot'][kidx],
         orbfn=files['orb'][kidx],
         basisfn=files['basis'],
-        sysfn=files['sys'][kidx])
+        sysfn=files['sys'][kidx],
+        maxmo_spin=maxmo_spin)
     normalize_eigvec(eigsys,basis,kpt)
     write_orb(eigsys,basis,ions,kpt,files['orb'][kidx],maxmo_spin)
     write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,files['sys'][kidx])
