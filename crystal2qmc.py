@@ -356,7 +356,6 @@ def write_slater(basis,eigsys,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
   outlines = [
       "slater",
       "{0} {{".format(orbstr),
-      "cutoff_mo",
       "  magnify 1",
       "  nmo {0}".format(dnorbs[-1]),
       "  orbfile {0}.orb".format(kbase),
@@ -376,7 +375,7 @@ def write_slater(basis,eigsys,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
   return outlines # Might be confusing.
 
 ###############################################################################
-def write_orbplot(basis,eigsys,kpt,base="qwalk",kfmt='coord'):
+def write_orbplot(basis,eigsys,kpt,base="qwalk",kfmt='coord',maxmo_spin=-1):
   if kfmt == 'int': kbase = base + '_' + "{}".format(eigsys['kpt_index'][kpt])
   else:             kbase = base + '_' + "{}{}{}".format(*kpt)
   ntot = basis['ntot']
@@ -385,8 +384,10 @@ def write_orbplot(basis,eigsys,kpt,base="qwalk",kfmt='coord'):
   ndn  = eigsys['ndn']
   uporbs = np.arange(nup)+1
   dnorbs = np.arange(ndn)+1
-  if eigsys['nspin'] > 1:
+  if maxmo_spin <0 and eigsys['nspin'] > 1:
     dnorbs += nmo
+  else:
+    dnorbs += maxmo_spin
   if eigsys['ikpt_iscmpx'][kpt]: orbstr = "corbitals"
   else:                          orbstr = "orbitals"
   uporblines = ["{:5d}".format(orb) for orb in uporbs]
@@ -400,7 +401,6 @@ def write_orbplot(basis,eigsys,kpt,base="qwalk",kfmt='coord'):
       "method { ",
       "plot",
       "{0} {{".format(orbstr),
-      "cutoff_mo",
       "  magnify 1",
       "  nmo {0}".format(dnorbs[-1]),
       "  orbfile {0}.orb".format(kbase),
@@ -771,7 +771,7 @@ def convert_crystal(
   for kpt in eigsys['kpt_coords']:
     if eigsys['ikpt_iscmpx'][kpt] and kset=='real': continue
     write_slater(basis,eigsys,kpt,base,kfmt,maxmo_spin)
-    write_orbplot(basis,eigsys,kpt,base,kfmt)
+    write_orbplot(basis,eigsys,kpt,base,kfmt,maxmo_spin)
     normalize_eigvec(eigsys,basis,kpt)
     write_orb(eigsys,basis,ions,kpt,base,kfmt,maxmo_spin)
     write_sys(lat_parm,basis,eigsys,pseudo,ions,kpt,base,kfmt)
