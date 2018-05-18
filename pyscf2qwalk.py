@@ -316,7 +316,6 @@ def print_slater(mol, mf, orbfile, basisfile, f,k=0,occ=None):
 
   f.write('''SLATER
   %s  { 
-	CUTOFF_MO
   MAGNIFY 1.0 
   NMO %d 
   ORBFILE %s
@@ -389,7 +388,6 @@ def print_cas_slater(mc,orbfile, basisfile,f, tol,fjson,root=None):
   f.write('''
   SLATER
   %s  { 
-        CUTOFF_MO
   MAGNIFY 1.0 
   NMO %d 
   ORBFILE %s
