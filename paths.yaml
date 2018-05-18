@@ -1,0 +1,8 @@
+# These are the paths for my laptop! I'm sure they're different for you, so update these so they're right.
+# If you don't have them, just leave it as-is, but you won't be able to use autogen for that program.
+Pcrystal: /home/brian/bin/Pcrystal
+Pproperties: /home/brian/bin/Pproperties
+crystal: /home/brian/bin/crystal
+properties: /home/brian/bin/properties
+pyscf: /home/brian/programs/pyscf
+qwalk: /home/brian/bin/qwalk
