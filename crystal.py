@@ -43,7 +43,7 @@ class CrystalWriter:
     #Numerical convergence parameters
     self.basis_params=[0.2,2,3]
     self.basislines=None # Option to manually input basis lines.
-    self.cutoff=0.2    
+    self.cutoff=0.0    
     self.kmesh=[8,8,8]
     self.gmesh=16
     self.tolinteg=[8,8,8,8,18]

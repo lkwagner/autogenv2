@@ -168,8 +168,8 @@ class CrystalManager:
     else: self.runner=runner
 
     # Internal.
-    self.crysinpfn=self.name+'.in'
-    self.propinpfn=self.name+'.prop.in'
+    self.crysinpfn=self.name
+    self.propinpfn=self.name+'.prop'
     self.crysoutfn=self.crysinpfn+'.o'
     self.propoutfn=self.propinpfn+'.o'
     self.restarts=0
@@ -380,7 +380,7 @@ class CrystalManager:
           self.scriptfile="%s.run"%self.name
           self.bundle_ready=self.prunner.script(self.scriptfile,self.driverfn)
         else:
-          qsubfile=self.runner.submit(self.name)
+          qsubfile=self.runner.submit(self.path+self.name)
       elif status=='ready_for_analysis':
         self.preader.collect(self.propoutfn)
 
@@ -389,7 +389,8 @@ class CrystalManager:
         print(self.logname,": converting crystal to QWalk input now.")
         self.qwfiles=crystal2qmc.convert_crystal(base=self.name,propoutfn=self.propoutfn)
       else:
-        print(self.logname,": conversion failed due to problem with properties run. Check for GRED.DAT and KRED.DAT.")
+        ready=False
+        print(self.logname,": conversion postponed because properties is not finished.")
 
       os.chdir(cwd)
     else:
@@ -530,7 +531,7 @@ class PySCFManager:
       self.scriptfile="%s.run"%self.name
       self.bundle_ready=self.runner.script(self.scriptfile,self.driverfn)
     else:
-      qsubfile=self.runner.submit(jobname=self.name,ppath=[paths['pyscf']])
+      qsubfile=self.runner.submit(jobname=self.path+self.name,ppath=[paths['pyscf']])
 
     self.completed=self.reader.completed
     # Update the file.
@@ -616,7 +617,7 @@ class QWalkManager:
     self.completed=False
     self.scriptfile=None
     self.bundle_ready=False
-    self.infile="%s.%s"%(name,writer.qmc_abr)
+    self.infile=name
     self.outfile="%s.o"%self.infile
     # Note: qwfiles stores file names of results, used for exporting trial wave functions.
     self.qwfiles={ 
@@ -706,7 +707,7 @@ class QWalkManager:
       self.scriptfile="%s.run"%self.name
       self.bundle_ready=self.runner.script(self.scriptfile)
     else:
-      qsubfile=self.runner.submit(self.name)
+      qsubfile=self.runner.submit(self.path+self.name)
 
     # Update the file.
     with open(self.pickle,'wb') as outf:

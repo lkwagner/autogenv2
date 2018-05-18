@@ -36,6 +36,14 @@ class RunnerLocal:
       self.exelines.append("mpirun -n {tnp} {exe}".format(tnp=self.nn*self.np,exe=exestr))
 
   #-------------------------------------
+  def add_command(self,cmdstr):
+    ''' Accumulate commands that don't get an MPI command.
+    Args: 
+      cmdstr (str): executible statement. Will be prepended with appropriate mpirun. 
+    '''
+    self.exelines.append(cmdstr)
+
+  #-------------------------------------
   def script(self,scriptfile):
     ''' Dump accumulated commands into a script for another job to run.
     Returns true if the runner had lines to actually execute.'''
