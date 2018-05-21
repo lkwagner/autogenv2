@@ -24,8 +24,8 @@ h2stretch='\n'.join([
     'H 0.0 0.0 1.4'
   ])
 
-def h2_tests():
-  ''' Simple tests that check PySCF and queue interaction.'''
+def h2_test_local():
+  ''' Simple test that checks PySCF using PySCFRunnerLocal.'''
 
   # Most basic possible job.
   eqwriter=PySCFWriter({'xyz':h2})
@@ -35,6 +35,11 @@ def h2_tests():
       writer=eqwriter,
       runner=PySCFRunnerLocal()
     )
+
+  return [eqman]
+
+def h2_test_PBS():
+  ''' Simple tests that check PySCF and queue interaction.'''
 
   # Change some options and run with PBS.
   stwriter=PySCFWriter({
@@ -49,7 +54,7 @@ def h2_tests():
       runner=PySCFRunnerPBS(nn=1,walltime='0:05:00',np=16,queue='secondary'),
     )
 
-  return [eqman,stman]
+  return [stman]
 
 def si_crystal_test():
   ''' Simple tests that check PBC is working Crystal, and that QMC can be performed on the result.'''
@@ -229,7 +234,8 @@ def mno_test():
 def run_tests():
   ''' Choose which tests to run and execute `nextstep()`.'''
   jobs=[]
-  jobs+=h2_tests()
+  jobs+=h2_test_local()
+  jobs+=h2_test_PBS()
   jobs+=si_crystal_test()
   jobs+=si_pyscf_test()
   jobs+=mno_test()
