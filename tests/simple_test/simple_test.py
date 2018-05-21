@@ -4,7 +4,7 @@ Some simple tests to check that autogen runs without erroring out.
 Run repeatedly to check if runner is also checking queued items correctly.
 '''
 
-from autogenv2 import manager,autopyscf,autorunner,crystal
+from autogenv2 import autopyscf,autorunner,crystal
 from crystal import CrystalWriter
 from autopyscf import PySCFWriter,PySCFPBCWriter,dm_set_spins
 from pyscfmanager import PySCFManager
