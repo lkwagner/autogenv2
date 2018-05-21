@@ -5,19 +5,18 @@ Goal: Provide tools that make it easy to manage and store QWalk runs.
 
 # Getting started.
 
-Run `setup.py` to fill in the locations of packages you may want to use with autogen, such as Crystal or PySCF.
-  - without this step autogen will not be able to run any executibles.
+Copy paths_example.yaml to paths.yaml and edit for your locations.
+
+Run `setup.py` 
 
 Check out the intro folder, which constains a set of jupyter notebooks to help you understand how this package works.
 Alternative python scripts (which are just python downloads of the notebooks) are also there.
-
-Working through all the notebooks should only take ~10 minutes.
 
 You can also checkout `tests/simple_test.py` for a more useful template to build scripts from.
 
 # Troubleshooting
 
-- autogen can't find an executible. 
+- autogen can't find an executable. 
   - Make sure you've run `setup.py`.
 - The notebooks keep saying 'file not found'?
   - If you have any error when running the notebook, try restarting the kernel.
