@@ -71,8 +71,8 @@ class RunnerLocal:
       for line in self.exelines:
         result = sub.check_output(line,shell=True)
         print(self.__class__.__name__,": executed %s"%line)
-    except sub.CalledProcessError:
-      print(self.__class__.__name__,": Error executing line.")
+    except sub.CalledProcessError as err:
+      print(self.__class__.__name__,": Error: {0}".format(err))
 
     # Remove exelines so the runner is ready for the next go.
     self.exelines=[]
@@ -180,8 +180,8 @@ class RunnerPBS:
       result = sub.check_output("qsub %s"%(qsubfile),shell=True)
       self.queueid.append(result.decode().split()[0].split('.')[0])
       print(self.__class__.__name__,": Submitted as %s"%self.queueid)
-    except sub.CalledProcessError:
-      print(self.__class__.__name__,": Error submitting job. Check queue settings.")
+    except sub.CalledProcessError as err:
+      print(self.__class__.__name__,": Error submitting job. Check queue settings.\n\t{0}".format(err))
 
     # Remove exelines so the runner is ready for the next go.
     self.exelines=[]
@@ -271,8 +271,8 @@ class PySCFRunnerLocal:
       for line in self.exelines:
         result = sub.check_output(line,shell=True)
         print(self.__class__.__name__,": executed %s"%line)
-    except sub.CalledProcessError:
-      print(self.__class__.__name__,": Error executing line.")
+    except sub.CalledProcessError as err:
+      print(self.__class__.__name__,": Error: {0}".format(err))
 
     # Remove exelines so the runner is ready for the next go.
     self.exelines=[]
@@ -377,8 +377,8 @@ class PySCFRunnerPBS(RunnerPBS):
       result = sub.check_output("qsub %s"%(qsubfile),shell=True)
       self.queueid.append(result.decode().split()[0].split('.')[0])
       print(self.__class__.__name__,": Submitted as %s"%self.queueid)
-    except sub.CalledProcessError:
-      print(self.__class__.__name__,": Error submitting job. Check queue settings.")
+    except sub.CalledProcessError as err:
+      print(self.__class__.__name__,": Error submitting job. Check queue settings.\n\t{0}".format(err))
 
     # Clear out the lines to set up for the next job.
     self.exelines=[]
