@@ -81,7 +81,13 @@ vopt_manager = QWalkManager(
 while not vopt_manager.completed:
     vopt_manager.nextstep()
 
+print(vopt_manager.reader.output['sigma'])
+import matplotlib.pyplot as plt
 
+plt.plot(vopt_manager.reader.output['sigma'])
+plt.ylabel("Standard deviation of energy")
+plt.xlabel("Optimization iteration")
+plt.savefig("05-qwalk_variance.pdf",bbox_inches='tight')
 # So what just happened here? 
 # After setting up the calculation, we called `nextstep` repeatedly and the QWalk manager:
 # * Noticed the PySCF run was not complete, and ran the PySCF run.
