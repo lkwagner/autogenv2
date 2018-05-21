@@ -3,6 +3,7 @@ from autopyscf import PySCFReader
 from autorunner import PySCFRunnerPBS
 import os
 import pickle as pkl
+import pyscf2qwalk
 from autopaths import paths
 
 class PySCFManager:
