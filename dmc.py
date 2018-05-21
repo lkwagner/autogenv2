@@ -58,16 +58,17 @@ class DMCWriter:
       if self.tmoves:
         outlines+=['tmoves']
       if self.savetrace:
-        tracename = "%s.trace"%inp
+        tracename = "%s.trace"%infile
         outlines+=['save_trace %s'%tracename]
       for avg_opts in self.extra_observables:
         outlines+=avg.average_section(avg_opts)
       outlines+=["}"]
-      outlines+=trialfunc.split('\n')
+      outlines+=self.trialfunc.split('\n')
 
-      with open(inp,'w') as f:
+      with open(infile,'w') as f:
         f.write('\n'.join(outlines))
-    self.completed=True
+
+      self.completed=True
 
      
 ####################################################
@@ -101,16 +102,16 @@ class DMCReader:
     Returns:
       bool: If self.results are within error tolerances.
     '''
-    complete=True
+    completed=True
     if self.output['properties']['total_energy']['error'][0] > self.errtol:
       print("DMC incomplete: (%f) does not meet tolerance (%f)"%\
           (self.output['properties']['total_energy']['error'][0],self.errtol))
-      complete=False
+      completed=False
     if self.output['total blocks']-self.output['warmup blocks'] < self.minblocks:
       print("DMC incomplete: Run completed %d blocks, but requires %d."%\
           (self.output['total blocks']-self.output['warmup blocks'],self.minblocks))
-      complete=False
-    return complete
+      completed=False
+    return completed
           
   #------------------------------------------------
   def collect(self,outfile):
@@ -129,7 +130,7 @@ class DMCReader:
       self.output['file']=outfile
 
     # Check files.
-    self.complete=self.check_complete()
+    self.completed=self.check_complete()
     if not self.completed:
       status='restart'
     else:

@@ -25,7 +25,7 @@ def mocoeff_project(coeff):
   if not np.iscomplexobj(coeff):
     return coeff
   avgimag=np.mean(np.abs(coeff.imag))
-  print(avgimag)
+  #print(avgimag)
   if avgimag < 1e-8:
     return coeff.real
   return coeff
@@ -264,7 +264,7 @@ def print_sys(mol, f,kpoint=[0.,0.,0.]):
 
 def print_slater(mol, mf, orbfile, basisfile, f,k=0,occ=None):
   if occ is None:
-    occ=mf.mo_occ 
+    occ=np.array(mf.mo_occ)
   corb = np.array(mf.mo_coeff).flatten()[0]
   if isinstance(mol,pbc.gto.Cell):
     if len(occ.shape)==3:
@@ -316,7 +316,6 @@ def print_slater(mol, mf, orbfile, basisfile, f,k=0,occ=None):
 
   f.write('''SLATER
   %s  { 
-	CUTOFF_MO
   MAGNIFY 1.0 
   NMO %d 
   ORBFILE %s
@@ -389,7 +388,6 @@ def print_cas_slater(mc,orbfile, basisfile,f, tol,fjson,root=None):
   f.write('''
   SLATER
   %s  { 
-        CUTOFF_MO
   MAGNIFY 1.0 
   NMO %d 
   ORBFILE %s
@@ -503,26 +501,27 @@ def print_jastrow(mol,jastfile,optbasis=True,threebody=False):
 ###########################################################
 
 def print_qwalk_mol(mol, mf, method='scf', tol=0.01, basename='qw'):
+  # Some are one-element lists to be compatible with PBC routines.
   files={
       'basis':basename+".basis",
       'jastrow2':basename+".jast2",
       'jastrow3':basename+".jast3",
-      'sys':basename+".sys",
-      'slater':basename+".slater",
-      'orb':basename+".orb"
+      'sys':[basename+".sys"],
+      'slater':[basename+".slater"],
+      'orb':[basename+".orb"]
     }
 
-  print_orb(mol,mf,open(files['orb'],'w'))
+  print_orb(mol,mf,open(files['orb'][0],'w'))
   print_basis(mol,open(files['basis'],'w'))
-  print_sys(mol,open(files['sys'],'w'))
+  print_sys(mol,open(files['sys'][0],'w'))
   print_jastrow(mol,open(files['jastrow2'],'w'))
   print_jastrow(mol,open(files['jastrow3'],'w'),threebody=True)
 
   if method == 'scf':
-    print_slater(mol,mf,files['orb'],files['basis'],open(files['slater'],'w'))
+    print_slater(mol,mf,files['orb'][0],files['basis'],open(files['slater'][0],'w'))
   elif method == 'mcscf':
     files['ci']=basename+".ci.json"
-    print_cas_slater(mf,files['orb'], files['basis'],open(files['slater'],'w'), 
+    print_cas_slater(mf,files['orb'][0], files['basis'],open(files['slater'][0],'w'), 
                      tol,open(files['ci'],'w'))
   else:
     raise NotImplementedError("Conversion not available yet.")
@@ -533,17 +532,17 @@ def print_qwalk_mol(mol, mf, method='scf', tol=0.01, basename='qw'):
 def print_qwalk_pbc(cell,mf,method='scf',tol=0.01,basename='qw'):
   files={
       'basis':basename+".basis",
-      'jastrow':basename+".jast2",
+      'jastrow2':basename+".jast2",
       'orb':["%s_%i.orb"%(basename,nk) for nk in range(mf.kpts.shape[0])],
       'sys':["%s_%i.sys"%(basename,nk) for nk in range(mf.kpts.shape[0])],
       'slater':["%s_%i.slater"%(basename,nk) for nk in range(mf.kpts.shape[0])]
     }
 
   print_basis(cell,open(files['basis'],'w'))
-  print_jastrow(cell,open(files['jastrow'],'w'))
+  print_jastrow(cell,open(files['jastrow2'],'w'))
   
   kpoints=cell.get_scaled_kpts(mf.kpts)
-  for i in range(nf.kpts.shape[0]):
+  for i in range(mf.kpts.shape[0]):
     print_slater(cell,mf,files['orb'][i],files['basis'],
                  open(files['slater'][i],'w'),k=i)
     print_sys(cell,open(files['sys'][i],'w'),kpoint=2.*kpoints[i,:])

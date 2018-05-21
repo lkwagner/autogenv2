@@ -1,12 +1,28 @@
-import Crystal
-import PropertiesReader
+''' Manager classes handle the file maintainance of various runs.
+
+They:
+  - Call write, run, and read in the appropriate order.
+  - Keep a record of progress on disk.
+  - Hold a list of all file paths together in one place.
+  - Report progress to the user.
+
+All choices revolving around file names should be handled here.
+
+Tips on avoiding bugs with the write/run/read cycle:
+  - Every time data is updated, write the updates to the disk.
+  - Every time the data is used, update the Manager from the disk.
+'''
+import crystal
+import propertiesreader
 import os
-import PySCF 
+import autopyscf 
 import shutil as sh
 import numpy as np
 import pyscf2qwalk
+import crystal2qmc
 import pickle as pkl
-import Runner
+import autorunner
+from autopaths import paths
 
 from copy import deepcopy
 
@@ -16,7 +32,7 @@ from copy import deepcopy
 ######################################################################
 # Misc functions. 
 ######################################################################
-def resolve_status(runner,reader,outfile, method='not_defined'):
+def resolve_status(runner,reader,outfile):
   #Check if the reader is done
   if reader.completed:
     return 'done'
@@ -35,6 +51,24 @@ def resolve_status(runner,reader,outfile, method='not_defined'):
   return "ready_for_analysis"
 
 ######################################################################
+def deep_compare(d1,d2):
+  '''I have to redo dict comparison because numpy will return a bool array when comparing.'''
+  if type(d1)!=type(d2):
+    return False
+  if type(d1)==dict:
+    if d1.keys()!=d2.keys():
+      return False
+    allsame=True
+    for key in d1.keys():
+      allsame=allsame and deep_compare(d1[key],d2[key])
+    return allsame
+  else:
+    try:
+      return np.array_equal(d1,d2)
+    except TypeError:
+      return d1==d2
+
+######################################################################
 def update_attributes(copyto,copyfrom,skip_keys=[],take_keys=[]):
   ''' Save update of class attributes. If copyfrom has additional attributes, they are ignored.
 
@@ -48,13 +82,12 @@ def update_attributes(copyto,copyfrom,skip_keys=[],take_keys=[]):
   '''
   updated=False
   for key in copyfrom.__dict__.keys():
-    #print("key",key)
     if key in skip_keys: 
       #print("Skipping key (%s)"%key)
       pass
     elif key not in copyto.__dict__.keys():
       print("Warning: Object update. An attribute (%s) was skipped because it doesn't exist in both objects."%key)
-    elif copyto.__dict__[key]!=copyfrom.__dict__[key]:
+    elif not deep_compare(copyto.__dict__[key],copyfrom.__dict__[key]):
       if key not in take_keys:
         print("Warning: update to attribute (%s) cancelled, because it requires job to be rerun."%key)
       else:
@@ -66,19 +99,44 @@ def update_attributes(copyto,copyfrom,skip_keys=[],take_keys=[]):
       pass
   return updated
 
+def seperate_jastrow(wffile,optimizebasis=False):
+  ''' Seperate the jastrow section of a QWalk wave function file.'''
+  # Copied from utils/seperate_jastrow TODO: no copy, bad
+  wff=open(wffile,'r')
+  tokens=wff.read().split('\n')
+  in_jastrow=False
+  nopen=0
+  nclose=0
+  jastlines=[]
+  for line in tokens:
+    if 'jastrow2' in line.lower():
+      in_jastrow=True
+    if in_jastrow:
+      if not optimizebasis and 'optimizebasis' in line.lower():
+        continue
+      nopen+=line.count("{")
+      nclose+=line.count("}")
+    if in_jastrow and nopen >= nclose:
+      jastlines.append(line)
+  return '\n'.join(jastlines)
+
 ######################################################################
 # Manager classes.
 #######################################################################
 class CrystalManager:
-  """ Internal class managing process of running a DFT job though Crystal.
+  """ Internal class managing process of running a DFT job though crystal.
   Has authority over file names associated with this task."""
-  def __init__(self,writer,runner,name='crystal_run',path=None,crys_reader=None,prop_reader=None,
+  def __init__(self,writer,runner,creader=None,name='crystal_run',path=None,
+      preader=None,prunner=None,
       trylev=False,bundle=False,max_restarts=5):
     ''' CrystalManager manages the writing of a Crystal input file, it's running, and keeping track of the results.
     Args:
       writer (PySCFWriter): writer for input.
       reader (PySCFReader): to read PySCF output.
       runner (runner object): to run job.
+      creader (CrystalReader): Reads the crystal results, (None implies use default reader).
+      preader (PropertiesReader): Reads properties results, if any (None implies use default reader).
+      prunner (runner object): run properties if needed (None implies use same runner as crystal).
       name (str): identifier for this job. This names the files associated with run.
       trylev (bool): When restarting use LEVSHIFT option to encourage convergence, then do a rerun without LEVSHIFT.
       bundle (bool): Whether you'll use a bundling tool to run these jobs.
@@ -96,19 +154,22 @@ class CrystalManager:
 
     self.logname="%s@%s"%(self.__class__.__name__,self.path+self.name)
 
-    print(self.logname,": initializing")
+    #print(self.logname,": initializing")
 
+    # Handle reader and runner defaults.
     self.writer=writer
-    if crys_reader is None: self.creader=Crystal.CrystalReader()
-    else: self.creader=crys_reader
-    if prop_reader is None: self.preader=PropertiesReader.PropertiesReader()
-    else: self.preader=prop_reader
+    if creader is None: self.creader=crystal.CrystalReader()
+    else: self.creader=creader
+    if preader is None: self.preader=propertiesreader.PropertiesReader()
+    else: self.preader=preader
+    if prunner is None: self.prunner=runner
+    else: self.prunner=prunner
     if runner is None: self.runner=RunnerPBS()
     else: self.runner=runner
 
     # Internal.
-    self.crysinpfn=self.name+'.in'
-    self.propinpfn=self.name+'.prop.in'
+    self.crysinpfn=self.name
+    self.propinpfn=self.name+'.prop'
     self.crysoutfn=self.crysinpfn+'.o'
     self.propoutfn=self.propinpfn+'.o'
     self.restarts=0
@@ -116,6 +177,15 @@ class CrystalManager:
     self.scriptfile=None
     self.completed=False
     self.bundle=bundle
+    self.qwfiles={ 
+        'kpoints':[],
+        'basis':'',
+        'jastrow2':'',
+        'orbplot':{},
+        'orb':{},
+        'sys':{},
+        'slater':{}
+      }
 
     # Smart error detection.
     self.trylev=trylev
@@ -125,7 +195,7 @@ class CrystalManager:
 
     # Handle old results if present.
     if os.path.exists(self.path+self.pickle):
-      print(self.logname,": rebooting old manager.")
+      #print(self.logname,": rebooting old manager.")
       old=pkl.load(open(self.path+self.pickle,'rb'))
       self.recover(old)
 
@@ -141,13 +211,16 @@ class CrystalManager:
     # This is because you are taking the attributes from the older instance, and copying into the new instance.
 
     update_attributes(copyto=self,copyfrom=other,
-        skip_keys=['writer','runner','creader','preader','lev','savebroy',
+        skip_keys=['writer','runner','creader','preader','prunner','lev','savebroy',
                    'path','logname','name',
                    'trylev','max_restarts','bundle'],
-        take_keys=['restarts','completed'])
+        take_keys=['restarts','completed','qwfiles'])
 
     # Update queue settings, but save queue information.
     update_attributes(copyto=self.runner,copyfrom=other.runner,
+        skip_keys=['queue','walltime','np','nn','jobname'],
+        take_keys=['queueid'])
+    update_attributes(copyto=self.prunner,copyfrom=other.prunner,
         skip_keys=['queue','walltime','np','nn','jobname'],
         take_keys=['queueid'])
 
@@ -168,6 +241,7 @@ class CrystalManager:
   #----------------------------------------
   def nextstep(self):
     ''' Determine and perform the next step in the calculation.'''
+    self.recover(pkl.load(open(self.path+self.pickle,'rb')))
 
     print(self.logname,": next step.")
     cwd=os.getcwd()
@@ -183,12 +257,12 @@ class CrystalManager:
         self.writer.write_prop_input(self.propinpfn)
 
     # Check on the CRYSTAL run
-    status=resolve_status(self.runner,self.creader,self.crysoutfn,method='crystal')
+    status=resolve_status(self.runner,self.creader,self.crysoutfn)
     print(self.logname,": status= %s"%(status))
 
     if status=="not_started":
       self.runner.add_command("cp %s INPUT"%self.crysinpfn)
-      self.runner.add_task("Pcrystal &> %s"%self.crysoutfn)
+      self.runner.add_task("%s &> %s"%(paths['Pcrystal'],self.crysoutfn))
 
     elif status=="ready_for_analysis":
       #This is where we (eventually) do error correction and resubmits
@@ -213,7 +287,7 @@ class CrystalManager:
           sh.copy(self.writer.guess_fort,'fort.20')
           self.writer.write_crys_input(self.crysinpfn)
           sh.copy(self.crysinpfn,'INPUT')
-          self.runner.add_task("Pcrystal &> %s"%self.crysoutfn)
+          self.runner.add_task("%s &> %s"%(paths['Pcrystal'],self.crysoutfn))
           self.restarts+=1
     elif status=='done' and self.lev:
       # We used levshift to converge. Now let's restart to be sure.
@@ -229,15 +303,15 @@ class CrystalManager:
       sh.copy(self.writer.guess_fort,'fort.20')
       self.writer.write_crys_input(self.crysinpfn)
       sh.copy(self.crysinpfn,'INPUT')
-      self.runner.add_task("Pcrystal &> %s"%self.crysoutfn)
+      self.runner.add_task("%s &> %s"%(paths['Pcrystal'],self.crysoutfn))
       self.restarts+=1
 
     # Ready for bundler or else just submit the jobs as needed.
     if self.bundle:
       self.scriptfile="%s.run"%self.name
-      self.bundle_ready=self.runner.script(self.scriptfile,self.driverfn)
+      self.bundle_ready=self.runner.script(self.scriptfile)
     else:
-      qsubfile=self.runner.submit()
+      qsubfile=self.runner.submit(self.name)
 
     self.completed=self.creader.completed
 
@@ -277,6 +351,56 @@ class CrystalManager:
   def write_summary(self):
     self.creader.write_summary()
     
+  #------------------------------------------------
+  def export_qwalk(self):
+    ''' Export QWalk input files into current directory.'''
+    self.recover(pkl.load(open(self.path+self.pickle,'rb')))
+
+    ready=False
+    if len(self.qwfiles['slater'])==0:
+      self.nextstep()
+
+      if not self.completed:
+        return False
+
+      cwd=os.getcwd()
+      os.chdir(self.path)
+
+      print(self.logname,": %s attempting to generate QWalk files."%self.name)
+
+      # Check on the properties run
+      status=resolve_status(self.prunner,self.preader,self.propoutfn)
+      print(self.logname,": properties status= %s"%(status))
+      if status=='not_started':
+        ready=False
+        self.prunner.add_command("cp %s INPUT"%self.propinpfn)
+        self.prunner.add_task("%s &> %s"%(paths['Pproperties'],self.propoutfn))
+
+        if self.bundle:
+          self.scriptfile="%s.run"%self.name
+          self.bundle_ready=self.prunner.script(self.scriptfile,self.driverfn)
+        else:
+          qsubfile=self.runner.submit(self.path+self.name)
+      elif status=='ready_for_analysis':
+        self.preader.collect(self.propoutfn)
+
+      if self.preader.completed:
+        ready=True
+        print(self.logname,": converting crystal to QWalk input now.")
+        self.qwfiles=crystal2qmc.convert_crystal(base=self.name,propoutfn=self.propoutfn)
+      else:
+        ready=False
+        print(self.logname,": conversion postponed because properties is not finished.")
+
+      os.chdir(cwd)
+    else:
+      ready=True
+
+    with open(self.path+self.pickle,'wb') as outf:
+      pkl.dump(self,outf)
+
+    return ready
+    
   #----------------------------------------
   def status(self):
     if self.completed:
@@ -291,7 +415,7 @@ class PySCFManager:
     Args:
       writer (PySCFWriter): writer for input.
       reader (PySCFReader): to read PySCF output.
-      runner (runner object): to run job.
+      runner (Runner object): to run job.
       name (str): identifier for this job. This names the files associated with run.
       path (str): directory where this manager is free to store information.
       bundle (bool): False - submit jobs. True - dump job commands into a script for a bundler to run.
@@ -306,21 +430,29 @@ class PySCFManager:
     if path[-1]!='/': path+='/'
     self.path=path
 
-    print(self.logname,": initializing")
-    print(self.logname,": name= %s"%self.name)
-    print(self.logname,": path= %s"%self.path)
+    self.logname="%s@%s"%(self.__class__.__name__,self.path+self.name)
+
+    #print(self.logname,": initializing")
 
     self.writer=writer
     if reader is not None: self.reader=reader
-    else: self.reader=PySCF.PySCFReader()
+    else: self.reader=autopyscf.PySCFReader()
     if runner is not None: self.runner=runner
-    else: self.runner=PySCFRunnerPBS()
+    else: self.runner=autorunner.PySCFRunnerPBS()
     self.bundle=bundle
 
     self.driverfn="%s.py"%name
     self.outfile=self.driverfn+'.o'
     self.chkfile=self.driverfn+'.chkfile'
-    self.qwfiles={}
+    self.qwfiles={ 
+        'kpoints':[],
+        'basis':'',
+        'jastrow2':'',
+        'orbplot':{},
+        'orb':{},
+        'sys':{},
+        'slater':{}
+      }
     self.completed=False
     self.bundle_ready=False
     self.restarts=0
@@ -329,10 +461,7 @@ class PySCFManager:
     if os.path.exists(self.path+self.pickle):
       print(self.logname,": rebooting old manager.")
       old=pkl.load(open(self.path+self.pickle,'rb'))
-      if False: #not self.is_consistent(old): TODO check consistency.
-        raise NotImplementedError("Handling updated input files is not implemented yet.")
-      else:
-        self.__dict__=old.__dict__
+      self.recover(old)
 
     # Update the file.
     if not os.path.exists(self.path): os.mkdir(self.path)
@@ -340,13 +469,25 @@ class PySCFManager:
       pkl.dump(self,outf)
 
   #------------------------------------------------
-  def update_options(self,other):
+  def recover(self,other):
     ''' Safe copy options from other to self. '''
-    updated=update_attributes(old=self.writer,new=other.writer,
-        safe_keys=['max_cycle'],
-        skip_keys=['completed','chkfile','dm_generator'])
-    if updated:
-      self.writer.completed=False
+    # Practically speaking, the run will preserve old `take_keys` and allow new changes to `skip_keys`.
+    # This is because you are taking the attributes from the older instance, and copying into the new instance.
+    updated=update_attributes(copyto=self,copyfrom=other,
+        skip_keys=['writer','runner','reader', 'path','logname','name','max_restarts','bundle'],
+        take_keys=['restarts','completed','qwfiles'])
+
+    update_attributes(copyto=self.runner,copyfrom=other.runner,
+        skip_keys=['queue','walltime','np','nn','jobname'],
+        take_keys=['queueid'])
+
+    update_attributes(copyto=self.reader,copyfrom=other.reader,
+        skip_keys=[],
+        take_keys=['completed','output'])
+
+    updated=update_attributes(copyto=self.writer,copyfrom=other.writer,
+        skip_keys=['max_cycle'],
+        take_keys=['completed','dm_generator'])
 
     # Update the file.
     with open(self.path+self.pickle,'wb') as outf:
@@ -355,6 +496,9 @@ class PySCFManager:
   #------------------------------------------------
   def nextstep(self):
     ''' Determine and perform the next step in the calculation.'''
+    # Recover old data.
+    self.recover(pkl.load(open(self.path+self.pickle,'rb')))
+
     print(self.logname,": next step.")
     cwd=os.getcwd()
     os.chdir(self.path)
@@ -362,14 +506,15 @@ class PySCFManager:
     if not self.writer.completed:
       self.writer.pyscf_input(self.driverfn,self.chkfile)
     
-    status=resolve_status(self.runner,self.reader,self.outfile, 'pyscf')
+    status=resolve_status(self.runner,self.reader,self.outfile)
     print(self.logname,": %s status= %s"%(self.name,status))
 
     if status=="not_started":
-      self.runner.add_task("/usr/bin/python3 %s > %s"%(self.driverfn,self.outfile))
+      self.runner.add_task("python3 %s > %s"%(self.driverfn,self.outfile))
     elif status=="ready_for_analysis":
       status=self.reader.collect(self.outfile,self.chkfile)
       if status=='killed':
+        print(self.logname,": attempting restart (%d previous restarts)."%self.restarts)
         sh.copy(self.driverfn,"%d.%s"%(self.restarts,self.driverfn))
         sh.copy(self.outfile,"%d.%s"%(self.restarts,self.outfile))
         sh.copy(self.chkfile,"%d.%s"%(self.restarts,self.chkfile))
@@ -378,7 +523,7 @@ class PySCFManager:
         self.writer.pyscf_input(self.driverfn,self.chkfile)
         self.runner.add_task("/usr/bin/python3 %s > %s"%(self.driverfn,self.outfile))
         self.restarts+=1
-      elif status=='ok':
+      elif status=='done':
         print(self.logname,": %s status= %s, task complete."%(self.name,status))
 
     # Ready for bundler or else just submit the jobs as needed.
@@ -386,7 +531,7 @@ class PySCFManager:
       self.scriptfile="%s.run"%self.name
       self.bundle_ready=self.runner.script(self.scriptfile,self.driverfn)
     else:
-      qsubfile=self.runner.submit()
+      qsubfile=self.runner.submit(jobname=self.path+self.name,ppath=[paths['pyscf']])
 
     self.completed=self.reader.completed
     # Update the file.
@@ -406,16 +551,18 @@ class PySCFManager:
   #------------------------------------------------
   def export_qwalk(self):
     ''' Export QWalk input files into current directory.'''
-    if len(self.qwfiles)==0:
+    # Recover old data.
+    self.recover(pkl.load(open(self.path+self.pickle,'rb')))
+
+    if len(self.qwfiles['slater'])==0:
       self.nextstep()
       if not self.completed:
         return False
-      else:
-        print(self.logname,": %s generating QWalk files."%self.name)
-        cwd=os.getcwd()
-        os.chdir(self.path)
-        self.qwfiles=pyscf2qwalk.print_qwalk_chkfile(self.chkfile)
-        os.chdir(cwd)
+      print(self.logname,": %s generating QWalk files."%self.name)
+      cwd=os.getcwd()
+      os.chdir(self.path)
+      self.qwfiles=pyscf2qwalk.print_qwalk_chkfile(self.chkfile)
+      os.chdir(cwd)
     with open(self.path+self.pickle,'wb') as outf:
       pkl.dump(self,outf)
     return True
@@ -423,7 +570,7 @@ class PySCFManager:
   #----------------------------------------
   def status(self):
     ''' Determine the course of action based on info from reader and runner.'''
-    current_status = resolve_status(self.runner,self.reader,self.outfile, 'pyscf')
+    current_status = resolve_status(self.runner,self.reader,self.outfile)
     if current_status == 'done':
       return 'ok'
     elif current_status == 'retry':
@@ -434,12 +581,12 @@ class PySCFManager:
 #######################################################################
 class QWalkManager:
   def __init__(self,writer,reader,runner=None,trialfunc=None,
-      name='qw_run',path=None,bundle=False,qwalk='~/bin/qwalk'):
+      name='qw_run',path=None,bundle=False):
     ''' QWalkManager managers the writing of a QWalk input files, it's running, and keeping track of the results.
     Args:
       writer (qwalk writer): writer for input.
       reader (qwalk reader): to read job.
-      runner (runner object): to run job.
+      runner (Runner object): to run job.
       trialfunc (TrialFunction): TrialFunction object for generating trail function input. 
         Note: This is only used if write.trailfunc arguement==''. 
       name (str): identifier for this job. This names the files associated with run.
@@ -458,23 +605,25 @@ class QWalkManager:
 
     self.logname="%s@%s"%(self.__class__.__name__,self.path+self.name)
 
-    print(self.logname,": initializing")
-    print(self.logname,": name= %s"%self.name)
-    print(self.logname,": path= %s"%self.path)
+    #print(self.logname,": initializing")
 
     self.writer=writer
     self.reader=reader
     self.trialfunc=trialfunc
-    self.qwalk=qwalk
     if runner is not None: self.runner=runner
-    else: self.runner=Runner.RunnerPBS()
+    else: self.runner=autorunner.RunnerPBS()
     self.bundle=bundle
 
     self.completed=False
     self.scriptfile=None
     self.bundle_ready=False
-    self.infile="%s.%s"%(name,writer.qmc_abr)
+    self.infile=name
     self.outfile="%s.o"%self.infile
+    # Note: qwfiles stores file names of results, used for exporting trial wave functions.
+    self.qwfiles={ 
+        'jastrow2':'',
+        'wfout':''
+      }
     self.stdout="%s.out"%self.infile
 
     # Handle old results if present.
@@ -496,7 +645,7 @@ class QWalkManager:
 
     update_attributes(copyto=self,copyfrom=other,
         skip_keys=['writer','runner','reader','path','logname','name','bundle'],
-        take_keys=['restarts','completed','trialfunc'])
+        take_keys=['restarts','completed','trialfunc','qwfiles'])
 
     # Update queue settings, but save queue information.
     update_attributes(copyto=self.runner,copyfrom=other.runner,
@@ -514,40 +663,21 @@ class QWalkManager:
       self.writer.completed=False
 
   #------------------------------------------------
-  def update_options(self,other):
-    ''' Safe copy options from other to self. 
-    
-    Args: 
-      other (QWRunManager): New object to copy attributes from.
-    '''
-
-    update_attributes(old=self.runner,new=other.runner,
-        safe_keys=['queue','walltime','np','nn','jobname','prefix','postfix'],
-        skip_keys=['queueid'])
-
-    # trialfunc gets updated as the manager generating it finishes its calculation.
-    update_attributes(old=self.writer,new=other.writer,
-        skip_keys=['completed','trialfunc'])
-
-    # Update the file.
-    with open(self.path+self.pickle,'wb') as outf:
-      pkl.dump(self,outf)
-    
-  #------------------------------------------------
   def nextstep(self):
     ''' Perform next step in calculation. trialfunc managers are updated if they aren't completed yet.'''
+    # Recover old data.
+    self.recover(pkl.load(open(self.path+self.pickle,'rb')))
 
     print(self.logname,": next step.")
 
     # Check dependency is completed first.
     if self.writer.trialfunc=='':
+      print(self.logname,": checking trial function.")
       self.writer.trialfunc=self.trialfunc.export(self.path)
 
     # Work on this job.
     cwd=os.getcwd()
     os.chdir(self.path)
-
-    dir(self.reader)
 
     # Write the input file.
     if not self.writer.completed:
@@ -556,7 +686,7 @@ class QWalkManager:
     status=resolve_status(self.runner,self.reader,self.outfile)
     print(self.logname,": %s status= %s"%(self.name,status))
     if status=="not_started" and self.writer.completed:
-      exestr="%s %s &> %s"%(self.qwalk,self.infile,self.stdout)
+      exestr="%s %s &> %s"%(paths['qwalk'],self.infile,self.stdout)
       self.runner.add_task(exestr)
       print(self.logname,": %s status= submitted"%(self.name))
     elif status=="ready_for_analysis":
@@ -567,20 +697,17 @@ class QWalkManager:
         self.completed=True
       else:
         print(self.logname,": %s status= %s, attempting rerun."%(self.name,status))
-        exestr="%s %s"%' '.join(self.qwalk,self.infile)
-        exestr+=" &> %s.out"%self.infile[-1]
+        exestr="%s %s &> %s"%(paths['qwalk'],self.infile,self.stdout)
         self.runner.add_task(exestr)
     elif status=='done':
       self.completed=True
-    else:
-      print(self.logname,": %s status= %s"%(self.name,status))
 
     # Ready for bundler or else just submit the jobs as needed.
     if self.bundle:
       self.scriptfile="%s.run"%self.name
-      self.bundle_ready=self.runner.script(self.scriptfile,self.driverfn)
+      self.bundle_ready=self.runner.script(self.scriptfile)
     else:
-      qsubfile=self.runner.submit()
+      qsubfile=self.runner.submit(self.path+self.name)
 
     # Update the file.
     with open(self.pickle,'wb') as outf:
@@ -622,3 +749,30 @@ class QWalkManager:
     with open(self.path+self.pickle,'wb') as outf:
       pkl.dump(self,outf)
 
+  #----------------------------------------
+  def export_qwalk(self):
+    ''' Extract jastrow from the optimization run and return that file name.'''
+    # Theoretically more than just Jastrow can be provided, but practically that's the only type of wavefunction we tend to export.
+
+    # Recover old data.
+    self.recover(pkl.load(open(self.path+self.pickle,'rb')))
+
+    assert self.writer.qmc_abr!='dmc',"DMC doesn't provide a wave function."
+
+    if self.qwfiles['wfout']=='':
+      self.nextstep()
+      if not self.completed:
+        return False
+      print(self.logname,": %s generating QWalk files."%self.name)
+      cwd=os.getcwd()
+      os.chdir(self.path)
+      self.qwfiles['wfout']="%s.wfout"%self.infile
+      newjast=seperate_jastrow(self.qwfiles['wfout'])
+      self.qwfiles['jastrow2']="%s.jast"%self.infile
+      with open(self.qwfiles['jastrow2'],'w') as outf:
+        outf.write(newjast)
+      os.chdir(cwd)
+
+    with open(self.path+self.pickle,'wb') as outf:
+      pkl.dump(self,outf)
+    return True

@@ -43,7 +43,7 @@ class CrystalWriter:
     #Numerical convergence parameters
     self.basis_params=[0.2,2,3]
     self.basislines=None # Option to manually input basis lines.
-    self.cutoff=0.2    
+    self.cutoff=0.0    
     self.kmesh=[8,8,8]
     self.gmesh=16
     self.tolinteg=[8,8,8,8,18]
@@ -553,7 +553,7 @@ class CrystalReader:
         if 'SCF ENDED - CONVERGENCE ON ENERGY' in line:
           self.output['total_energy']=float(line.split()[8])    
           print(self.__class__.__name__,": SCF ended converging on %f"%self.output['total_energy'])
-          status='completed'
+          status='done'
           self.completed=True
         elif 'SCF ENDED - TOO MANY CYCLES' in line:
           last=float(line.split()[8])

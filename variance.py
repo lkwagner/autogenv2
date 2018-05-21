@@ -46,6 +46,18 @@ class VarianceWriter:
 ####################################################
 class VarianceReader:
   def __init__(self,vartol=10,vardifftol=0.1,minsteps=2):
+    ''' Object for reading, diagnosing, and storing variance optimizer results.
+
+    The arguements control when the object sends a 'restart' flag.
+
+    Args:
+      vartol (float): Tolerance on the variance.
+      vardifftol (float): Tolerance of the change between the first and last variance.
+      minsteps (int): minimun number of steps to attempt >= 2.
+    Attributes:
+      output (dict): Results for energy, error, and other information.
+      completed (bool): Whether no more runs are needed.
+    '''
     self.output={}
     self.completed=False
 

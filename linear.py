@@ -3,19 +3,28 @@ import os
 ####################################################
 class LinearWriter:
   def __init__(self,options={}):
-    self.qmc_type='Linear optimization'
-    self.sysfiles=['qw_000.sys']
-    self.wffiles=[]
-    #self.basenames=['qw_000']
-    self.completed=False
+    ''' Object for producing input into a variance optimization QWalk run. 
+    Args:
+      options (dict): editable options are as follows.
+        trialfunc (str): system and trial wavefunction section.
+        errtol (float): tolerance for the variance. 
+        minblocks (int): minimum number of VMC steps to take.
+        iterations (int): number of VMC steps to attempt.
+        macro_iterations (int): Number of optimize calls to make.
+    '''
+    self.trialfunc=''
     self.errtol=10
     self.minblocks=0
     self.total_nstep=2048*4 # 2048 gets stuck pretty often.
     self.total_fit=2048
     self.qmc_abr='energy'
+
+    self.qmc_type='Linear optimization'
+    self.qmc_abr='energy'
+    self.completed=False
     self.set_options(options)
+
   #-----------------------------------------------
-    
   def set_options(self, d):
     selfdict=self.__dict__
     for k in d.keys():
@@ -23,6 +32,7 @@ class LinearWriter:
         print("Error:",k,"not a keyword for LinearWriter")
         raise InputError
       selfdict[k]=d[k]
+
   #-----------------------------------------------
   def is_consistent(self,other):
     #In principle we should check for the files, but 
@@ -45,22 +55,18 @@ class LinearWriter:
     return True
     
   #-----------------------------------------------
-  def qwalk_input(self,infiles):
-    nfiles=len(infiles)
-    assert nfiles==len(self.sysfiles), "Check sysfiles"
-    assert nfiles==len(self.wffiles), "Check wffiles"
-
-    for inp,sys,wf in zip(infiles,self.sysfiles,self.wffiles):
-      
-      with open(inp,'w') as f:
+  def qwalk_input(self,infile):
+    if self.trialfunc=='':
+      print(self.__class__.__name__,": Trial function not ready. Postponing input file generation.")
+      self.completed=False
+    else:
+      with open(infile,'w') as f:
         f.write("method { linear \n")
         f.write("total_nstep %i \n"%self.total_nstep)
         f.write("total_fit %i \n"%self.total_fit)
         f.write("}\n")
-        f.write("include "+sys+"\n")
-        f.write("trialfunc { include %s\n"%wf)
-        f.write("}\n")
-    self.completed=True
+        f.write(self.trialfunc)
+      self.completed=True
 
      
 ####################################################
@@ -99,42 +105,36 @@ class LinearReader:
     Returns:
       bool: If self.results are within error tolerances.
     '''
-    complete={}
-    for fname,results in self.output.items():
-      complete[fname]=True
-      print(results['energy'])
-      if len(results['energy']) < self.minsteps:
-        print("Linear optimize incomplete: number of steps (%f) less than minimum (%f)"%\
-            (len(results['energy']),self.minsteps))
-        complete[fname]=False
-      else:
-        ediff=results['energy'][-1]-results['energy'][-2]
-        ediff_err=(results['energy_err'][-1]**2 + results['energy_err'][-2]**2)**0.5
-        if ediff > self.sigtol*ediff_err:
-          print("Linear optimize incomplete: change in energy (%.5f) less than tolerance (%.2f*%.2f=%.5f)"%\
-              (ediff,self.sigtol,ediff_err,self.sigtol*ediff_err))
-          complete[fname]=False
-    return complete
+    if len(self.output['energy']) < self.minsteps:
+      print(self.__class__.__name__,"Linear optimize incomplete: number of steps (%f) less than minimum (%f)"%\
+          (len(self.output['energy']),self.minsteps))
+      return False
+    else:
+      ediff=self.output['energy'][-1]-self.output['energy'][-2]
+      ediff_err=(self.output['energy_err'][-1]**2 + self.output['energy_err'][-2]**2)**0.5
+      if ediff > self.sigtol*ediff_err:
+        print(self.__class__.__name__,"Linear optimize incomplete: change in energy (%.5f) less than tolerance (%.2f*%.2f=%.5f)"%\
+            (ediff,self.sigtol,ediff_err,self.sigtol*ediff_err))
+        return False
+    return True
           
   #------------------------------------------------
-  def collect(self,outfiles,errtol=None,minblocks=None):
+  def collect(self,outfile,errtol=None,minblocks=None):
     ''' Collect results for each output file and resolve if the run needs to be resumed. 
 
     Args: 
-      outfiles (list): list of output file names to open and read.
+      outfile (str): output file to read.
     Returns:
       str: status of run = {'ok','restart'}
     '''
     # Gather output from files.
-    self.completed=True
     status='unknown'
-    for f in outfiles:
-      if os.path.exists(f):
-        self.output[f]=self.read_outputfile(f)
+    if os.path.exists(outfile):
+      self.output=self.read_outputfile(outfile)
+      self.output['file']=outfile
 
     # Check files.
-    file_complete=self.check_complete()
-    self.completed=all([c for f,c in file_complete.items()])
+    self.completed=self.check_complete()
     if not self.completed:
       status='restart'
     else:

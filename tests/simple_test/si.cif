@@ -252,4 +252,3 @@ _atom_site_occupancy
 _atom_site_attached_hydrogens
 Si1 Si0+ 8 a 0. 0. 0. 0.54(1) 1. 0
 #End of TTdata_51688-ICSD
-
