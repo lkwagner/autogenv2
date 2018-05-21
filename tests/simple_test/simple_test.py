@@ -6,8 +6,10 @@ Run repeatedly to check if runner is also checking queued items correctly.
 
 from autogenv2 import manager,autopyscf,autorunner,crystal
 from crystal import CrystalWriter
-from autopyscf import PySCFWriter,PySCFPBCWriter
-from manager import PySCFManager,CrystalManager,QWalkManager
+from autopyscf import PySCFWriter,PySCFPBCWriter,dm_set_spins
+from pyscfmanager import PySCFManager
+from crystalmanager import CrystalManager
+from qwalkmanager import QWalkManager
 from autorunner import PySCFRunnerLocal,PySCFRunnerPBS,RunnerPBS
 from variance import VarianceWriter,VarianceReader
 from linear import LinearWriter,LinearReader
@@ -45,7 +47,7 @@ def h2_test_PBS():
   stwriter=PySCFWriter({
       'xyz':h2stretch,
       'method':'UKS',
-      'dm_generator':autopyscf.dm_set_spins([1,-1],[]),
+      'dm_generator':dm_set_spins([1,-1],[]),
     })
   stman=PySCFManager(
       name='scf',
@@ -62,6 +64,7 @@ def si_crystal_test():
 
   cwriter=CrystalWriter({
       'xml_name':'../BFD_Library.xml',
+      'cutoff':0.2,
       'kmesh':(4,4,4),
     })
   cwriter.set_struct_fromcif(open('si.cif','r').read(),primitive=True)
@@ -173,6 +176,7 @@ def mno_test():
   jobs=[]
   cwriter=CrystalWriter({
       'xml_name':'../BFD_Library.xml',
+      'cutoff':0.2,
       'kmesh':(4,4,4),
       'total_spin':4
     })
