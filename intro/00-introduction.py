@@ -32,7 +32,8 @@ from autopyscf import PySCFWriter, PySCFReader, dm_set_spins
 from autorunner import PySCFRunnerLocal,RunnerLocal
 from trialfunc import SlaterJastrow
 from variance import VarianceWriter, VarianceReader
-from manager import PySCFManager, QWalkManager
+from pyscfmanager import PySCFManager
+from qwalkmanager import QWalkManager
 
 path='00-scratch'
 

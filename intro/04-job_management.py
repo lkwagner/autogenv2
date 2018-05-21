@@ -59,7 +59,7 @@ pyscf_runner = PySCFRunnerLocal()
 # In[ ]:
 
 
-from manager import PySCFManager
+from pyscfmanager import PySCFManager
 pyscf_manager = PySCFManager(
     path='04-scratch',
     name='h2_pbe',

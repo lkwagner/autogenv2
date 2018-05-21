@@ -24,7 +24,7 @@ sys.path.append('..')
 
 from autopyscf import PySCFWriter,PySCFReader
 from autorunner import PySCFRunnerLocal
-from manager import PySCFManager
+from pyscfmanager import PySCFManager
 
 h2='\n'.join([
     'H 0.0 0.0 0.0 ',
@@ -64,7 +64,7 @@ sj=SlaterJastrow(pyscf_manager)
 
 from variance import VarianceWriter,VarianceReader
 from autorunner import RunnerLocal
-from manager import QWalkManager
+from qwalkmanager import QWalkManager
 from imp import reload
 import time
 
