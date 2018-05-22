@@ -1,4 +1,4 @@
-from manager_tools import resolve_status, update_attributes, seperate_jastrow
+from manager_tools import resolve_status, update_attributes, separate_jastrow
 from autorunner import RunnerPBS
 import os
 import pickle as pkl
@@ -177,7 +177,9 @@ class QWalkManager:
 
   #----------------------------------------
   def export_qwalk(self):
-    ''' Extract jastrow from the optimization run and return that file name.'''
+    ''' Store resulting wave function into self.qwfiles['wfout']. Extract Jastrow and store in self.qwfiles['jastrow2']
+    Returns:
+      bool: Whether it was successful.'''
     # Theoretically more than just Jastrow can be provided, but practically that's the only type of wavefunction we tend to export.
 
     # Recover old data.
@@ -193,7 +195,7 @@ class QWalkManager:
       cwd=os.getcwd()
       os.chdir(self.path)
       self.qwfiles['wfout']="%s.wfout"%self.infile
-      newjast=seperate_jastrow(self.qwfiles['wfout'])
+      newjast=separate_jastrow(self.qwfiles['wfout'])
       self.qwfiles['jastrow2']="%s.jast"%self.infile
       with open(self.qwfiles['jastrow2'],'w') as outf:
         outf.write(newjast)

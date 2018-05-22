@@ -147,7 +147,9 @@ class PySCFManager:
       
   #------------------------------------------------
   def export_qwalk(self):
-    ''' Export QWalk input files into current directory.'''
+    ''' Export QWalk input files into current directory.
+    Returns:
+      bool: whether it was successful.'''
     # Recover old data.
     self.recover(pkl.load(open(self.path+self.pickle,'rb')))
 

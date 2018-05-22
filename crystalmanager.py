@@ -238,7 +238,9 @@ class CrystalManager:
     
   #------------------------------------------------
   def export_qwalk(self):
-    ''' Export QWalk input files into current directory.'''
+    ''' Export QWalk input files into current directory.
+    Returns:
+      bool: whether it was successful.'''
     self.recover(pkl.load(open(self.path+self.pickle,'rb')))
 
     ready=False
