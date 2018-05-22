@@ -1,4 +1,4 @@
-from manager_tools import resolve_status, update_attributes, separate_jastrow
+from manager_tools import resolve_status, update_attributes, seperate_jastrow
 from autorunner import RunnerPBS
 import os
 import pickle as pkl
