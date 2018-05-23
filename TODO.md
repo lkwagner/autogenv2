@@ -11,11 +11,11 @@
   - crystal, properties, pyscf, and qwalk executible names and locations.
  ---------------------------------------
 - [ ] Redesign of data storage:
-# Orbitals object
+### Orbitals object
  - coeff: 2D array
  - basis: dictionary of labels
 
-# System
+### System
  - Atomic positions 
  - Atomic labels
  - ECP 
@@ -23,12 +23,12 @@
  - k-point
  - lattice vectors
  
-# Slater
+### Slater
  - occupation: [det,s,orb]
  - wt
  - orbital object
  
-# Jastrow
+### Jastrow
  - Cusp
  - coefficients
  - basis
