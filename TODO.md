@@ -9,3 +9,26 @@
 - [ ] PySCF Si run in `simple_test` doesn't make any sense.
 - [x] Manage path setup with setup script.
   - crystal, properties, pyscf, and qwalk executible names and locations.
+ ---------------------------------------
+- [ ] Redesign of data storage:
+# Orbitals object
+ - coeff: 2D array
+ - basis: dictionary of labels
+
+# System
+ - Atomic positions 
+ - Atomic labels
+ - ECP 
+ - nspin
+ - k-point
+ - lattice vectors
+ 
+# Slater
+ - occupation: [det,s,orb]
+ - wt
+ - orbital object
+ 
+# Jastrow
+ - Cusp
+ - coefficients
+ - basis
