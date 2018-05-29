@@ -68,7 +68,7 @@ def si_crystal_test():
       'kmesh':(4,4,4),
     })
   cwriter.set_struct_fromcif(open('si.cif','r').read(),primitive=True)
-  cwriter.set_options({'symmetry':True})
+  cwriter.set_options({})
 
   cman=CrystalManager(
       name='crys',
@@ -181,7 +181,7 @@ def mno_test():
       'total_spin':4
     })
   cwriter.set_struct_fromcif(open('mno.cif','r').read(),primitive=True)
-  cwriter.set_options({'symmetry':True})
+  cwriter.set_options({})
 
   cman=CrystalManager(
       name='crys',
