@@ -1,4 +1,4 @@
-from manager_tools import resolve_status, update_attributes, seperate_jastrow
+from manager_tools import resolve_status, update_attributes, separate_jastrow
 from autorunner import RunnerPBS
 import os
 import pickle as pkl
@@ -195,7 +195,7 @@ class QWalkManager:
       cwd=os.getcwd()
       os.chdir(self.path)
       self.qwfiles['wfout']="%s.wfout"%self.infile
-      newjast=seperate_jastrow(self.qwfiles['wfout'])
+      newjast=separate_jastrow(self.qwfiles['wfout'])
       self.qwfiles['jastrow2']="%s.jast"%self.infile
       with open(self.qwfiles['jastrow2'],'w') as outf:
         outf.write(newjast)
