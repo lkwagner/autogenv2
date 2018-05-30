@@ -195,7 +195,7 @@ class QWalkManager:
       cwd=os.getcwd()
       os.chdir(self.path)
       self.qwfiles['wfout']="%s.wfout"%self.infile
-      newjast=separate_jastrow(self.qwfiles['wfout'])
+      newjast=seperate_jastrow(self.qwfiles['wfout'])
       self.qwfiles['jastrow2']="%s.jast"%self.infile
       with open(self.qwfiles['jastrow2'],'w') as outf:
         outf.write(newjast)
