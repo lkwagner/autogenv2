@@ -794,25 +794,17 @@ def convert_crystal(
   return files
 
 if __name__ == "__main__":
-  if len(sys.argv) > 1:
-    base = sys.argv[1]
-  else: 
-    base = "qwalk"
-  if len(sys.argv) > 2:
-    propoutfn = sys.argv[2]
-  else:
-    propoutfn = "prop.in.o"
-  if len(sys.argv) > 3:
-    kfmt = sys.argv[3]
-  else:
-    kfmt="coord"
-  if len(sys.argv) > 4:
-    kset = sys.argv[4]
-  else:
-    kset="complex"
-  print("Converting crystal with base {},".format(base))
-  print("system spin drawn from {},".format(propoutfn))
-  print("using {} kpoint naming convention,".format(kfmt))
-  print("and using {} kpoint set.".format(kset))
-  convert_crystal(base,propoutfn,kfmt,kset)
+  from argparse import ArgumentParser
+  parser=ArgumentParser('Convert a crystal file (defaults in brackets).')
+  parser.add_argument('-b','--base',type=str,default='qwalk',
+      help="[='qw'] First part of string for file names.")
+  parser.add_argument('-p','--propout',type=str,default='prop.in.o',
+      help="[='prop.in.o'] Name of file containing net spin. Either crystal or properties stdout.")
+  parser.add_argument('-k','--kset',type=str,default='complex',
+      help="[='complex'] 'real' or 'complex' kpoints.")
+  parser.add_argument('-v','--nvirtual',type=int,default=50,
+      help="[=50] Number of unoccupied or virtual orbitals to allow access to.")
+  args=parser.parse_args()
+
+  convert_crystal(args.base,args.propout,args.kset,args.nvirtual)
 
