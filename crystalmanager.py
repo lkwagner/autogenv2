@@ -13,7 +13,7 @@ class CrystalManager:
   Has authority over file names associated with this task."""
   def __init__(self,writer,runner,creader=None,name='crystal_run',path=None,
       preader=None,prunner=None,
-      trylev=False,bundle=False,max_restarts=5):
+      trylev=False,bundle=False,max_restarts=2):
     ''' CrystalManager manages the writing of a Crystal input file, it's running, and keeping track of the results.
     Args:
       writer (PySCFWriter): writer for input.
