@@ -409,7 +409,6 @@ def write_orbplot(basis,eigsys,kpt,outfn,orbfn,basisfn,sysfn,maxmo_spin=-1):
     outf.write("\n".join(outlines_prefix+ [" ".join(uporblines)] + outlines_postfix))
   with open(outfn+".dn.plot",'w') as outf:
     outf.write("\n".join(outlines_prefix+ [" ".join(dnorblines)] + outlines_postfix))
-  
 
 ###############################################################################
 # f orbital normalizations are from 
@@ -664,7 +663,6 @@ def write_basis(basis,ions,outfn):
 
   # If there's no hybridization, at most one of coef_s, coef_p, and coef_dfg is
   # nonzero. Just add them, so we have one array.
-  done_atoms = {}
   coefs = basis['coef_s'] + basis['coef_p'] + basis['coef_dfg']
 
   shell_type = np.tile("Unknown...",basis['shell_type'].shape)
@@ -681,16 +679,16 @@ def write_basis(basis,ions,outfn):
       "  normtype CRYSTAL",
       "  gamess {"
     ]
+  done_atoms = set([atom_type])
   for sidx in range(len(shell_type)):
     new_aidx = basis['atom_shell'][sidx]-1
 
     new_atom_type = ions['atom_nums'][new_aidx]
     if aidx != new_aidx:
-      outlines += ["  }","}"]
       if new_atom_type in done_atoms:
-        done_atoms.append(atom_type)
         continue
       else:
+        outlines += ["  }","}"]
         atom_type = new_atom_type
         aidx = new_aidx
         outlines += [
@@ -700,6 +698,7 @@ def write_basis(basis,ions,outfn):
             "  normtype CRYSTAL",
             "  gamess {"
           ]
+        done_atoms.add(atom_type)
 
     nprim = basis['prim_shell'][sidx]
     outlines.append("    {0} {1}".format(shell_type[sidx],nprim))
@@ -794,25 +793,17 @@ def convert_crystal(
   return files
 
 if __name__ == "__main__":
-  if len(sys.argv) > 1:
-    base = sys.argv[1]
-  else: 
-    base = "qwalk"
-  if len(sys.argv) > 2:
-    propoutfn = sys.argv[2]
-  else:
-    propoutfn = "prop.in.o"
-  if len(sys.argv) > 3:
-    kfmt = sys.argv[3]
-  else:
-    kfmt="coord"
-  if len(sys.argv) > 4:
-    kset = sys.argv[4]
-  else:
-    kset="complex"
-  print("Converting crystal with base {},".format(base))
-  print("system spin drawn from {},".format(propoutfn))
-  print("using {} kpoint naming convention,".format(kfmt))
-  print("and using {} kpoint set.".format(kset))
-  convert_crystal(base,propoutfn,kfmt,kset)
+  from argparse import ArgumentParser
+  parser=ArgumentParser('Convert a crystal file (defaults in brackets).')
+  parser.add_argument('-b','--base',type=str,default='qwalk',
+      help="[='qw'] First part of string for file names.")
+  parser.add_argument('-p','--propout',type=str,default='prop.in.o',
+      help="[='prop.in.o'] Name of file containing net spin. Either crystal or properties stdout.")
+  parser.add_argument('-k','--kset',type=str,default='complex',
+      help="[='complex'] 'real' or 'complex' kpoints.")
+  parser.add_argument('-v','--nvirtual',type=int,default=50,
+      help="[=50] Number of unoccupied or virtual orbitals to allow access to.")
+  args=parser.parse_args()
+
+  convert_crystal(args.base,args.propout,args.kset,args.nvirtual)
 

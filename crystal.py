@@ -4,7 +4,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from pymatgen.io.cif import CifParser
-from pymatgen.symmetry.analyzer import SpacegroupAnalyzer 
 from pymatgen.io.xyz import XYZ
 from pymatgen.core.periodic_table import Element
 from crystal2qmc import periodic_table # TODO should this be in crystal2qmc?
@@ -24,9 +23,6 @@ class CrystalWriter:
     self.struct_input=None # Manual structure input.
     self.supercell=None #[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]  
     self.boundary='3d'
-    self.symmetry=False
-    # Enter this to ensure it's correct. If symmetry is on and this is 1, it will try to guess group_number.
-    self.group_number=1
 
     #Electron model
     self.spin_polarized=True    
@@ -81,11 +77,6 @@ class CrystalWriter:
     self.primitive=primitive
     self.cif=cifstr
     pystruct=CifParser.from_string(self.cif).get_structures(primitive=self.primitive)[0]
-    if self.symmetry and  self.group_number==1:
-      # Defaults are too low. These tolerances *may* be too tight.
-      # If the produced space group number is too low, try tightening this.
-      pysym=SpacegroupAnalyzer(pystruct,symprec=1e-5,angle_tolerance=1e-5)
-      self.struct['group_number']=pysym.get_space_group_number()
     self.struct=pystruct.as_dict()
   #-----------------------------------------------
 
@@ -287,18 +278,11 @@ class CrystalWriter:
       self._elements.add(nm)
     self._elements = sorted(list(self._elements)) # Standardize ordering.
 
-    if self.symmetry:
-      geomlines=[
-          "CRYSTAL","0 0 0",
-          str(self.group_number),
-          self.space_group_format().format(**lat),
-        ]
-    else:
-      geomlines=[
-          "CRYSTAL","0 0 0",
-          "1",
-          '%g %g %g %g %g %g'%(lat['a'],lat['b'],lat['c'],lat['alpha'],lat['beta'],lat['gamma'])
-        ]
+    geomlines=[
+        "CRYSTAL","0 0 0",
+        "1",
+        '%g %g %g %g %g %g'%(lat['a'],lat['b'],lat['c'],lat['alpha'],lat['beta'],lat['gamma'])
+      ]
 
     geomlines+=["%i"%len(sites)]
     for v in sites:
@@ -327,49 +311,6 @@ class CrystalWriter:
     self._elements = sorted(list(self._elements)) # Standardize ordering.
 
     return geomlines
-
-########################################################
-
-  # TODO needs checking for each structure (crystal will error out with incorrect format).
-  def space_group_format(self):
-    ''' Generate the format of the symmetry group input format for crystal.
-    Returns:
-      str: .format()-able string. 
-    '''
-    format_string=""
-
-    if 1<=self.group_number<3:
-      #print("Case triclinic")
-      format_string="{a} {b} {c} {alpha} {beta} {gamma}"
-
-    elif 3<=self.group_number<16:
-      #print("Case monoclinic")
-      format_string="{a} {b} {c} {beta}"
-
-    elif 16<=self.group_number<75:
-      #print("Case orthorhombic")
-      format_string="{a} {b} {c}"
-     
-    elif 75<=self.group_number<143:
-      #print("Case tetragonal")
-      format_string="{a} {c}"
-
-    elif 143<=self.group_number<168:
-      #print("Case trigonal")
-      format_string="{a} {c}"
-
-    elif 168<=self.group_number<195:
-      #print("Case trigonal")
-      format_string="{a} {c}"
-
-    elif 167<=self.group_number<231:
-      #print("Case cubic")
-      format_string="{a}"
-
-    else:
-      raise AssertionError("Invalid group_number")
-
-    return format_string
 
 ########################################################
 
