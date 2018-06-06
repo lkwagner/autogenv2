@@ -35,6 +35,7 @@ class CrystalWriter:
     # Initial guess.
     self.initial_spins=[]
     self.guess_fort=None # or, path to a fort.79 or fort.9.
+    self.spinedit=[] # Spins to flip from guess_fort
 
     #Numerical convergence parameters
     self.basis_params=[0.2,2,3]
@@ -94,6 +95,10 @@ class CrystalWriter:
       if not k in selfdict.keys():
         raise AssertionError("Error: %s not a keyword for CrystalWriter"%k)
       selfdict[k]=d[k]
+
+    if 'spinedit' in d:
+      assert len(d['spinedit'])==0 or ('guess_fort' in d and d['guess_fort'] is not None),\
+          "spinedit requires guess_fort."
 
   #-----------------------------------------------
   def crystal_input(self,section4=[]):
@@ -176,6 +181,9 @@ class CrystalWriter:
     if len(self.initial_spins)>0:
       outlines+=['ATOMSPIN',str(len(self.initial_spins))]
       outlines+=["%i %i"%(i+1,s) for i,s in enumerate(self.initial_spins)]
+    if len(self.spinedit)>0:
+      outlines+=['SPINEDIT',str(len(self.spinedit))]
+      outlines+=[str(i) for i in self.spinedit]
 
     if not self.diis:
       if self.levshift!=[]:
