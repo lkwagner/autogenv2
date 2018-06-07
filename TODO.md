@@ -1,3 +1,4 @@
+- [ ] Better handling of `optimize_basis` option.
 - [ ] Model fitting example.
 - [ ] How to handle qwfiles better? Interaction between manager and trialfunc is currently not too flexible. For example it depends on kpoints being a list.
   - Possible to move the `export_qwalk` into `trialfunc`?
