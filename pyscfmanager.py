@@ -1,7 +1,8 @@
 from manager_tools import resolve_status, update_attributes
-from autopyscf import PySCFReader
+from autopyscf import PySCFReader,dm_from_chkfile
 from autorunner import PySCFRunnerPBS
 import os
+import shutil as sh 
 import pickle as pkl
 import pyscf2qwalk
 from autopaths import paths
@@ -116,7 +117,7 @@ class PySCFManager:
         sh.copy(self.outfile,"%d.%s"%(self.restarts,self.outfile))
         sh.copy(self.chkfile,"%d.%s"%(self.restarts,self.chkfile))
         if os.path.exists(self.chkfile):
-          self.writer.dm_generator=PySCF.dm_from_chkfile("%d.%s"%(self.restarts,self.chkfile))
+          self.writer.dm_generator=dm_from_chkfile("%d.%s"%(self.restarts,self.chkfile))
         self.writer.pyscf_input(self.driverfn,self.chkfile)
         self.runner.add_task("/usr/bin/python3 %s > %s"%(self.driverfn,self.outfile))
         self.restarts+=1
