@@ -1053,226 +1053,205 @@
         <Basis-set name="vdz">
             <HF-Energy>-0.96198978</HF-Energy>
             <CCSD_T_Energy>-1.00330234</CCSD_T_Energy>
-            <Contraction nterms="9" Angular_momentum="s">
-                <Basis-term Exp="0.030068" Coeff="0.025105"/>
-                <Basis-term Exp="0.054002" Coeff="0.178890"/>
-                <Basis-term Exp="0.096986" Coeff="0.263939"/>
-                <Basis-term Exp="0.174186" Coeff="0.435946"/>
-                <Basis-term Exp="0.312836" Coeff="-0.008188"/>
-                <Basis-term Exp="0.561850" Coeff="0.049509"/>
-                <Basis-term Exp="1.009077" Coeff="-0.114576"/>
-                <Basis-term Exp="1.812290" Coeff="-0.067207"/>
-                <Basis-term Exp="3.254852" Coeff="0.017250"/>
+            <Contraction nterms="6" Angular_momentum="s">
+                <Basis-term Exp="1.534946" Coeff="0.031822"/>
+                <Basis-term Exp="1.126766" Coeff="-0.284692"/>
+                <Basis-term Exp="0.791542" Coeff="0.134293"/>
+                <Basis-term Exp="0.178640" Coeff="0.447713"/>
+                <Basis-term Exp="0.073776" Coeff="0.501301"/>
+                <Basis-term Exp="0.032780" Coeff="0.143845"/>
+            </Contraction>
+            <Contraction nterms="6" Angular_momentum="s">
+                <Basis-term Exp="1.534946" Coeff="0.371714"/>
+                <Basis-term Exp="1.126766" Coeff="-1.460040"/>
+                <Basis-term Exp="0.791542" Coeff="1.125926"/>
+                <Basis-term Exp="0.178640" Coeff="1.598045"/>
+                <Basis-term Exp="0.073776" Coeff="-1.306671"/>
+                <Basis-term Exp="0.032780" Coeff="-0.328239"/>
+            </Contraction>
+            <Contraction nterms="3" Angular_momentum="p">
+                <Basis-term Exp="3.619000" Coeff="0.029105"/>
+                <Basis-term Exp="0.711000" Coeff="0.169466"/>
+                <Basis-term Exp="0.195100" Coeff="0.512969"/>
             </Contraction>
             <Contraction nterms="1" Angular_momentum="s">
-                <Basis-term Exp="0.239392" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="9" Angular_momentum="p">
-                <Basis-term Exp="0.015064" Coeff="0.735052"/>
-                <Basis-term Exp="0.028584" Coeff="-0.476214"/>
-                <Basis-term Exp="0.054236" Coeff="0.564806"/>
-                <Basis-term Exp="0.102911" Coeff="-0.108575"/>
-                <Basis-term Exp="0.195269" Coeff="0.233862"/>
-                <Basis-term Exp="0.370513" Coeff="-0.009003"/>
-                <Basis-term Exp="0.703030" Coeff="0.067510"/>
-                <Basis-term Exp="1.333967" Coeff="-0.002868"/>
-                <Basis-term Exp="2.531139" Coeff="0.017869"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="p">
-                <Basis-term Exp="0.222969" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="d">
-                <Basis-term Exp="0.217340" Coeff="1.000000"/>
+                <Basis-term Exp="0.058900" Coeff="1.000000"/>
             </Contraction>
         </Basis-set>
         <Basis-set name="vtz">
             <HF-Energy>-0.96200753</HF-Energy>
             <CCSD_T_Energy>-1.00923488</CCSD_T_Energy>
-            <Contraction nterms="9" Angular_momentum="s">
-                <Basis-term Exp="0.030068" Coeff="0.025105"/>
-                <Basis-term Exp="0.054002" Coeff="0.178890"/>
-                <Basis-term Exp="0.096986" Coeff="0.263939"/>
-                <Basis-term Exp="0.174186" Coeff="0.435946"/>
-                <Basis-term Exp="0.312836" Coeff="-0.008188"/>
-                <Basis-term Exp="0.561850" Coeff="0.049509"/>
-                <Basis-term Exp="1.009077" Coeff="-0.114576"/>
-                <Basis-term Exp="1.812290" Coeff="-0.067207"/>
-                <Basis-term Exp="3.254852" Coeff="0.017250"/>
+            <Contraction nterms="6" Angular_momentum="s">
+                <Basis-term Exp="1.534946" Coeff="0.031822"/>
+                <Basis-term Exp="1.126766" Coeff="-0.284692"/>
+                <Basis-term Exp="0.791542" Coeff="0.134293"/>
+                <Basis-term Exp="0.178640" Coeff="0.447713"/>
+                <Basis-term Exp="0.073776" Coeff="0.501301"/>
+                <Basis-term Exp="0.032780" Coeff="0.143845"/>
+            </Contraction>
+            <Contraction nterms="6" Angular_momentum="s">
+                <Basis-term Exp="1.534946" Coeff="0.371714"/>
+                <Basis-term Exp="1.126766" Coeff="-1.460040"/>
+                <Basis-term Exp="0.791542" Coeff="1.125926"/>
+                <Basis-term Exp="0.178640" Coeff="1.598045"/>
+                <Basis-term Exp="0.073776" Coeff="-1.306671"/>
+                <Basis-term Exp="0.032780" Coeff="-0.328239"/>
+            </Contraction>
+            <Contraction nterms="6" Angular_momentum="s">
+                <Basis-term Exp="1.534946" Coeff="1.888350"/>
+                <Basis-term Exp="1.126766" Coeff="-6.876878"/>
+                <Basis-term Exp="0.791542" Coeff="6.623484"/>
+                <Basis-term Exp="0.178640" Coeff="-1.836895"/>
+                <Basis-term Exp="0.073776" Coeff="-0.300817"/>
+                <Basis-term Exp="0.032780" Coeff="1.035726"/>
             </Contraction>
             <Contraction nterms="1" Angular_momentum="s">
-                <Basis-term Exp="0.060913" Coeff="1.000000"/>
+                <Basis-term Exp="0.058900" Coeff="1.000000"/>
             </Contraction>
-            <Contraction nterms="1" Angular_momentum="s">
-                <Basis-term Exp="0.357735" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="9" Angular_momentum="p">
-                <Basis-term Exp="0.015064" Coeff="0.735052"/>
-                <Basis-term Exp="0.028584" Coeff="-0.476214"/>
-                <Basis-term Exp="0.054236" Coeff="0.564806"/>
-                <Basis-term Exp="0.102911" Coeff="-0.108575"/>
-                <Basis-term Exp="0.195269" Coeff="0.233862"/>
-                <Basis-term Exp="0.370513" Coeff="-0.009003"/>
-                <Basis-term Exp="0.703030" Coeff="0.067510"/>
-                <Basis-term Exp="1.333967" Coeff="-0.002868"/>
-                <Basis-term Exp="2.531139" Coeff="0.017869"/>
+            <Contraction nterms="3" Angular_momentum="p">
+                <Basis-term Exp="3.619000" Coeff="0.029105"/>
+                <Basis-term Exp="0.711000" Coeff="0.169466"/>
+                <Basis-term Exp="0.195100" Coeff="0.512969"/>
             </Contraction>
             <Contraction nterms="1" Angular_momentum="p">
-                <Basis-term Exp="0.728274" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="p">
-                <Basis-term Exp="0.165173" Coeff="1.000000"/>
+                <Basis-term Exp="0.060180" Coeff="1.000000"/>
             </Contraction>
             <Contraction nterms="1" Angular_momentum="d">
-                <Basis-term Exp="0.113241" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="d">
-                <Basis-term Exp="0.305198" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="f">
-                <Basis-term Exp="0.272841" Coeff="1.000000"/>
+                <Basis-term Exp="0.238000" Coeff="1.000000"/>
             </Contraction>
         </Basis-set>
         <Basis-set name="vqz">
-            <HF-Energy>-0.96201130</HF-Energy>
-            <CCSD_T_Energy>-1.00964619</CCSD_T_Energy>
-            <Contraction nterms="9" Angular_momentum="s">
-                <Basis-term Exp="0.030068" Coeff="0.025105"/>
-                <Basis-term Exp="0.054002" Coeff="0.178890"/>
-                <Basis-term Exp="0.096986" Coeff="0.263939"/>
-                <Basis-term Exp="0.174186" Coeff="0.435946"/>
-                <Basis-term Exp="0.312836" Coeff="-0.008188"/>
-                <Basis-term Exp="0.561850" Coeff="0.049509"/>
-                <Basis-term Exp="1.009077" Coeff="-0.114576"/>
-                <Basis-term Exp="1.812290" Coeff="-0.067207"/>
-                <Basis-term Exp="3.254852" Coeff="0.017250"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="s">
-                <Basis-term Exp="0.012287" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="s">
-                <Basis-term Exp="0.175341" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="s">
-                <Basis-term Exp="1.244398" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="9" Angular_momentum="p">
-                <Basis-term Exp="0.015064" Coeff="0.735052"/>
-                <Basis-term Exp="0.028584" Coeff="-0.476214"/>
-                <Basis-term Exp="0.054236" Coeff="0.564806"/>
-                <Basis-term Exp="0.102911" Coeff="-0.108575"/>
-                <Basis-term Exp="0.195269" Coeff="0.233862"/>
-                <Basis-term Exp="0.370513" Coeff="-0.009003"/>
-                <Basis-term Exp="0.703030" Coeff="0.067510"/>
-                <Basis-term Exp="1.333967" Coeff="-0.002868"/>
-                <Basis-term Exp="2.531139" Coeff="0.017869"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="p">
-                <Basis-term Exp="0.317061" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="p">
-                <Basis-term Exp="1.585739" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="p">
-                <Basis-term Exp="0.108346" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="d">
-                <Basis-term Exp="0.125228" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="d">
-                <Basis-term Exp="0.801065" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="d">
-                <Basis-term Exp="0.301656" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="f">
-                <Basis-term Exp="0.153439" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="f">
-                <Basis-term Exp="0.377536" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="g">
-                <Basis-term Exp="0.338801" Coeff="1.000000"/>
-            </Contraction>
+          <Contraction nterms="6" Angular_momentum="s">
+              <Basis-term Exp="1.534946" Coeff="0.031822"/>
+              <Basis-term Exp="1.126766" Coeff="-0.284692"/>
+              <Basis-term Exp="0.791542" Coeff="0.134293"/>
+              <Basis-term Exp="0.178640" Coeff="0.447713"/>
+              <Basis-term Exp="0.073776" Coeff="0.501301"/>
+              <Basis-term Exp="0.032780" Coeff="0.143845"/>
+          </Contraction>
+          <Contraction nterms="6" Angular_momentum="s">
+              <Basis-term Exp="1.534946" Coeff="0.371714"/>
+              <Basis-term Exp="1.126766" Coeff="-1.460040"/>
+              <Basis-term Exp="0.791542" Coeff="1.125926"/>
+              <Basis-term Exp="0.178640" Coeff="1.598045"/>
+              <Basis-term Exp="0.073776" Coeff="-1.306671"/>
+              <Basis-term Exp="0.032780" Coeff="-0.328239"/>
+          </Contraction>
+          <Contraction nterms="6" Angular_momentum="s">
+              <Basis-term Exp="1.534946" Coeff="1.888350"/>
+              <Basis-term Exp="1.126766" Coeff="-6.876878"/>
+              <Basis-term Exp="0.791542" Coeff="6.623484"/>
+              <Basis-term Exp="0.178640" Coeff="-1.836895"/>
+              <Basis-term Exp="0.073776" Coeff="-0.300817"/>
+              <Basis-term Exp="0.032780" Coeff="1.035726"/>
+          </Contraction>
+          <Contraction nterms="6" Angular_momentum="s">
+              <Basis-term Exp="1.534946" Coeff="-2.442333"/>
+              <Basis-term Exp="1.126766" Coeff="3.460239"/>
+              <Basis-term Exp="0.791542" Coeff="0.148521"/>
+              <Basis-term Exp="0.178640" Coeff="-3.441646"/>
+              <Basis-term Exp="0.073776" Coeff="4.916180"/>
+              <Basis-term Exp="0.032780" Coeff="-2.706087"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="s">
+              <Basis-term Exp="0.058900" Coeff="1.000000"/>
+          </Contraction>
+          <Contraction nterms="3" Angular_momentum="p">
+              <Basis-term Exp="3.619000" Coeff="0.029105"/>
+              <Basis-term Exp="0.711000" Coeff="0.169466"/>
+              <Basis-term Exp="0.195100" Coeff="0.512969"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="p">
+              <Basis-term Exp="0.143800" Coeff="1.000000"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="p">
+              <Basis-term Exp="0.049940" Coeff="1.000000"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="d">
+              <Basis-term Exp="0.180300" Coeff="1.000000"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="d">
+              <Basis-term Exp="0.348000" Coeff="1.000000"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="f">
+              <Basis-term Exp="0.325000" Coeff="1.000000"/>
+          </Contraction>
         </Basis-set>
         <Basis-set name="v5z">
-            <HF-Energy>-0.96201342</HF-Energy>
-            <CCSD_T_Energy>-1.00984051</CCSD_T_Energy>
-            <Contraction nterms="9" Angular_momentum="s">
-                <Basis-term Exp="0.030068" Coeff="0.025105"/>
-                <Basis-term Exp="0.054002" Coeff="0.178890"/>
-                <Basis-term Exp="0.096986" Coeff="0.263939"/>
-                <Basis-term Exp="0.174186" Coeff="0.435946"/>
-                <Basis-term Exp="0.312836" Coeff="-0.008188"/>
-                <Basis-term Exp="0.561850" Coeff="0.049509"/>
-                <Basis-term Exp="1.009077" Coeff="-0.114576"/>
-                <Basis-term Exp="1.812290" Coeff="-0.067207"/>
-                <Basis-term Exp="3.254852" Coeff="0.017250"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="s">
-                <Basis-term Exp="0.012778" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="s">
-                <Basis-term Exp="0.108807" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="s">
-                <Basis-term Exp="0.216157" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="s">
-                <Basis-term Exp="1.207279" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="9" Angular_momentum="p">
-                <Basis-term Exp="0.015064" Coeff="0.735052"/>
-                <Basis-term Exp="0.028584" Coeff="-0.476214"/>
-                <Basis-term Exp="0.054236" Coeff="0.564806"/>
-                <Basis-term Exp="0.102911" Coeff="-0.108575"/>
-                <Basis-term Exp="0.195269" Coeff="0.233862"/>
-                <Basis-term Exp="0.370513" Coeff="-0.009003"/>
-                <Basis-term Exp="0.703030" Coeff="0.067510"/>
-                <Basis-term Exp="1.333967" Coeff="-0.002868"/>
-                <Basis-term Exp="2.531139" Coeff="0.017869"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="p">
-                <Basis-term Exp="0.072561" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="p">
-                <Basis-term Exp="0.501715" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="p">
-                <Basis-term Exp="0.184471" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="p">
-                <Basis-term Exp="2.128672" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="d">
-                <Basis-term Exp="0.090175" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="d">
-                <Basis-term Exp="0.743653" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="d">
-                <Basis-term Exp="0.238494" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="d">
-                <Basis-term Exp="0.933001" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="f">
-                <Basis-term Exp="0.129140" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="f">
-                <Basis-term Exp="0.299150" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="f">
-                <Basis-term Exp="0.739023" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="g">
-                <Basis-term Exp="0.316080" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="g">
-                <Basis-term Exp="0.863442" Coeff="1.000000"/>
-            </Contraction>
-            <Contraction nterms="1" Angular_momentum="h">
-                <Basis-term Exp="0.409080" Coeff="1.000000"/>
-            </Contraction>
+          <Contraction nterms="6" Angular_momentum="s">
+              <Basis-term Exp="1.534946" Coeff="0.031822"/>
+              <Basis-term Exp="1.126766" Coeff="-0.284692"/>
+              <Basis-term Exp="0.791542" Coeff="0.134293"/>
+              <Basis-term Exp="0.178640" Coeff="0.447713"/>
+              <Basis-term Exp="0.073776" Coeff="0.501301"/>
+              <Basis-term Exp="0.032780" Coeff="0.143845"/>
+          </Contraction>
+          <Contraction nterms="6" Angular_momentum="s">
+              <Basis-term Exp="1.534946" Coeff="0.371714"/>
+              <Basis-term Exp="1.126766" Coeff="-1.460040"/>
+              <Basis-term Exp="0.791542" Coeff="1.125926"/>
+              <Basis-term Exp="0.178640" Coeff="1.598045"/>
+              <Basis-term Exp="0.073776" Coeff="-1.306671"/>
+              <Basis-term Exp="0.032780" Coeff="-0.328239"/>
+          </Contraction>
+          <Contraction nterms="6" Angular_momentum="s">
+              <Basis-term Exp="1.534946" Coeff="1.888350"/>
+              <Basis-term Exp="1.126766" Coeff="-6.876878"/>
+              <Basis-term Exp="0.791542" Coeff="6.623484"/>
+              <Basis-term Exp="0.178640" Coeff="-1.836895"/>
+              <Basis-term Exp="0.073776" Coeff="-0.300817"/>
+              <Basis-term Exp="0.032780" Coeff="1.035726"/>
+          </Contraction>
+          <Contraction nterms="6" Angular_momentum="s">
+              <Basis-term Exp="1.534946" Coeff="-2.442333"/>
+              <Basis-term Exp="1.126766" Coeff="3.460239"/>
+              <Basis-term Exp="0.791542" Coeff="0.148521"/>
+              <Basis-term Exp="0.178640" Coeff="-3.441646"/>
+              <Basis-term Exp="0.073776" Coeff="4.916180"/>
+              <Basis-term Exp="0.032780" Coeff="-2.706087"/>
+          </Contraction>
+          <Contraction nterms="6" Angular_momentum="s">
+              <Basis-term Exp="1.534946" Coeff="-12.761838"/>
+              <Basis-term Exp="1.126766" Coeff="30.076603"/>
+              <Basis-term Exp="0.791542" Coeff="-19.023445"/>
+              <Basis-term Exp="0.178640" Coeff="4.222208"/>
+              <Basis-term Exp="0.073776" Coeff="-3.610009"/>
+              <Basis-term Exp="0.032780" Coeff="1.532327"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="s">
+              <Basis-term Exp="0.058900" Coeff="1.000000"/>
+          </Contraction>
+          <Contraction nterms="3" Angular_momentum="p">
+              <Basis-term Exp="3.619000" Coeff="0.029105"/>
+              <Basis-term Exp="0.711000" Coeff="0.169466"/>
+              <Basis-term Exp="0.195100" Coeff="0.512969"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="p">
+              <Basis-term Exp="0.303600" Coeff="1.000000"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="p">
+              <Basis-term Exp="0.113000" Coeff="1.000000"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="p">
+              <Basis-term Exp="0.042860" Coeff="1.000000"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="d">
+              <Basis-term Exp="1.072000" Coeff="1.000000"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="d">
+              <Basis-term Exp="0.441000" Coeff="1.000000"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="d">
+              <Basis-term Exp="0.181100" Coeff="1.000000"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="f">
+              <Basis-term Exp="0.481000" Coeff="1.000000"/>
+          </Contraction>
+          <Contraction nterms="1" Angular_momentum="f">
+              <Basis-term Exp="0.255000" Coeff="1.000000"/>
+              <Basis-term Exp="g" Coeff="1"/>
+              <Basis-term Exp="0.415000" Coeff="1.000000"/>
+          </Contraction>
         </Basis-set>
     </Pseudopotential>
     <Pseudopotential symbol="B">

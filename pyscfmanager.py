@@ -24,7 +24,7 @@ class PySCFManager:
 
     # Ensure path is set up correctly.
     if path is None:
-      path=os.path.getcwd()
+      path=os.getcwd()
     if path[-1]!='/': path+='/'
     self.path=path
 
