@@ -681,11 +681,13 @@ def write_basis(basis,ions,outfn):
     ]
   done_atoms = set([atom_type])
   for sidx in range(len(shell_type)):
+    nprim = basis['prim_shell'][sidx]
     new_aidx = basis['atom_shell'][sidx]-1
 
     new_atom_type = ions['atom_nums'][new_aidx]
     if aidx != new_aidx:
       if new_atom_type in done_atoms:
+        cnt+=nprim
         continue
       else:
         outlines += ["  }","}"]
@@ -700,7 +702,6 @@ def write_basis(basis,ions,outfn):
           ]
         done_atoms.add(atom_type)
 
-    nprim = basis['prim_shell'][sidx]
     outlines.append("    {0} {1}".format(shell_type[sidx],nprim))
     for pidx in range(nprim):
       outlines.append("      {0} {1} {2}".format(
